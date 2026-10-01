@@ -1,27 +1,34 @@
-interface Env {
-  WORKER_URL: string;
-  CF_ACCESS_CLIENT_ID: string;
-  CF_ACCESS_CLIENT_SECRET: string;
+interface Fetcher {
+  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
 }
 
-export const onRequest: PagesFunction<Env> = async (context) => {
+interface Env {
+  JOURNAL_WORKER: Fetcher;
+}
+
+interface PagesContext {
+  request: Request;
+  env: Env;
+  params: Record<string, string | string[]>;
+  data: Record<string, unknown>;
+  next: (input?: Request | string, init?: RequestInit) => Promise<Response>;
+  waitUntil: (promise: Promise<unknown>) => void;
+}
+
+export const onRequest = async (context: PagesContext): Promise<Response> => {
   const { request, env } = context;
-  const url = new URL(request.url);
 
-  const targetBase = env.WORKER_URL || "https://api.kalidass.amrit.fyi";
-  const workerUrl = `${targetBase}${url.pathname}${url.search}`;
-
-  const headers = new Headers(request.headers);
-  if (env.CF_ACCESS_CLIENT_ID) {
-    headers.set("CF-Access-Client-Id", env.CF_ACCESS_CLIENT_ID);
-  }
-  if (env.CF_ACCESS_CLIENT_SECRET) {
-    headers.set("CF-Access-Client-Secret", env.CF_ACCESS_CLIENT_SECRET);
+  if (!env.JOURNAL_WORKER) {
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        error: "JOURNAL_WORKER service binding is not configured in Cloudflare Pages settings.",
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 
-  return fetch(workerUrl, {
-    method: request.method,
-    headers,
-    body: ["GET", "HEAD"].includes(request.method) ? null : request.body,
-  });
+  return env.JOURNAL_WORKER.fetch(request);
 };
+
+

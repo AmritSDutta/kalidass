@@ -42,7 +42,7 @@ Before initiating deployment, gather and configure the following credentials:
 | **Public Blob Bucket** | Upstash | Stores article JSON schemas and uploaded media objects |
 | **`UPSTASH_BLOB_TOKEN`** | Upstash Console | Authenticates Worker and browser client uploads |
 | **`ADMIN_TOKEN`** | Cloudflare Secret | *(Optional)* Protects Studio CMS write and delete endpoints |
-| **`KALIDASS_API_BASE`** | Cloudflare Pages Env | Injects Worker URL into static frontend build |
+| **`JOURNAL_WORKER`** | Cloudflare Pages Binding | Direct edge RPC binding to `kalidass-journal-worker` |
 | **`NODE_VERSION`** | Cloudflare Pages Env | Specifies Node.js `20` or `22` for build runtime |
 
 ---
@@ -131,12 +131,14 @@ The frontend is a static Docusaurus site that hydrates dynamically in the client
 | **Build command** | `npm install && npm run build` |
 | **Build output directory** | `build` |
 
-### Step 3.2: Configure Environment Variables
+### Step 3.2: Configure Service Binding & Environment
 
-Under **Environment variables (Advanced)**, add:
-
-- `KALIDASS_API_BASE`: `https://kalidass-journal.<subdomain>.workers.dev` *(No trailing slash)*
-- `NODE_VERSION`: `20`
+1. Under **Settings** -> **Bindings** (or **Functions** -> **Service bindings**), add:
+   - **Type**: `Service binding`
+   - **Name**: `JOURNAL_WORKER`
+   - **Value**: `kalidass-journal-worker`
+2. Under **Environment variables (Advanced)**, add:
+   - `NODE_VERSION`: `20`
 
 Click **Save and Deploy**.
 
@@ -146,10 +148,8 @@ To deploy without connecting to a Git provider, use Wrangler Pages:
 
 ```bash
 cd blog_frontend
-# Set API base variable for Docusaurus build
-export KALIDASS_API_BASE="https://kalidass-journal.<subdomain>.workers.dev"
 npm run build
-npx wrangler pages deploy build --project-name=kalidass-journal
+npx wrangler pages deploy build --project-name=kalidass
 ```
 
 ---

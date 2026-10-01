@@ -16,6 +16,7 @@
         "pages": [
           "index",
           "architecture",
+          "zero-trust",
           "evaluation",
           "agent-publishing"
         ]
