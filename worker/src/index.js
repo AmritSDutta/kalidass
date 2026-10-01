@@ -194,9 +194,22 @@ function uploadsFor(env) {
   });
 }
 
+function resolveOrigin(request, env) {
+  const reqOrigin = request.headers.get("origin") || "";
+  const allowed = [
+    env.CORS_ORIGIN,
+    "https://kalidass.amrit.fyi",
+    "https://kalidass.pages.dev",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+  ].filter(Boolean);
+  if (allowed.includes(reqOrigin)) return reqOrigin;
+  return env.CORS_ORIGIN || "*";
+}
+
 export default {
   async fetch(request, env) {
-    const origin = env.CORS_ORIGIN || "*";
+    const origin = resolveOrigin(request, env);
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") return options(origin);

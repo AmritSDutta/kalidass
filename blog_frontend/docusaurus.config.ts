@@ -9,7 +9,7 @@ const config: Config = {
   future: {
     v4: true,
   },
-  url: "https://kalidass-journal.pages.dev",
+  url: "https://kalidass.amrit.fyi",
   baseUrl: "/",
   organizationName: "kalidass-journal",
   projectName: "kalidass-journal",
@@ -31,7 +31,7 @@ const config: Config = {
             mergeStrategy: {"devServer.proxy": "replace"},
             devServer: {
               host: "0.0.0.0",
-              allowedHosts: [".kalidass.fyi", ".monkeycode-ai.live"],
+              allowedHosts: [".amrit.fyi", ".kalidass.fyi", ".monkeycode-ai.live"],
               proxy: [
                 {
                   context: ["/api"],

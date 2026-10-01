@@ -3,6 +3,12 @@ main = "src/index.js"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
 
+workers_dev = false
+
+[[routes]]
+pattern = "api.kalidass.amrit.fyi/*"
+zone_name = "amrit.fyi"
+
 [vars]
-CORS_ORIGIN = "https://kalidass.pages.dev"
+CORS_ORIGIN = "https://kalidass.amrit.fyi"
 ROOT_BUCKET = "kalidass"
