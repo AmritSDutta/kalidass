@@ -123,26 +123,32 @@ function estimateReadTime(blocks) {
 }
 
 function adminOk(request, env) {
-  if (!env.ADMIN_TOKEN) return true;
-  return (request.headers.get("authorization") || "") === `Bearer ${env.ADMIN_TOKEN}`;
+  if (!env.ADMIN_TOKEN) return false;
+  const auth = request.headers.get("authorization") || "";
+  return auth === `Bearer ${env.ADMIN_TOKEN}`;
 }
 
 async function ensureSeed(bucket, env) {
   const indexPath = getIndexPath(env);
-  const index = await readJson(bucket, indexPath, null);
-  if (Array.isArray(index) && index.length > 0) return index;
-  const summaries = [];
-  for (const article of seedArticles) {
-    const record = {
-      ...article,
-      createdAt: article.publishedAt,
-      updatedAt: article.publishedAt,
-    };
-    await putJson(bucket, getArticleObject(article.id, env), record);
-    summaries.push(summarize(record));
+  try {
+    const index = await readJson(bucket, indexPath, null);
+    if (Array.isArray(index) && index.length > 0) return index;
+    const summaries = [];
+    for (const article of seedArticles) {
+      const record = {
+        ...article,
+        createdAt: article.publishedAt,
+        updatedAt: article.publishedAt,
+      };
+      await putJson(bucket, getArticleObject(article.id, env), record);
+      summaries.push(summarize(record));
+    }
+    await putJson(bucket, indexPath, summaries);
+    return summaries;
+  } catch (err) {
+    console.error("Upstash Blob ensureSeed error:", err);
+    return seedArticles.map(summarize);
   }
-  await putJson(bucket, indexPath, summaries);
-  return summaries;
 }
 
 function buildArticle(body, existing) {
@@ -288,15 +294,21 @@ export default {
           if (meta.published === false && !adminOk(request, env)) {
             return json({error: "Article not found"}, 404, origin);
           }
-          const article = await readJson(bucket, getArticleObject(meta.id, env), null);
-          if (!article) return json({error: "Article missing from blob storage"}, 404, origin);
+          let article = await readJson(bucket, getArticleObject(meta.id, env), null);
+          if (!article) {
+            article = seedArticles.find((item) => item.id === meta.id || item.slug === meta.slug) || null;
+          }
+          if (!article) return json({error: "Article not found"}, 404, origin);
           return json(article, 200, origin);
         }
 
         if (request.method === "PUT") {
           if (!adminOk(request, env)) return json({error: "Unauthorized"}, 401, origin);
-          const existing = await readJson(bucket, getArticleObject(meta.id, env), null);
-          if (!existing) return json({error: "Article missing from blob storage"}, 404, origin);
+          let existing = await readJson(bucket, getArticleObject(meta.id, env), null);
+          if (!existing) {
+            existing = seedArticles.find((item) => item.id === meta.id || item.slug === meta.slug) || null;
+          }
+          if (!existing) return json({error: "Article not found"}, 404, origin);
           const body = await request.json();
           const article = buildArticle(body, existing);
           article.slug = uniqueSlug(

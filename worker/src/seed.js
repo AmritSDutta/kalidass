@@ -20,6 +20,8 @@ export const seedArticles = [
     publishedAt: "2026-08-18T09:00:00.000Z",
     readTime: 9,
     featured: true,
+    published: true,
+    private: false,
     blocks: [
       {
         type: "paragraph",
@@ -87,6 +89,8 @@ export const seedArticles = [
     publishedAt: "2026-07-30T16:20:00.000Z",
     readTime: 8,
     featured: false,
+    published: true,
+    private: false,
     blocks: [
       {
         type: "paragraph",
@@ -142,6 +146,8 @@ export const seedArticles = [
     publishedAt: "2026-06-21T11:00:00.000Z",
     readTime: 7,
     featured: false,
+    published: true,
+    private: false,
     blocks: [
       {
         type: "paragraph",
@@ -192,6 +198,8 @@ export const seedArticles = [
     publishedAt: "2026-05-08T14:40:00.000Z",
     readTime: 6,
     featured: false,
+    published: true,
+    private: false,
     blocks: [
       {
         type: "paragraph",

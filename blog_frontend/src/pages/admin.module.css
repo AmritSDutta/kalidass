@@ -270,3 +270,76 @@
     display: grid;
   }
 }
+
+.lockContainer {
+  min-height: 55vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.lockCard {
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface-raised, rgba(15, 23, 42, 0.6));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: 16px;
+  padding: 2.2rem;
+  text-align: center;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+}
+
+.lockBadge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--chroma-coral, #f43f5e);
+  margin-bottom: 0.8rem;
+}
+
+.lockCard h2 {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.5rem;
+}
+
+.lockCard p {
+  color: var(--ink-mute);
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.lockForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.lockInput {
+  background: var(--surface-overlay, rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.15));
+  color: #fff;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.lockInput:focus {
+  border-color: var(--chroma-cyan, #22d3ee);
+}
+
+.authError {
+  color: var(--chroma-coral, #f43f5e);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0;
+}

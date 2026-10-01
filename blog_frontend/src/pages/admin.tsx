@@ -80,17 +80,86 @@ export default function Admin(): ReactNode {
   const [busy, setBusy] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [query, setQuery] = useState("");
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   const refresh = () => {
     const current = MODES.find((m) => m.key === mode);
     if (!current?.status) return;
-    listArticles(current.status).then(setArticles).catch(() => setArticles([]));
+    listArticles(current.status)
+      .then(setArticles)
+      .catch((err) => {
+        if ((err as Error).message?.toLowerCase().includes("unauthorized")) {
+          setAuthenticated(false);
+        }
+        setArticles([]);
+      });
   };
 
   useEffect(() => {
-    setQuery("");
-    refresh();
-  }, [mode]);
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem("kalidass-admin-token") || "";
+    if (!saved) {
+      setAuthenticated(false);
+      setCheckingAuth(false);
+      return;
+    }
+    listArticles("all")
+      .then(() => {
+        setAuthenticated(true);
+      })
+      .catch(() => {
+        setAuthenticated(false);
+      })
+      .finally(() => {
+        setCheckingAuth(false);
+      });
+  }, []);
+
+  const handleUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setBusy(true);
+    const candidate = passwordInput.trim();
+    if (!candidate) {
+      setAuthError("Please enter your admin password.");
+      setBusy(false);
+      return;
+    }
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("kalidass-admin-token", candidate);
+      }
+      await listArticles("all");
+      setAuthenticated(true);
+      setPasswordInput("");
+      refresh();
+    } catch (err) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("kalidass-admin-token");
+      }
+      setAuthError((err as Error).message || "Invalid admin token or unauthorized.");
+      setAuthenticated(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleLock = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("kalidass-admin-token");
+    }
+    setAuthenticated(false);
+  };
+
+  useEffect(() => {
+    if (authenticated) {
+      setQuery("");
+      refresh();
+    }
+  }, [mode, authenticated]);
 
   useEffect(() => {
     if (!editSlug) return;
@@ -241,6 +310,49 @@ export default function Admin(): ReactNode {
       .includes(q);
   });
 
+  if (checkingAuth) {
+    return (
+      <Layout title="Studio" description="Compose and publish Kalidass Journal briefs.">
+        <main className={styles.page}>
+          <div className={styles.lockContainer}>
+            <p className={styles.status}>Checking authentication...</p>
+          </div>
+        </main>
+      </Layout>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <Layout title="Studio — Locked" description="Administrative access required.">
+        <main className={styles.page}>
+          <div className={styles.lockContainer}>
+            <div className={styles.lockCard}>
+              <div className={styles.lockBadge}>🔒 Restricted Access</div>
+              <h2>Kalidass Studio</h2>
+              <p>Enter your administrative token to unlock the CMS.</p>
+              <form onSubmit={handleUnlock} className={styles.lockForm}>
+                <input
+                  type="password"
+                  className={styles.lockInput}
+                  placeholder="Enter ADMIN_TOKEN"
+                  value={passwordInput}
+                  onChange={(event) => setPasswordInput(event.target.value)}
+                  autoFocus
+                  required
+                />
+                <button type="submit" className={styles.primary} disabled={busy}>
+                  {busy ? "Verifying..." : "Unlock Studio"}
+                </button>
+              </form>
+              {authError ? <p className={styles.authError}>{authError}</p> : null}
+            </div>
+          </div>
+        </main>
+      </Layout>
+    );
+  }
+
   return (
     <Layout title="Studio" description="Compose and publish Kalidass Journal briefs.">
       <main className={styles.page}>
@@ -275,6 +387,9 @@ export default function Admin(): ReactNode {
                 )}
               </>
             ) : null}
+            <button type="button" className={styles.ghost} onClick={handleLock} title="Clear saved token and lock Studio">
+              🔒 Lock Studio
+            </button>
           </div>
         </header>
 
