@@ -74,13 +74,15 @@ This route is only meaningful in memory mode — in Upstash mode, media objects 
 
 ## Blob Path Conventions
 
+All object paths in Upstash Blob are namespaced under the configurable `ROOT_BUCKET` (default: `kalidass`):
+
 | Content | Path Pattern | Format |
 | --- | --- | --- |
-| Article index | `journal/index.json` | `ArticleSummary[]` JSON |
-| Full article | `journal/articles/<id>.json` | `Article` JSON |
-| Uploaded media | `media/<filename>-<unique-suffix>` | Image or video binary |
+| Article index | `<rootBucket>/index.json` (e.g. `kalidass/index.json`) | `ArticleSummary[]` JSON |
+| Full article | `<rootBucket>/articles/<id>.json` | `Article` JSON |
+| Uploaded media | `<rootBucket>/media/<filename>-<unique-suffix>` | Image or video binary |
 
-The `uniquePath` template tag from `@upstash/blob` generates collision-safe media paths.
+The `uniquePath` template tag from `@upstash/blob` generates collision-safe media paths inside `<rootBucket>/media/`.
 
 ## JSON Helpers
 

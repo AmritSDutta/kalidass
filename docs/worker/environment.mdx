@@ -13,14 +13,15 @@ The worker reads configuration from two sources: **Cloudflare secrets** (set via
 | --- | --- | --- | --- | --- |
 | `UPSTASH_BLOB_TOKEN` | Secret | For persistence | *(absent)* | Upstash Blob read/write token. When absent, the worker falls back to in-memory storage and articles do not persist across restarts. |
 | `ADMIN_TOKEN` | Secret | Optional | *(absent)* | Bearer token for Studio write operations. When absent, all write endpoints are open — suitable for personal or local deployments. |
+| `ROOT_BUCKET` | Var (`wrangler.toml`) | Optional | `"kalidass"` | Root folder prefix inside Upstash Blob (e.g. `kalidass/index.json`, `kalidass/articles/`). |
 | `CORS_ORIGIN` | Var (`wrangler.toml`) | Yes | `"*"` | Value of the `Access-Control-Allow-Origin` response header. Set to `"*"` during development; tighten to your Pages domain (`https://kalidass-journal.pages.dev`) after deployment. |
 
 ## Effect on Storage Mode
 
 | `UPSTASH_BLOB_TOKEN` | Storage Mode | `/api/health` Response |
 | --- | --- | --- |
-| Set | `upstash-blob` | `{"ok":true,"storage":"upstash-blob","runtime":"cloudflare-worker"}` |
-| Absent | `memory` | `{"ok":true,"storage":"memory","runtime":"cloudflare-worker"}` |
+| Set | `upstash-blob` | `{"ok":true,"storage":"upstash-blob","rootBucket":"kalidass","runtime":"cloudflare-worker"}` |
+| Absent | `memory` | `{"ok":true,"storage":"memory","rootBucket":"kalidass","runtime":"cloudflare-worker"}` |
 
 ## Local Development (`.dev.vars`)
 
@@ -33,6 +34,7 @@ cp .dev.vars.example .dev.vars
 ```text
 UPSTASH_BLOB_TOKEN=replace-with-upstash-blob-token
 ADMIN_TOKEN=
+ROOT_BUCKET=kalidass
 ```
 
 > [!IMPORTANT]

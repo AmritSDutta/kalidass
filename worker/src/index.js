@@ -2,8 +2,18 @@ import {Bucket, uniquePath, uploadHandler} from "@upstash/blob";
 import {getMemoryObject, memoryBucket} from "./memory.js";
 import {seedArticles} from "./seed.js";
 
-const INDEX_PATH = "journal/index.json";
-const articleObject = (id) => `journal/articles/${id}.json`;
+function getRootPrefix(env) {
+  const root = env?.ROOT_BUCKET || env?.ROOT_FOLDER || "kalidass";
+  return String(root).replace(/^\/+|\/+$/g, "");
+}
+
+function getIndexPath(env) {
+  return `${getRootPrefix(env)}/index.json`;
+}
+
+function getArticleObject(id, env) {
+  return `${getRootPrefix(env)}/articles/${id}.json`;
+}
 
 function json(data, status = 200, origin = "*") {
   return new Response(JSON.stringify(data), {
@@ -117,8 +127,9 @@ function adminOk(request, env) {
   return (request.headers.get("authorization") || "") === `Bearer ${env.ADMIN_TOKEN}`;
 }
 
-async function ensureSeed(bucket) {
-  const index = await readJson(bucket, INDEX_PATH, null);
+async function ensureSeed(bucket, env) {
+  const indexPath = getIndexPath(env);
+  const index = await readJson(bucket, indexPath, null);
   if (Array.isArray(index) && index.length > 0) return index;
   const summaries = [];
   for (const article of seedArticles) {
@@ -127,10 +138,10 @@ async function ensureSeed(bucket) {
       createdAt: article.publishedAt,
       updatedAt: article.publishedAt,
     };
-    await putJson(bucket, articleObject(article.id), record);
+    await putJson(bucket, getArticleObject(article.id, env), record);
     summaries.push(summarize(record));
   }
-  await putJson(bucket, INDEX_PATH, summaries);
+  await putJson(bucket, indexPath, summaries);
   return summaries;
 }
 
@@ -165,11 +176,12 @@ function buildArticle(body, existing) {
 }
 
 function uploadsFor(env) {
+  const prefix = getRootPrefix(env);
   return uploadHandler({
     bucket: new Bucket({token: env.UPSTASH_BLOB_TOKEN, enableTelemetry: false}),
     constraints: {maxSize: "20mb", contentTypes: ["image/*", "video/*"]},
     onBeforeUpload: ({file}) => ({
-      path: uniquePath`media/${file.name}`,
+      path: uniquePath`${prefix}/media/${file.name}`,
       metadata: {kind: "journal-media"},
     }),
     onUploadComplete: ({path, url, size, contentType}) => ({path, url, size, contentType}),
@@ -211,7 +223,12 @@ export default {
 
       if (url.pathname === "/api/health" && request.method === "GET") {
         return json(
-          {ok: true, storage: mode === "upstash" ? "upstash-blob" : "memory", runtime: "cloudflare-worker"},
+          {
+            ok: true,
+            storage: mode === "upstash" ? "upstash-blob" : "memory",
+            rootBucket: getRootPrefix(env),
+            runtime: "cloudflare-worker",
+          },
           200,
           origin
         );
@@ -222,7 +239,8 @@ export default {
         const form = await request.formData();
         const file = form.get("file");
         if (!(file instanceof File)) return json({error: "file field required"}, 400, origin);
-        const path = uniquePath`media/${file.name}`;
+        const prefix = getRootPrefix(env);
+        const path = uniquePath`${prefix}/media/${file.name}`;
         const blob = await bucket.put(path, file, {
           contentType: file.type || "application/octet-stream",
           contentTypes: ["image/*", "video/*"],
@@ -236,7 +254,7 @@ export default {
       }
 
       if (url.pathname === "/api/articles" && request.method === "GET") {
-        const index = await ensureSeed(bucket);
+        const index = await ensureSeed(bucket, env);
         const rawStatus = url.searchParams.get("status");
         if (rawStatus && !adminOk(request, env)) {
           return json({error: "Unauthorized"}, 401, origin);
@@ -258,20 +276,20 @@ export default {
       if (url.pathname === "/api/articles" && request.method === "POST") {
         if (!adminOk(request, env)) return json({error: "Unauthorized"}, 401, origin);
         const body = await request.json();
-        const index = await ensureSeed(bucket);
+        const index = await ensureSeed(bucket, env);
         const article = buildArticle(body);
         article.slug = uniqueSlug(index, slugify(body.slug || body.title));
         article.readTime = estimateReadTime(article.blocks);
-        await putJson(bucket, articleObject(article.id), article);
+        await putJson(bucket, getArticleObject(article.id, env), article);
         index.unshift(summarize(article));
-        await putJson(bucket, INDEX_PATH, index);
+        await putJson(bucket, getIndexPath(env), index);
         return json(article, 201, origin);
       }
 
       const articleMatch = url.pathname.match(/^\/api\/articles\/([^/]+)$/);
       if (articleMatch) {
         const key = decodeURIComponent(articleMatch[1]);
-        const index = await ensureSeed(bucket);
+        const index = await ensureSeed(bucket, env);
         const meta = index.find((item) => item.id === key || item.slug === key);
         if (!meta) return json({error: "Article not found"}, 404, origin);
 
@@ -279,14 +297,14 @@ export default {
           if (meta.published === false && !adminOk(request, env)) {
             return json({error: "Article not found"}, 404, origin);
           }
-          const article = await readJson(bucket, articleObject(meta.id), null);
+          const article = await readJson(bucket, getArticleObject(meta.id, env), null);
           if (!article) return json({error: "Article missing from blob storage"}, 404, origin);
           return json(article, 200, origin);
         }
 
         if (request.method === "PUT") {
           if (!adminOk(request, env)) return json({error: "Unauthorized"}, 401, origin);
-          const existing = await readJson(bucket, articleObject(meta.id), null);
+          const existing = await readJson(bucket, getArticleObject(meta.id, env), null);
           if (!existing) return json({error: "Article missing from blob storage"}, 404, origin);
           const body = await request.json();
           const article = buildArticle(body, existing);
@@ -296,10 +314,10 @@ export default {
             existing.id
           );
           article.readTime = estimateReadTime(article.blocks);
-          await putJson(bucket, articleObject(existing.id), article);
+          await putJson(bucket, getArticleObject(existing.id, env), article);
           await putJson(
             bucket,
-            INDEX_PATH,
+            getIndexPath(env),
             index.map((item) => (item.id === existing.id ? summarize(article) : item))
           );
           return json(article, 200, origin);
@@ -308,13 +326,13 @@ export default {
         if (request.method === "DELETE") {
           if (!adminOk(request, env)) return json({error: "Unauthorized"}, 401, origin);
           try {
-            await bucket.del(articleObject(meta.id));
+            await bucket.del(getArticleObject(meta.id, env));
           } catch {
             // already gone
           }
           await putJson(
             bucket,
-            INDEX_PATH,
+            getIndexPath(env),
             index.filter((item) => item.id !== meta.id)
           );
           return json({ok: true}, 200, origin);

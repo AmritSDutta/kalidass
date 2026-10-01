@@ -29,6 +29,7 @@ compatibility_flags = ["nodejs_compat"]
 # Set to "*" during development.
 # Tighten to your Cloudflare Pages URL after first deployment.
 CORS_ORIGIN = "*"
+ROOT_BUCKET = "kalidass"
 ```
 
 ## Key Fields Explained
@@ -40,6 +41,7 @@ CORS_ORIGIN = "*"
 | `compatibility_date` | `2026-09-01` | Locks Workers runtime behavior to a specific date, preventing unexpected breaking changes on new runtime releases. |
 | `compatibility_flags` | `["nodejs_compat"]` | Enables Node.js compatibility layer for APIs like `crypto`, `Buffer`, `TextEncoder`, and streams. |
 | `CORS_ORIGIN` | `"*"` (default) | Injected into `env.CORS_ORIGIN` in the fetch handler. Overridden to the Pages URL after deployment. |
+| `ROOT_BUCKET` | `"kalidass"` | Root folder prefix inside Upstash Blob for article JSON and media objects. |
 
 ## `.wranglerignore`
 
