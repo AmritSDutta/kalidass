@@ -24,11 +24,30 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
         ok: false,
         error: "JOURNAL_WORKER service binding is not configured in Cloudflare Pages settings.",
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "SAMEORIGIN",
+        },
+      }
     );
   }
 
-  return env.JOURNAL_WORKER.fetch(request);
+  const response = await env.JOURNAL_WORKER.fetch(request);
+  const newHeaders = new Headers(response.headers);
+  newHeaders.set("X-Content-Type-Options", "nosniff");
+  newHeaders.set("X-Frame-Options", "SAMEORIGIN");
+  newHeaders.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  newHeaders.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders,
+  });
 };
+
 
 

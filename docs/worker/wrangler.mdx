@@ -10,8 +10,7 @@ The worker is configured via `wrangler.toml` at the root of the `worker/` direct
 ## `wrangler.toml` Annotated
 
 ```toml
-# Worker name — used as the subdomain in workers.dev URLs
-# and as the identifier for wrangler secret put
+# Worker name — identifier for wrangler commands and service bindings
 name = "kalidass-journal-worker"
 
 # Entry point — the single ES Module file wrangler bundles and deploys
@@ -24,11 +23,13 @@ compatibility_date = "2026-09-01"
 # Required for crypto.randomUUID() and TextEncoder/TextDecoder
 compatibility_flags = ["nodejs_compat"]
 
+# Disable public workers.dev routing — Worker is private and reachable
+# exclusively via Pages Service Binding (JOURNAL_WORKER)
+workers_dev = false
+
 [vars]
-# CORS origin for all responses.
-# Set to "*" during development.
-# Tighten to your Cloudflare Pages URL after first deployment.
-CORS_ORIGIN = "*"
+# CORS origin for allowed client origins
+CORS_ORIGIN = "https://kalidass.amrit.fyi"
 ROOT_BUCKET = "kalidass"
 ```
 
@@ -36,11 +37,12 @@ ROOT_BUCKET = "kalidass"
 
 | Field | Value | Purpose |
 | --- | --- | --- |
-| `name` | `"kalidass-journal-worker"` | Worker identifier in Cloudflare dashboard and `workers.dev` subdomain. |
+| `name` | `"kalidass-journal-worker"` | Worker identifier in Cloudflare dashboard and target for Pages Service Binding. |
 | `main` | `"src/index.js"` | Single entry point bundled by Wrangler. Imports `memory.js` and `seed.js`. |
 | `compatibility_date` | `2026-09-01` | Locks Workers runtime behavior to a specific date, preventing unexpected breaking changes on new runtime releases. |
 | `compatibility_flags` | `["nodejs_compat"]` | Enables Node.js compatibility layer for APIs like `crypto`, `Buffer`, `TextEncoder`, and streams. |
-| `CORS_ORIGIN` | `"*"` (default) | Injected into `env.CORS_ORIGIN` in the fetch handler. Overridden to the Pages URL after deployment. |
+| `workers_dev` | `false` | Completely disables public `*.workers.dev` DNS exposure. |
+| `CORS_ORIGIN` | `"https://kalidass.amrit.fyi"` | Value of the `Access-Control-Allow-Origin` response header. |
 | `ROOT_BUCKET` | `"kalidass"` | Root folder prefix inside Upstash Blob for article JSON and media objects. |
 
 ## `.wranglerignore`
@@ -70,25 +72,16 @@ With `UPSTASH_BLOB_TOKEN` set in `.dev.vars`, the worker connects to the live Up
 ## Deployment
 
 ```bash
-# Deploy worker to Cloudflare edge
-npx wrangler deploy
-```
-
-After deploying, update `CORS_ORIGIN` with the Cloudflare Pages domain and redeploy:
-
-```toml
-[vars]
-CORS_ORIGIN = "https://kalidass-journal.pages.dev"
-```
-
-```bash
+# Deploy private worker to Cloudflare edge
 npx wrangler deploy
 ```
 
 ## Health Check
 
+In production, test the health endpoint via the Cloudflare Pages edge proxy:
+
 ```bash
-curl https://kalidass-journal.<account>.workers.dev/api/health
+curl https://kalidass.amrit.fyi/api/health
 ```
 
 Expected production response:

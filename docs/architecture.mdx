@@ -82,7 +82,8 @@ flowchart TD
 
 ## API Base Resolution & Proxy
 
-1. **Build Time**: The environment variable `KALIDASS_API_BASE` is injected into `customFields.apiBase` inside `docusaurus.config.ts`.
-2. **Client Initialization**: `src/client-modules/api-base.ts` reads `siteConfig.customFields.apiBase` and attaches it to `window.KALIDASS_API_BASE`.
-3. **Runtime Requests**: `src/lib/config.ts` exports `apiUrl(path)`, prepending `window.KALIDASS_API_BASE` to all endpoints. If empty, requests default to same-origin relative URLs (`/api/...`).
+1. **Build Time**: `customFields.apiBase` is hardcoded to `""` in `docusaurus.config.ts`, ensuring all requests default to relative paths.
+2. **Client Initialization**: `src/client-modules/api-base.ts` initializes `window.KALIDASS_API_BASE` as `""`.
+3. **Runtime Requests**: `src/lib/config.ts` exports `apiUrl(path)`, generating relative URLs (`/api/...`) routed through same-origin Pages Functions.
 4. **Dev Server Proxy**: During development, `devServer.proxy` automatically forwards `/api` requests to `http://127.0.0.1:8787`.
+5. **Production Edge Proxy**: In production on Cloudflare Pages, `functions/api/[[route]].ts` forwards all `/api/*` traffic directly to `kalidass-journal-worker` via the `JOURNAL_WORKER` Service Binding.

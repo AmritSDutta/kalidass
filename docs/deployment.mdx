@@ -154,17 +154,26 @@ npx wrangler pages deploy build --project-name=kalidass
 
 ---
 
-## 4. SPA Route Handling (`_redirects`)
+## 4. SPA Route Handling & Security Headers
 
-Because article URLs (`/story/:slug`) are dynamic client routes, direct browser reloads must resolve to `index.html`.
+### SPA Route Handling (`_redirects`)
 
-The file `static/_redirects` is automatically included in the build root:
+Because article URLs (`/story/:slug`) are dynamic client routes, direct browser reloads must resolve to `index.html`. The file `static/_redirects` is copied to the build root:
 
 ```text
 /story/* /index.html 200
 ```
 
-Cloudflare Pages detects `_redirects` and serves `index.html` with a `200` status code, allowing the React router in `StoryPage.tsx` to mount and fetch the article payload.
+### Security & Trust Headers (`_headers`)
+
+Cloudflare Pages enforces enterprise-grade Trust & Safety headers via `static/_headers`:
+
+- **`Content-Security-Policy`**: Restricts scripts, styles, media, and frame ancestors.
+- **`Strict-Transport-Security`**: `max-age=31536000; includeSubDomains; preload`
+- **`Cross-Origin-Opener-Policy`**: `same-origin-allow-popups`
+- **`X-Frame-Options`**: `SAMEORIGIN`
+- **`Permissions-Policy`**: Disables `browsing-topics` and ad tracking APIs.
+- **`X-Content-Type-Options`**: `nosniff`
 
 ---
 
