@@ -53,9 +53,17 @@ export default function Magazine(): ReactNode {
           </div>
         </header>
         <div className={styles.grid}>
-          {filtered.map((article) => (
-            <ArticleCard key={article.id} article={article} />
-          ))}
+          {filtered.length > 0 ? (
+            filtered.map((article) => (
+              <ArticleCard key={article.id} article={article} />
+            ))
+          ) : (
+            <div className={styles.empty}>
+              {articles.length === 0
+                ? "No briefs published yet. Launch Studio to compose your first brief."
+                : "No matching briefs found."}
+            </div>
+          )}
         </div>
       </main>
     </Layout>

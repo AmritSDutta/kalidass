@@ -60,3 +60,16 @@
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.2rem;
 }
+
+.empty {
+  grid-column: 1 / -1;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  background: var(--paper);
+  border: 1px dashed rgba(103, 232, 249, 0.2);
+  border-radius: 12px;
+}
+

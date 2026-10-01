@@ -132,7 +132,7 @@ async function ensureSeed(bucket, env) {
   const indexPath = getIndexPath(env);
   try {
     const index = await readJson(bucket, indexPath, null);
-    if (Array.isArray(index) && index.length > 0) return index;
+    if (Array.isArray(index)) return index;
     const summaries = [];
     for (const article of seedArticles) {
       const record = {
@@ -281,6 +281,12 @@ export default {
               new Date(b.publishedAt || b.updatedAt) - new Date(a.publishedAt || a.updatedAt)
           );
         return json(items, 200, origin);
+      }
+
+      if (url.pathname === "/api/admin/reset" && request.method === "POST") {
+        if (!adminOk(request, env)) return json({error: "Unauthorized"}, 401, origin);
+        await putJson(bucket, getIndexPath(env), []);
+        return json({ok: true, message: "Article repository reset to empty"}, 200, origin);
       }
 
       if (url.pathname === "/api/articles" && request.method === "POST") {

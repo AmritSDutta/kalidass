@@ -108,13 +108,6 @@ const config: Config = {
             {label: "Studio", to: "/admin"},
           ],
         },
-        {
-          title: "Stack",
-          items: [
-            {label: "Upstash Blob", to: "/admin"},
-            {label: "Cloudflare Worker", to: "/"},
-          ],
-        },
       ],
       copyright: `Copyright © ${new Date().getFullYear()} Kalidass Journal. Stored as objects.`,
     },

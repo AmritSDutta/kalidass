@@ -17,6 +17,7 @@
           "index",
           "architecture",
           "zero-trust",
+          "bot-protection",
           "evaluation",
           "agent-publishing"
         ]

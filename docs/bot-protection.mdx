@@ -1,0 +1,56 @@
+---
+title: Bot Protection
+description: Edge bot protection, Cloudflare WAF Custom Rule configuration, and cf_clearance cookie lifecycle on kalidass.amrit.fyi.
+---
+
+# Bot Protection
+
+for each page of kalidass.amrit.fyi:
+
+Visitor requests any page — Cloudflare intercepts the request at the edge before it reaches your Docusaurus site.
+Managed Challenge runs — Cloudflare checks the visitor's signals; most humans pass invisibly, bots get an interactive challenge.
+cf_clearance cookie is set — once passed, the visitor gets a clearance cookie stored in their browser.
+All subsequent pages load freely — the cookie lets them browse every page on kalidass.amrit.fyi without being re-challenged.
+Cookie expires after the Challenge Passage duration — once it expires, the visitor is challenged again on their next visit.
+
+---
+
+## Cloudflare WAF Custom Rule Configuration
+
+| Order | Name | Description / Expression | Action | CSR | Events | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **1** | `kalidass` | `Hostname contains kalidass.amrit.fyi` | **Managed Challenge** *(stops evaluating later rules)* | 0% | 0 | **Active** |
+
+---
+
+## Challenge Lifecycle & Edge Flow
+
+```mermaid
+flowchart TD
+  subgraph Ingress["Edge Request Ingress"]
+    Visitor["Visitor Requests Page on kalidass.amrit.fyi"]
+    EdgeCheck{"Cloudflare Edge Inspection"}
+  end
+  subgraph ChallengeFlow["Managed Challenge Execution"]
+    CheckSignals["Signal and Behavioral Evaluation"]
+    PassCheck["Invisible Pass - Standard Human"]
+    Interactive["Interactive Challenge - Suspected Bot"]
+    CookieSet["Set cf_clearance Cookie"]
+  end
+  subgraph SiteAccess["Docusaurus Site Access"]
+    AllowAccess["Load Page from Pages Edge"]
+    Subsequent["Subsequent Requests Pass Freely with Cookie"]
+    Expiry["Cookie Expires After Passage Duration"]
+  end
+  Visitor --> EdgeCheck
+  EdgeCheck -->|No valid cf_clearance| CheckSignals
+  EdgeCheck -->|Valid cf_clearance cookie| AllowAccess
+  CheckSignals -->|Clean Signals| PassCheck
+  CheckSignals -->|Anomalous Signals| Interactive
+  PassCheck --> CookieSet
+  Interactive -->|Passed Challenge| CookieSet
+  CookieSet --> AllowAccess
+  AllowAccess --> Subsequent
+  Subsequent --> Expiry
+  Expiry -->|Re-challenge on next visit| EdgeCheck
+```
