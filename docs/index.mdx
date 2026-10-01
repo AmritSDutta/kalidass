@@ -1,0 +1,95 @@
+---
+title: Amrit Journal Documentation
+description: Master documentation for the Amrit Journal static frontend, admin studio, and Cloudflare Worker edge API.
+---
+
+# Amrit Journal Documentation
+
+Field notes from the model layer. Amrit Journal is a colorful research publication exploring AI systems: attention architectures, agent workflows, evals, and multimodal plumbing.
+
+The codebase is organized as a combined monorepo containing a Docusaurus 3.10 static UI, an edge Cloudflare Worker REST API, and Upstash Blob storage.
+
+## Documentation Index
+
+### System & Architecture
+- [Architecture](/architecture) — Client routing, dynamic route plugins, API-base resolution, and proxy topology.
+- [AI Agent Publishing](/agent-publishing) — Automated server-to-server publishing specification for agent pipelines.
+
+### Frontend & Reader
+- [Data Model](/data-model) — TypeScript types for Authors, Block unions, Summaries, and ArticleDrafts.
+- [Reading Experience](/reading-experience) — Dynamic rendering on Home (`/`), Magazine (`/magazine`), and Reader (`/story/:slug`).
+- [Studio](/studio) — Web-based content creation, drafting, multi-block editing, and deletion interface.
+- [Media and Uploads](/media-uploads) — Video player resolution (YouTube, Vimeo, direct MP4) and Upstash Blob uploads.
+
+### Edge Worker & Storage
+- [Worker Overview](/worker/index) — Worker architecture, request dispatching, and cold-start seeding.
+- [REST Routing](/worker/routing) — Worker endpoint specifications, status queries, and payload schemas.
+- [Storage Engine](/worker/storage) — Upstash Blob object storage mechanics and in-memory dev fallback.
+- [Environment & Secrets](/worker/environment) — Environment variables, secrets management, and access controls.
+- [Wrangler Configuration](/worker/wrangler) — Cloudflare bindings, compatibility flags, and custom domains.
+- [Worker Utilities](/worker/utilities) — Response formatting, CORS headers, and slug generators.
+
+### Operations & Deployment
+- [API Client Reference](/api) — Frontend client methods, Bearer auth, and fallback pipelines.
+- [Configuration](/configuration) — `docusaurus.config.ts`, custom fields, client modules, and CSS variables.
+- [Deployment](/deployment) — Production runbooks for Cloudflare Pages, Cloudflare Workers, and Zero Trust Access.
+- [Development](/development) — Local setup, toolchain requirements, scripts, and verification procedures.
+- [Learnings](/learnings) — Architectural discoveries, CommonJS/ESM build conflicts, and Windows platform nuances.
+
+## Repository Structure
+
+<Tree>
+  <Tree.Folder name="blog_frontend" defaultOpen>
+    <Tree.Folder name="src" defaultOpen>
+      <Tree.Folder name="client-modules">
+        <Tree.File name="api-base.ts" />
+      </Tree.Folder>
+      <Tree.Folder name="components">
+        <Tree.File name="ArticleCard.tsx" highlight />
+        <Tree.File name="StoryBody.tsx" highlight />
+        <Tree.File name="StoryPage.tsx" highlight />
+        <Tree.File name="VideoEmbed.tsx" />
+      </Tree.Folder>
+      <Tree.Folder name="lib">
+        <Tree.File name="api.ts" highlight />
+        <Tree.File name="types.ts" highlight />
+      </Tree.Folder>
+      <Tree.Folder name="pages">
+        <Tree.File name="index.tsx" highlight />
+        <Tree.File name="magazine.tsx" highlight />
+        <Tree.File name="admin.tsx" highlight />
+      </Tree.Folder>
+    </Tree.Folder>
+    <Tree.File name="docusaurus.config.ts" highlight />
+    <Tree.File name="package.json" />
+  </Tree.Folder>
+  <Tree.Folder name="worker" defaultOpen>
+    <Tree.Folder name="src" defaultOpen>
+      <Tree.File name="index.js" highlight />
+      <Tree.File name="memory.js" />
+      <Tree.File name="seed.js" />
+    </Tree.Folder>
+    <Tree.File name="wrangler.toml" highlight />
+    <Tree.File name="package.json" />
+  </Tree.Folder>
+  <Tree.Folder name="docs" defaultOpen>
+    <Tree.File name="docs.json" highlight />
+    <Tree.File name="custom.css" />
+    <Tree.Folder name="worker">
+      <Tree.File name="index.mdx" />
+      <Tree.File name="routing.mdx" />
+      <Tree.File name="storage.mdx" />
+    </Tree.Folder>
+  </Tree.Folder>
+  <Tree.File name="README.md" highlight />
+  <Tree.File name="CLAUDE.md" />
+  <Tree.File name="AGENTS.md" />
+  <Tree.File name="ZERO_TRUST_DEPLOY.md" />
+</Tree>
+
+## Local Development Quickstart
+
+```bash
+# Concurrent startup (worker on :8787, frontend on :3000)
+./start.sh
+```

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://context7.com/schema/docs7.json",
+  "name": "Amrit Journal",
+  "theme": "maple",
+  "colors": {
+    "primary": "#22d3ee",
+    "light": "#22d3ee",
+    "dark": "#0e7490"
+  },
+  "filterSidebar": true,
+  "poweredByDocs7": true,
+  "navigation": {
+    "groups": [
+      {
+        "group": "System & Architecture",
+        "pages": [
+          "index",
+          "architecture",
+          "agent-publishing"
+        ]
+      },
+      {
+        "group": "Frontend & Reader",
+        "pages": [
+          "data-model",
+          "reading-experience",
+          "studio",
+          "media-uploads"
+        ]
+      },
+      {
+        "group": "Edge Worker & Storage",
+        "pages": [
+          "worker/index",
+          "worker/routing",
+          "worker/storage",
+          "worker/environment",
+          "worker/wrangler",
+          "worker/utilities"
+        ]
+      },
+      {
+        "group": "Operations & Deployment",
+        "pages": [
+          "api",
+          "configuration",
+          "deployment",
+          "development",
+          "learnings"
+        ]
+      }
+    ]
+  }
+}

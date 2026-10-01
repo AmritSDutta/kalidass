@@ -1,11 +1,11 @@
 ---
 title: Worker Overview
-description: Overview of the Aether Journal Cloudflare Worker — entry point, responsibilities, source layout, and tech stack.
+description: Overview of the Amrit Journal Cloudflare Worker — entry point, responsibilities, source layout, and tech stack.
 ---
 
 # Worker Overview
 
-The Aether Journal Worker is a single-file Cloudflare Worker that serves as the edge REST API for all article CRUD operations, media uploads, and health reporting. It is backed by Upstash Blob for persistent JSON and object storage, with an in-memory fallback for local development.
+The Amrit Journal Worker is a lightweight Cloudflare Worker that serves as the edge REST API for all article CRUD operations, media uploads, and health reporting. It is backed by Upstash Blob for persistent JSON and object storage, with an in-memory fallback for local development.
 
 ## Responsibilities
 
@@ -33,16 +33,6 @@ The Aether Journal Worker is a single-file Cloudflare Worker that serves as the 
       <Tree.File name="index.js" highlight />
       <Tree.File name="memory.js" highlight />
       <Tree.File name="seed.js" highlight />
-    </Tree.Folder>
-    <Tree.Folder name="docs" defaultOpen>
-      <Tree.File name="docs.json" highlight />
-      <Tree.File name="custom.css" />
-      <Tree.File name="index.mdx" />
-      <Tree.File name="routing.mdx" />
-      <Tree.File name="storage.mdx" />
-      <Tree.File name="utilities.mdx" />
-      <Tree.File name="environment.mdx" />
-      <Tree.File name="wrangler.mdx" />
     </Tree.Folder>
     <Tree.File name=".dev.vars.example" />
     <Tree.File name=".wranglerignore" highlight />
