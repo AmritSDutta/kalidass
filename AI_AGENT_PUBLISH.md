@@ -1,11 +1,11 @@
-# AI Agent Publishing Guide — Amrit Journal
+# AI Agent Publishing Guide — Kalidass Journal
 
 How an AI agent (script/backend, no browser) publishes an article directly to the Worker API as a **draft + private + AI-generated** story.
 
 ## Endpoint & auth
 
 - Local dev: `http://127.0.0.1:8787` (the frontend dev server proxies `/api` here)
-- Deployed: the Worker URL (same origin as the site, or whatever `AMRIT_API_BASE` points to)
+- Deployed: the Worker URL (same origin as the site, or whatever `KALIDASS_API_BASE` points to)
 - Auth: `Authorization: Bearer <ADMIN_TOKEN>` on **every write** (`POST`/`PUT`/`DELETE`). `ADMIN_TOKEN` is the Worker's env var — if unset, the Worker accepts unauthenticated writes (dev mode only).
 - Content type: `application/json` (except media upload, which is multipart).
 

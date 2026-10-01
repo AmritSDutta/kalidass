@@ -242,7 +242,7 @@ export default function Admin(): ReactNode {
   });
 
   return (
-    <Layout title="Studio" description="Compose and publish Amrit Journal briefs.">
+    <Layout title="Studio" description="Compose and publish Kalidass Journal briefs.">
       <main className={styles.page}>
         <header className={styles.top}>
           <div>

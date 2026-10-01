@@ -1,6 +1,6 @@
 export const seedArticles = [
   {
-    id: "a1c4e8f2-7b91-4d33-9c0a-aether001",
+    id: "a1c4e8f2-7b91-4d33-9c0a-kalidass001",
     slug: "the-geometry-of-attention",
     title: "The Geometry of Attention",
     subtitle: "Transformers do not read. They angle. The rest of the stack is lighting.",
@@ -67,7 +67,7 @@ export const seedArticles = [
     ],
   },
   {
-    id: "b2d5f9a3-8c02-4e44-0d1b-aether002",
+    id: "b2d5f9a3-8c02-4e44-0d1b-kalidass002",
     slug: "agents-that-remember-too-much",
     title: "Agents That Remember Too Much",
     subtitle: "Persistent memory is not a feature until forgetting is designed.",
@@ -122,7 +122,7 @@ export const seedArticles = [
     ],
   },
   {
-    id: "c3e6a0b4-9d13-4f55-1e2c-aether003",
+    id: "c3e6a0b4-9d13-4f55-1e2c-kalidass003",
     slug: "eval-is-a-product-decision",
     title: "Eval Is a Product Decision",
     subtitle: "Benchmarks are not neutral. They are taste, frozen into a spreadsheet.",
@@ -172,7 +172,7 @@ export const seedArticles = [
     ],
   },
   {
-    id: "d4f7b1c5-0e24-4066-2f3d-aether004",
+    id: "d4f7b1c5-0e24-4066-2f3d-kalidass004",
     slug: "multimodal-is-a-plumbing-problem",
     title: "Multimodal Is a Plumbing Problem",
     subtitle: "Pixels, waveforms, and tokens only become intelligence after the clocks agree.",

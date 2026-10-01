@@ -5,7 +5,7 @@ description: Technical insights, architectural gotchas, CommonJS conflict preven
 
 # Learnings
 
-Technical discoveries and operational guard rails established during the development of Amrit Journal.
+Technical discoveries and operational guard rails established during the development of Kalidass Journal.
 
 ## Sibling `.js` Source Conflicts
 
@@ -28,7 +28,7 @@ flowchart TD
 
 ## Dynamic Route SSG Quirk on Windows
 
-Docusaurus generates static HTML files during `npm run build` for all registered paths. Because `/story/:slug` is registered as a dynamic route via `amritPlugin.contentLoaded`, Docusaurus attempts to create directory paths containing `:slug`.
+Docusaurus generates static HTML files during `npm run build` for all registered paths. Because `/story/:slug` is registered as a dynamic route via `kalidassPlugin.contentLoaded`, Docusaurus attempts to create directory paths containing `:slug`.
 
 On Windows filesystems, colons (`:`) are prohibited characters, causing `fs-extra` to throw an `EINVAL` filesystem error. On Linux (Cloudflare Pages deploy environment), dynamic route filenames succeed without error.
 

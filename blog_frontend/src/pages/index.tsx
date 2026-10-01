@@ -23,7 +23,7 @@ export default function Home(): ReactNode {
 
   return (
     <Layout
-      title="Amrit Journal"
+      title="Kalidass Journal"
       description="A research magazine for models, agents, evals, and the systems under them.">
       <main className={styles.page}>
         <section className={styles.hero}>
@@ -35,7 +35,7 @@ export default function Home(): ReactNode {
             <em> the model layer.</em>
           </h1>
           <p className={styles.lede}>
-            Amrit Journal is a colorful research magazine for AI systems:
+            Kalidass Journal is a colorful research magazine for AI systems:
             attention, agents, evals, and multimodal plumbing. Essays live in
             Upstash Blob. The API is a Cloudflare Worker. The site is static.
           </p>

@@ -5,7 +5,7 @@ import type {Article, ArticleDraft, ArticleSummary} from "./types";
 function authHeaders(): HeadersInit {
   const token =
     typeof window !== "undefined"
-      ? window.localStorage.getItem("amrit-admin-token") || ""
+      ? window.localStorage.getItem("kalidass-admin-token") || ""
       : "";
   return token ? {Authorization: `Bearer ${token}`} : {};
 }

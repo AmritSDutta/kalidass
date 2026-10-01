@@ -3,35 +3,35 @@ import type {Config} from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
-  title: "Amrit Journal",
+  title: "Kalidass Journal",
   tagline: "Field notes from the model layer.",
   favicon: "img/favicon.ico",
   future: {
     v4: true,
   },
-  url: "https://amrit-journal.pages.dev",
+  url: "https://kalidass-journal.pages.dev",
   baseUrl: "/",
-  organizationName: "amrit-journal",
-  projectName: "amrit-journal",
+  organizationName: "kalidass-journal",
+  projectName: "kalidass-journal",
   onBrokenLinks: "throw",
   i18n: {
     defaultLocale: "en",
     locales: ["en"],
   },
   customFields: {
-    apiBase: process.env.AMRIT_API_BASE || "",
+    apiBase: process.env.KALIDASS_API_BASE || "",
   },
   clientModules: ["./src/client-modules/api-base.ts"],
   plugins: [
-    function amritPlugin() {
+    function kalidassPlugin() {
       return {
-        name: "amrit-journal",
+        name: "kalidass-journal",
         configureWebpack() {
           return {
             mergeStrategy: {"devServer.proxy": "replace"},
             devServer: {
               host: "0.0.0.0",
-              allowedHosts: [".monkeycode-ai.live"],
+              allowedHosts: [".kalidass.fyi", ".monkeycode-ai.live"],
               proxy: [
                 {
                   context: ["/api"],
@@ -71,9 +71,9 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: "Amrit Journal",
+      title: "Kalidass Journal",
       logo: {
-        alt: "Amrit Journal",
+        alt: "Kalidass Journal",
         src: "img/logo.svg",
       },
       items: [
@@ -99,7 +99,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Amrit Journal. Stored as objects.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Kalidass Journal. Stored as objects.`,
     },
     prism: {
       theme: prismThemes.github,

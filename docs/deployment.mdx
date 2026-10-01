@@ -1,11 +1,11 @@
 ---
 title: Deployment
-description: Complete guide for deploying Amrit Journal to Cloudflare Pages, Cloudflare Workers, and Upstash Blob.
+description: Complete guide for deploying Kalidass Journal to Cloudflare Pages, Cloudflare Workers, and Upstash Blob.
 ---
 
 # Deployment
 
-Amrit Journal uses a serverless 3-tier production architecture combining a static Docusaurus frontend hosted on Cloudflare Pages, an edge API running on Cloudflare Workers, and object persistence in Upstash Blob.
+Kalidass Journal uses a serverless 3-tier production architecture combining a static Docusaurus frontend hosted on Cloudflare Pages, an edge API running on Cloudflare Workers, and object persistence in Upstash Blob.
 
 ## Deployment Topology
 
@@ -42,18 +42,18 @@ Before initiating deployment, gather and configure the following credentials:
 | **Public Blob Bucket** | Upstash | Stores article JSON schemas and uploaded media objects |
 | **`UPSTASH_BLOB_TOKEN`** | Upstash Console | Authenticates Worker and browser client uploads |
 | **`ADMIN_TOKEN`** | Cloudflare Secret | *(Optional)* Protects Studio CMS write and delete endpoints |
-| **`AMRIT_API_BASE`** | Cloudflare Pages Env | Injects Worker URL into static frontend build |
+| **`KALIDASS_API_BASE`** | Cloudflare Pages Env | Injects Worker URL into static frontend build |
 | **`NODE_VERSION`** | Cloudflare Pages Env | Specifies Node.js `20` or `22` for build runtime |
 
 ---
 
 ## 1. Upstash Blob Bucket Setup
 
-Amrit Journal requires a **Public** Upstash Blob bucket so that article cover images, video assets, and article JSON files are accessible via public HTTPS URLs.
+Kalidass Journal requires a **Public** Upstash Blob bucket so that article cover images, video assets, and article JSON files are accessible via public HTTPS URLs.
 
 1. Navigate to the [Upstash Console](https://console.upstash.com/blob).
 2. Click **Create Bucket**.
-3. Set the bucket name (e.g., `amrit-journal`) and select your preferred region.
+3. Set the bucket name (e.g., `kalidass-journal`) and select your preferred region.
 4. Set the bucket access type to **Public**.
 5. Copy the generated **Read-Write Token**.
 
@@ -97,14 +97,14 @@ Run the Wrangler deployment command:
 npx wrangler deploy
 ```
 
-Take note of the resulting Worker URL (e.g., `https://amrit-journal.<subdomain>.workers.dev`).
+Take note of the resulting Worker URL (e.g., `https://kalidass-journal.<subdomain>.workers.dev`).
 
 ### Step 2.3: Verify Worker Health
 
 Test that the worker is connected to Upstash Blob:
 
 ```bash
-curl https://amrit-journal.<subdomain>.workers.dev/api/health
+curl https://kalidass-journal.<subdomain>.workers.dev/api/health
 ```
 
 Expected response:
@@ -138,7 +138,7 @@ The frontend is a static Docusaurus site that hydrates dynamically in the client
 
 Under **Environment variables (Advanced)**, add:
 
-- `AMRIT_API_BASE`: `https://amrit-journal.<subdomain>.workers.dev` *(No trailing slash)*
+- `KALIDASS_API_BASE`: `https://kalidass-journal.<subdomain>.workers.dev` *(No trailing slash)*
 - `NODE_VERSION`: `20`
 
 Click **Save and Deploy**.
@@ -150,9 +150,9 @@ To deploy without connecting to a Git provider, use Wrangler Pages:
 ```bash
 cd blog_frontend
 # Set API base variable for Docusaurus build
-export AMRIT_API_BASE="https://amrit-journal.<subdomain>.workers.dev"
+export KALIDASS_API_BASE="https://kalidass-journal.<subdomain>.workers.dev"
 npm run build
-npx wrangler pages deploy build --project-name=amrit-journal
+npx wrangler pages deploy build --project-name=kalidass-journal
 ```
 
 ---
@@ -173,18 +173,18 @@ Cloudflare Pages detects `_redirects` and serves `index.html` with a `200` statu
 
 ## 5. Worker CORS Lockdown
 
-Once your Pages deployment URL is live (e.g., `https://amrit-journal.pages.dev`):
+Once your Pages deployment URL is live (e.g., `https://kalidass-journal.pages.dev`):
 
 1. Update `worker/wrangler.toml`:
 
 ```toml
-name = "amrit-journal"
+name = "kalidass-journal-worker"
 main = "src/index.js"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-CORS_ORIGIN = "https://amrit-journal.pages.dev"
+CORS_ORIGIN = "https://kalidass-journal.pages.dev"
 ```
 
 2. Redeploy the Worker:
@@ -205,7 +205,7 @@ flowchart TD
   CheckHealth["1. Verify /api/health returns upstash-blob"]
   CheckHome["2. Open Pages domain / - confirm cover story renders"]
   CheckMag["3. Open /magazine - test search & tag filter"]
-  CheckStory["4. Open /story/latent-cartography - test block reader"]
+  CheckStory["4. Open /story/the-geometry-of-attention - test block reader"]
   CheckStudio["5. Open /admin - test draft creation & image upload"]
   CheckHealth --> CheckHome
   CheckHome --> CheckMag
@@ -217,6 +217,6 @@ flowchart TD
 2. **Dynamic Story Reader**: Click on an article card and verify the `/story/:slug` route loads smoothly. Refresh the browser page to ensure `_redirects` works.
 3. **Studio CMS**: Navigate to `/admin`. If `ADMIN_TOKEN` was set, provide the token in browser storage:
    ```javascript
-   localStorage.setItem('amrit-admin-token', '<your-admin-token>');
+   localStorage.setItem('kalidass-admin-token', '<your-admin-token>');
    ```
 4. **Blob Upload**: Upload a cover image and create a draft brief to confirm write operations to Upstash Blob.

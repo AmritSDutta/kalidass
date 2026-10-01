@@ -1,4 +1,4 @@
-# CLAUDE.md — Amrit Journal
+# CLAUDE.md — Kalidass Journal
 
 Quick-reference and operational guidance for Claude Code and AI assistants working in this repository.
 
@@ -22,7 +22,7 @@ Quick-reference and operational guidance for Claude Code and AI assistants worki
 kalidass/
 ├── blog_frontend/             # Docusaurus 3.10 + React 19 UI & Reader
 │   ├── src/
-│   │   ├── client-modules/    # window.AMRIT_API_BASE client initialization
+│   │   ├── client-modules/    # window.KALIDASS_API_BASE client initialization
 │   │   ├── components/        # ArticleCard, StoryBody, StoryPage, VideoEmbed
 │   │   ├── css/               # Theming gradients and custom properties
 │   │   ├── lib/               # api.ts (CRUD & uploads), media.ts, types.ts

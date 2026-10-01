@@ -24,7 +24,7 @@ The frontend interacts with the Cloudflare Worker API via the client library in 
 
 ## Authentication
 
-- **Admin Token**: Configured on the client via `localStorage.getItem("amrit-admin-token")`.
+- **Admin Token**: Configured on the client via `localStorage.getItem("kalidass-admin-token")`.
 - **Header**: Included on all mutating requests and privileged list queries as `Authorization: Bearer <token>`.
 - **Content Type**: All JSON API requests send `Content-Type: application/json`. File uploads send raw `FormData` without manually overriding the browser-managed multipart boundary.
 

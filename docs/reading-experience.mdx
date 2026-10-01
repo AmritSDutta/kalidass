@@ -5,7 +5,7 @@ description: Home cover layout, magazine search and tag filter, article cards, a
 
 # Reading Experience
 
-Amrit Journal renders reading views purely client-side within the Docusaurus `Layout` component. On component mount, the client calls `listArticles()` or `getArticle()` to fetch content directly from the Worker API.
+Kalidass Journal renders reading views purely client-side within the Docusaurus `Layout` component. On component mount, the client calls `listArticles()` or `getArticle()` to fetch content directly from the Worker API.
 
 ## Home Page (`src/pages/index.tsx`, `/`)
 
@@ -29,7 +29,7 @@ Amrit Journal renders reading views purely client-side within the Docusaurus `La
 
 ## Story Reader (`src/components/StoryPage.tsx`, `/story/:slug`)
 
-- **Dynamic Route**: The dynamic path `/story/:slug` is registered via `amritPlugin.contentLoaded` in `docusaurus.config.ts`.
+- **Dynamic Route**: The dynamic path `/story/:slug` is registered via `kalidassPlugin.contentLoaded` in `docusaurus.config.ts`.
 - **Slug Resolution**: The article slug is extracted from `location.pathname` and fetched via `getArticle(slug)`.
 - **Hero Header**: Full-width veil overlay with cover image, topic kicker tag, headline, subtitle, and author byline.
 - **Story Body**: Renders lead `excerpt` deck, optional hero `VideoEmbed` player, and delegates content blocks to `StoryBody.tsx`.

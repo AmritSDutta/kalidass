@@ -1,6 +1,6 @@
-# Amrit Journal — Systems Research Magazine
+# Kalidass Journal — Systems Research Magazine
 
-**Amrit Journal** is a colorful research publication exploring the model layer: attention architectures, agent workflows, evals, and multimodal systems plumbing.
+**Kalidass Journal** is a colorful research publication exploring the model layer: attention architectures, agent workflows, evals, and multimodal systems plumbing.
 
 The application is structured as a **combined monorepo** consisting of a **Docusaurus 3.10** static frontend, a **Cloudflare Worker REST API**, and **Upstash Blob** object storage.
 
@@ -49,7 +49,7 @@ graph LR
 kalidass/
 ├── blog_frontend/             # Static frontend & reader application
 │   ├── src/
-│   │   ├── client-modules/    # window.AMRIT_API_BASE client initialization
+│   │   ├── client-modules/    # window.KALIDASS_API_BASE client initialization
 │   │   ├── components/        # ArticleCard, StoryBody, StoryPage, VideoEmbed
 │   │   ├── css/               # Theming variables and color gradients
 │   │   ├── lib/               # api.ts (CRUD/uploads), media.ts, types.ts
@@ -185,7 +185,7 @@ npx wrangler secret put ADMIN_TOKEN  # Optional password for Studio writes
 # Deploy worker to Cloudflare
 npx wrangler deploy
 ```
-*Note your deployed Worker URL (e.g. `https://aether-journal.<account>.workers.dev`).*
+*Note your deployed Worker URL (e.g. `https://kalidass-journal.<account>.workers.dev`).*
 
 #### Step 3: Deploy the Frontend to Cloudflare Pages
 1. Connect your Git repository in the Cloudflare Dashboard under **Workers & Pages** → **Create application** → **Pages**.
@@ -195,7 +195,7 @@ npx wrangler deploy
    - **Build command**: `npm run build`
    - **Build output directory**: `build`
    - **Environment variables**:
-     - `AMRIT_API_BASE`: Your deployed Worker URL (e.g., `https://aether-journal.<account>.workers.dev`).
+     - `KALIDASS_API_BASE`: Your deployed Worker URL (e.g., `https://kalidass-journal.<account>.workers.dev`).
      - `NODE_VERSION`: `20`
 3. Deploy. `blog_frontend/static/_redirects` ensures dynamic `/story/*` client-side routes resolve properly.
 
@@ -203,19 +203,19 @@ npx wrangler deploy
 In `worker/wrangler.toml`, set `CORS_ORIGIN` to your deployed Pages URL and redeploy:
 ```toml
 [vars]
-CORS_ORIGIN = "https://amrit-journal.pages.dev"
+CORS_ORIGIN = "https://kalidass-journal.pages.dev"
 ```
 
 ---
 
-### Option 2: Zero Trust Access Deployment (`journal.amrit.fyi` + `api.amrit.fyi`)
+### Option 2: Zero Trust Access Deployment (`journal.kalidass.fyi` + `api.kalidass.fyi`)
 
 For high-security production deployments where the Worker API is completely private behind Cloudflare Zero Trust:
 
 1. **Pages Function Proxy**: The frontend uses `blog_frontend/functions/api/[[route]].ts` to proxy all `/api/*` calls server-side, injecting `CF-Access-Client-Id` and `CF-Access-Client-Secret`.
-2. **Worker Custom Domain**: The Worker runs on `api.amrit.fyi` with `workers_dev = false`.
-3. **Zero Trust Access Application**: Protects `api.amrit.fyi` using a Service Token policy (`amrit-journal-pages`).
-4. **Custom Domain on Pages**: The frontend runs on `journal.amrit.fyi` and calls same-origin `/api/*` without exposing tokens to the browser.
+2. **Worker Custom Domain**: The Worker runs on `api.kalidass.fyi` with `workers_dev = false`.
+3. **Zero Trust Access Application**: Protects `api.kalidass.fyi` using a Service Token policy (`kalidass-journal-pages`).
+4. **Custom Domain on Pages**: The frontend runs on `journal.kalidass.fyi` and calls same-origin `/api/*` without exposing tokens to the browser.
 
 > Refer to [`ZERO_TRUST_DEPLOY.md`](./ZERO_TRUST_DEPLOY.md) for the complete step-by-step dashboard runbook.
 
@@ -226,7 +226,7 @@ For high-security production deployments where the Worker API is completely priv
 1. Navigate to `/admin` to open the Studio CMS.
 2. If `ADMIN_TOKEN` is configured on the Worker, enter your token in the Studio prompt or set it via browser console:
    ```javascript
-   localStorage.setItem("amrit-admin-token", "<your-admin-token>");
+   localStorage.setItem("kalidass-admin-token", "<your-admin-token>");
    ```
 3. Use the tabs to:
    - **Compose**: Write text, add pull quotes, insert images, and embed videos.
@@ -241,7 +241,7 @@ For high-security production deployments where the Worker API is completely priv
 Autonomous AI agents can publish articles directly via HTTP without using the browser UI:
 
 ```bash
-curl -X POST https://api.amrit.fyi/api/articles \
+curl -X POST https://api.kalidass.fyi/api/articles \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

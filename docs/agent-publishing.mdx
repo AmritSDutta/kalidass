@@ -33,7 +33,7 @@ flowchart TD
 ## Endpoint & Authentication
 
 - **Local Dev Endpoint**: `http://127.0.0.1:8787` (the frontend dev server proxies `/api` to this address).
-- **Deployed Endpoint**: The production Worker URL (configured via build-time `AMRIT_API_BASE`).
+- **Deployed Endpoint**: The production Worker URL (configured via build-time `KALIDASS_API_BASE`).
 - **Authorization**: `Authorization: Bearer <ADMIN_TOKEN>` on all write operations (`POST`, `PUT`, `DELETE`).
 - **Content Type**: `application/json` (except media file uploads, which use `multipart/form-data`).
 

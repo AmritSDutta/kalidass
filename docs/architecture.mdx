@@ -5,7 +5,7 @@ description: Frontend routes, dynamic plugins, API base configuration, and clien
 
 # Architecture
 
-Amrit Journal is built on Docusaurus 3.10 and React 19. It configures `preset-classic` with `docs: false, blog: false` so that Markdown processing is disabled for standard content; all articles are fetched at runtime via client-side fetch requests to the Cloudflare Worker API.
+Kalidass Journal is built on Docusaurus 3.10 and React 19. It configures `preset-classic` with `docs: false, blog: false` so that Markdown processing is disabled for standard content; all articles are fetched at runtime via client-side fetch requests to the Cloudflare Worker API.
 
 ## System Topology
 
@@ -37,7 +37,7 @@ flowchart TD
 | `/` | `src/pages/index.tsx` | Cover story, featured brief, and index grid |
 | `/magazine` | `src/pages/magazine.tsx` | Searchable article archive with tag filtering |
 | `/admin` | `src/pages/admin.tsx` | Studio CMS: Compose, Drafts, Published, and Delete tabs |
-| `/story/:slug` | Plugin route → `src/components/StoryPage.tsx` | Full-page reader registered in `amritPlugin.contentLoaded` |
+| `/story/:slug` | Plugin route → `src/components/StoryPage.tsx` | Full-page reader registered in `kalidassPlugin.contentLoaded` |
 
 ## Source Tree Layout
 
@@ -82,7 +82,7 @@ flowchart TD
 
 ## API Base Resolution & Proxy
 
-1. **Build Time**: The environment variable `AMRIT_API_BASE` is injected into `customFields.apiBase` inside `docusaurus.config.ts`.
-2. **Client Initialization**: `src/client-modules/api-base.ts` reads `siteConfig.customFields.apiBase` and attaches it to `window.AMRIT_API_BASE`.
-3. **Runtime Requests**: `src/lib/config.ts` exports `apiUrl(path)`, prepending `window.AMRIT_API_BASE` to all endpoints. If empty, requests default to same-origin relative URLs (`/api/...`).
+1. **Build Time**: The environment variable `KALIDASS_API_BASE` is injected into `customFields.apiBase` inside `docusaurus.config.ts`.
+2. **Client Initialization**: `src/client-modules/api-base.ts` reads `siteConfig.customFields.apiBase` and attaches it to `window.KALIDASS_API_BASE`.
+3. **Runtime Requests**: `src/lib/config.ts` exports `apiUrl(path)`, prepending `window.KALIDASS_API_BASE` to all endpoints. If empty, requests default to same-origin relative URLs (`/api/...`).
 4. **Dev Server Proxy**: During development, `devServer.proxy` automatically forwards `/api` requests to `http://127.0.0.1:8787`.

@@ -1,4 +1,4 @@
-# AGENTS.md — Amrit Journal
+# AGENTS.md — Kalidass Journal
 
 Canonical guide and hard operational invariants for AI coding agents in this repository.
 

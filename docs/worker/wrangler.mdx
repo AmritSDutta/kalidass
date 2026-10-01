@@ -12,7 +12,7 @@ The worker is configured via `wrangler.toml` at the root of the `worker/` direct
 ```toml
 # Worker name — used as the subdomain in workers.dev URLs
 # and as the identifier for wrangler secret put
-name = "aether-journal"
+name = "kalidass-journal-worker"
 
 # Entry point — the single ES Module file wrangler bundles and deploys
 main = "src/index.js"
@@ -35,7 +35,7 @@ CORS_ORIGIN = "*"
 
 | Field | Value | Purpose |
 | --- | --- | --- |
-| `name` | `"aether-journal"` | Worker identifier in Cloudflare dashboard and `workers.dev` subdomain. |
+| `name` | `"kalidass-journal-worker"` | Worker identifier in Cloudflare dashboard and `workers.dev` subdomain. |
 | `main` | `"src/index.js"` | Single entry point bundled by Wrangler. Imports `memory.js` and `seed.js`. |
 | `compatibility_date` | `2026-09-01` | Locks Workers runtime behavior to a specific date, preventing unexpected breaking changes on new runtime releases. |
 | `compatibility_flags` | `["nodejs_compat"]` | Enables Node.js compatibility layer for APIs like `crypto`, `Buffer`, `TextEncoder`, and streams. |
@@ -76,7 +76,7 @@ After deploying, update `CORS_ORIGIN` with the Cloudflare Pages domain and redep
 
 ```toml
 [vars]
-CORS_ORIGIN = "https://amrit-journal.pages.dev"
+CORS_ORIGIN = "https://kalidass-journal.pages.dev"
 ```
 
 ```bash
@@ -86,7 +86,7 @@ npx wrangler deploy
 ## Health Check
 
 ```bash
-curl https://aether-journal.<account>.workers.dev/api/health
+curl https://kalidass-journal.<account>.workers.dev/api/health
 ```
 
 Expected production response:

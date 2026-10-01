@@ -28,7 +28,7 @@ export default function Magazine(): ReactNode {
   });
 
   return (
-    <Layout title="Issue" description="The full Amrit Journal issue.">
+    <Layout title="Issue" description="The full Kalidass Journal issue.">
       <main className={styles.page}>
         <header className={styles.header}>
           <p>Issue 01 / Upstash Blob</p>

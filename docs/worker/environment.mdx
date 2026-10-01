@@ -13,7 +13,7 @@ The worker reads configuration from two sources: **Cloudflare secrets** (set via
 | --- | --- | --- | --- | --- |
 | `UPSTASH_BLOB_TOKEN` | Secret | For persistence | *(absent)* | Upstash Blob read/write token. When absent, the worker falls back to in-memory storage and articles do not persist across restarts. |
 | `ADMIN_TOKEN` | Secret | Optional | *(absent)* | Bearer token for Studio write operations. When absent, all write endpoints are open — suitable for personal or local deployments. |
-| `CORS_ORIGIN` | Var (`wrangler.toml`) | Yes | `"*"` | Value of the `Access-Control-Allow-Origin` response header. Set to `"*"` during development; tighten to your Pages domain (`https://amrit-journal.pages.dev`) after deployment. |
+| `CORS_ORIGIN` | Var (`wrangler.toml`) | Yes | `"*"` | Value of the `Access-Control-Allow-Origin` response header. Set to `"*"` during development; tighten to your Pages domain (`https://kalidass-journal.pages.dev`) after deployment. |
 
 ## Effect on Storage Mode
 
@@ -50,4 +50,4 @@ npx wrangler secret put ADMIN_TOKEN
 # Leave blank to keep the endpoint open, or enter a passphrase
 ```
 
-Secrets are bound to the named worker (`aether-journal`) and are available on `env` in the `fetch` handler.
+Secrets are bound to the named worker (`kalidass-journal-worker`) and are available on `env` in the `fetch` handler.
