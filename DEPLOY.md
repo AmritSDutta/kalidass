@@ -61,10 +61,8 @@ curl https://kalidass-journal.<account>.workers.dev/api/health
 Expected:
 
 ```json
-{"ok":true,"storage":"upstash-blob","runtime":"cloudflare-worker"}
+{"ok":true}
 ```
-
-If `storage` is `"memory"`, the token is missing and articles will not persist.
 
 ## 3. Deploy the UI on Cloudflare Pages
 
@@ -147,5 +145,5 @@ Without `UPSTASH_BLOB_TOKEN`, the Worker seeds four AI briefs in memory. Reloadi
 2. `wrangler secret put UPSTASH_BLOB_TOKEN`
 3. `npx wrangler deploy`
 4. Pages build with `KALIDASS_API_BASE=<worker-url>`
-5. Confirm `/api/health` reports `upstash-blob`
+5. Confirm `/api/health` reports `{"ok":true}`
 6. Confirm `/magazine` and `/admin` on the Pages URL

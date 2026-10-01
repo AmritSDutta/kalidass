@@ -110,11 +110,8 @@ curl https://kalidass-journal.<subdomain>.workers.dev/api/health
 Expected response:
 
 ```json
-{"ok":true,"storage":"upstash-blob","runtime":"cloudflare-worker"}
+{"ok":true}
 ```
-
-> [!WARNING]
-> If the health endpoint returns `"storage":"memory"`, the `UPSTASH_BLOB_TOKEN` secret is missing or misconfigured, and article changes will not persist across worker restarts.
 
 ---
 

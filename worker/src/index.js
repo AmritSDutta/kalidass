@@ -222,16 +222,7 @@ export default {
       const {mode, bucket} = blobClient(env);
 
       if (url.pathname === "/api/health" && request.method === "GET") {
-        return json(
-          {
-            ok: true,
-            storage: mode === "upstash" ? "upstash-blob" : "memory",
-            rootBucket: getRootPrefix(env),
-            runtime: "cloudflare-worker",
-          },
-          200,
-          origin
-        );
+        return json({ok: true}, 200, origin);
       }
 
       if (url.pathname === "/api/objects" && request.method === "POST") {

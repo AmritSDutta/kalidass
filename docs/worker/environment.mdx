@@ -18,10 +18,10 @@ The worker reads configuration from two sources: **Cloudflare secrets** (set via
 
 ## Effect on Storage Mode
 
-| `UPSTASH_BLOB_TOKEN` | Storage Mode | `/api/health` Response |
+| `UPSTASH_BLOB_TOKEN` | Storage Mode | Persistence |
 | --- | --- | --- |
-| Set | `upstash-blob` | `{"ok":true,"storage":"upstash-blob","rootBucket":"kalidass","runtime":"cloudflare-worker"}` |
-| Absent | `memory` | `{"ok":true,"storage":"memory","rootBucket":"kalidass","runtime":"cloudflare-worker"}` |
+| Set | Upstash Blob | Articles and media persist durably across worker restarts and redeployments. |
+| Absent | In-Memory Fallback | Articles are held in worker memory and reset on reload (dev mode). |
 
 ## Local Development (`.dev.vars`)
 

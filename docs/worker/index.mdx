@@ -13,7 +13,7 @@ The Kalidass Journal Worker is a lightweight Cloudflare Worker that serves as th
 - **Upload Signing**: Delegate direct browser-to-Upstash uploads via the `@upstash/blob` `uploadHandler`.
 - **Fallback Upload**: Accept `FormData` file uploads when the direct upload route is unavailable.
 - **CORS Negotiation**: Respond to `OPTIONS` preflight requests and add access-control headers to all responses.
-- **Health Reporting**: Expose `/api/health` to report the active storage mode and runtime.
+- **Health Reporting**: Expose `/api/health` to report server availability with HTTP `200 { "ok": true }`.
 - **Cold-Start Seeding**: Populate an empty store with four seed articles on first request.
 
 ## Tech Stack

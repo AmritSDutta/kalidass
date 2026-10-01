@@ -4,5 +4,5 @@ compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-CORS_ORIGIN = "*"
+CORS_ORIGIN = "https://kalidass.pages.dev"
 ROOT_BUCKET = "kalidass"
