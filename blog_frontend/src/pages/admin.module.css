@@ -1,0 +1,272 @@
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2.6rem 1.4rem 5rem;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 1.4rem;
+}
+
+.top p {
+  margin: 0;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--chroma-coral);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.top h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4vw, 3.4rem);
+  letter-spacing: -0.045em;
+  margin: 0.2rem 0 0;
+}
+
+.topActions,
+.blocksHead div,
+.blockBar div,
+.mini div {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.primary,
+.ghost,
+.blocksHead button,
+.blockBar button,
+.mini button,
+.mini a {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.primary {
+  background: var(--chroma-coral);
+  color: #041018;
+}
+
+.ghost,
+.blocksHead button,
+.blockBar button {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid rgba(103, 232, 249, 0.22);
+}
+
+.status {
+  background: rgba(196, 245, 66, 0.12);
+  color: var(--chroma-gold);
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.4rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.2rem;
+}
+
+.tab,
+.tabOn {
+  border: 1px solid rgba(103, 232, 249, 0.22);
+  background: transparent;
+  color: var(--ink-mute);
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.tabOn {
+  background: rgba(103, 232, 249, 0.14);
+  color: var(--ink);
+  border-color: rgba(103, 232, 249, 0.45);
+}
+
+.search {
+  width: 100%;
+  border: 1px solid rgba(103, 232, 249, 0.22);
+  background: rgba(7, 11, 20, 0.35);
+  border-radius: 14px;
+  padding: 0.75rem 0.85rem;
+  font: inherit;
+  color: var(--ink);
+}
+
+.editor,
+.rail,
+.block,
+.mediaBox,
+.mini {
+  background: var(--paper);
+  border-radius: 24px;
+  border: 1px solid rgba(103, 232, 249, 0.14);
+}
+
+.editor,
+.rail {
+  padding: 1.3rem;
+  display: grid;
+  gap: 0.9rem;
+  align-content: start;
+}
+
+.editor label,
+.mediaBox p {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-weight: 700;
+}
+
+.editor input,
+.editor textarea {
+  width: 100%;
+  border: 1px solid rgba(103, 232, 249, 0.22);
+  background: rgba(7, 11, 20, 0.35);
+  border-radius: 14px;
+  padding: 0.75rem 0.85rem;
+  font: inherit;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.accents {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.swatch,
+.swatchOn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: var(--swatch);
+  box-shadow: 0 0 0 1px rgba(24, 16, 36, 0.15);
+  cursor: pointer;
+}
+
+.swatchOn {
+  box-shadow: 0 0 0 3px var(--ink);
+}
+
+.feature {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.92rem !important;
+  color: var(--ink) !important;
+}
+
+.mediaBox {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 0.8rem;
+  padding: 0.9rem;
+}
+
+.mediaBox img,
+.ph {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #12324a, #2a1c4a);
+}
+
+.blocksHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.blocksHead h2,
+.rail h2 {
+  font-family: var(--font-display);
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.block {
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.blockBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stack {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.mini {
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.mini span,
+.mini a,
+.mini div button {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-mute);
+}
+
+.mini a,
+.mini div button {
+  background: transparent;
+  padding: 0.2rem 0;
+}
+
+@media (max-width: 920px) {
+  .layout,
+  .row,
+  .mediaBox,
+  .top {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+}

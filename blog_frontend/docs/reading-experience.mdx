@@ -1,0 +1,36 @@
+---
+title: Reading Experience
+description: Home cover layout, magazine search and tag filter, article cards, and the story reader view.
+---
+
+# Reading Experience
+
+Amrit Journal renders reading views purely client-side within the Docusaurus `Layout` component. On component mount, the client calls `listArticles()` or `getArticle()` to fetch content directly from the Worker API.
+
+## Home Page (`src/pages/index.tsx`, `/`)
+
+- **Hero & Cover Brief**: Displays the publication tagline and selects the cover story (`articles.find(a => a.featured) || articles[0]`). The lead story is rendered with the featured `ArticleCard` variant.
+- **In This Cycle**: The next 3 articles are arranged in a multi-column responsive grid.
+- **Index List**: All remaining articles are presented as streamlined row entries linking to `/story/:slug` with their primary tag.
+- **Error Handling**: Network and API errors are caught and surfaced directly in the UI with contextual troubleshooting hints.
+
+## Magazine Archive (`src/pages/magazine.tsx`, `/magazine`)
+
+- **Live Search**: Client-side substring search filtering across `title`, `excerpt`, and `tags` simultaneously.
+- **Dynamic Tag Filter**: Generates a tag filter bar from the union of all article tags, prefixed with `All`.
+- **Card Grid**: Renders all matching public articles as cards, updating instantly as search queries change.
+
+## ArticleCard Component (`src/components/ArticleCard.tsx`)
+
+- **Interactive Card**: The entire card functions as a clickable navigation link tinted by the `--card-accent` CSS variable.
+- **Media Header**: Displays the article's `coverImage` asset. If absent, renders a patterned CSS fallback background.
+- **Meta Chips**: Displays primary tag chips and an `AI` indicator badge if `aiGenerated: true`.
+- **Author Row**: Displays the author's avatar image or first initial, alongside publication date and estimated read time.
+
+## Story Reader (`src/components/StoryPage.tsx`, `/story/:slug`)
+
+- **Dynamic Route**: The dynamic path `/story/:slug` is registered via `amritPlugin.contentLoaded` in `docusaurus.config.ts`.
+- **Slug Resolution**: The article slug is extracted from `location.pathname` and fetched via `getArticle(slug)`.
+- **Hero Header**: Full-width veil overlay with cover image, topic kicker tag, headline, subtitle, and author byline.
+- **Story Body**: Renders lead `excerpt` deck, optional hero `VideoEmbed` player, and delegates content blocks to `StoryBody.tsx`.
+- **Navigation Footer**: Direct links back to the main index and `/admin?edit=<slug>` for instant editorial access.

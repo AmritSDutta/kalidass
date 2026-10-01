@@ -1,0 +1,105 @@
+---
+title: Amrit Journal Documentation
+description: Overview of the Amrit Journal static frontend, admin studio, and Cloudflare Worker API.
+---
+
+# Amrit Journal Documentation
+
+Field notes from the model layer. Amrit Journal is a static Docusaurus research magazine designed for reading AI-systems essays and managing publications via an integrated admin studio.
+
+Articles and media assets are stored in Upstash Blob via a Cloudflare Worker API. Content is loaded dynamically at runtime in the client rather than compiled from static Markdown files.
+
+## Documentation Index
+
+- [Architecture](/architecture) — Client routing, dynamic route plugins, API-base resolution, and proxy architecture.
+- [AI Agent Publishing](/agent-publishing) — Server-to-server publishing specification for automated agents and background workflows.
+- [Data Model](/data-model) — Type definitions for Authors, Block unions, Summaries, and ArticleDrafts.
+- [Reading Experience](/reading-experience) — Dynamic rendering on Home (`/`), Magazine (`/magazine`), and Story Reader (`/story/:slug`).
+- [Studio](/studio) — Web-based content creation, drafting, multi-block editing, and deletion interface.
+- [Media and Uploads](/media-uploads) — Video player resolution (YouTube, Vimeo, direct MP4) and Upstash Blob uploads.
+- [API Reference](/api) — Worker endpoint specifications, authentication tokens, query filters, and payloads.
+- [Configuration](/configuration) — `docusaurus.config.ts`, custom fields, client modules, and CSS variables.
+- [Deployment](/deployment) — Production setup for Cloudflare Pages, Cloudflare Workers, and Upstash Blob.
+- [Development](/development) — Local setup, toolchain requirements, scripts, and verification procedures.
+- [Learnings](/learnings) — Architectural discoveries, CommonJS/ESM build conflicts, and Windows platform nuances.
+
+## Repository Structure
+
+<Tree>
+  <Tree.Folder name="src" defaultOpen>
+    <Tree.Folder name="client-modules" defaultOpen>
+      <Tree.File name="api-base.ts" />
+    </Tree.Folder>
+    <Tree.Folder name="components" defaultOpen>
+      <Tree.File name="ArticleCard.tsx" highlight />
+      <Tree.File name="ArticleCard.module.css" />
+      <Tree.File name="StoryBody.tsx" highlight />
+      <Tree.File name="StoryBody.module.css" />
+      <Tree.File name="StoryPage.tsx" highlight />
+      <Tree.File name="StoryPage.module.css" />
+      <Tree.File name="VideoEmbed.tsx" />
+      <Tree.File name="VideoEmbed.module.css" />
+    </Tree.Folder>
+    <Tree.Folder name="css" defaultOpen>
+      <Tree.File name="custom.css" />
+    </Tree.Folder>
+    <Tree.Folder name="lib" defaultOpen>
+      <Tree.File name="api.ts" highlight />
+      <Tree.File name="config.ts" />
+      <Tree.File name="media.ts" />
+      <Tree.File name="types.ts" highlight />
+    </Tree.Folder>
+    <Tree.Folder name="pages" defaultOpen>
+      <Tree.Folder name="story">
+        <Tree.File name="[slug].tsx" />
+        <Tree.File name="slug.module.css" />
+      </Tree.Folder>
+      <Tree.File name="admin.tsx" highlight />
+      <Tree.File name="admin.module.css" />
+      <Tree.File name="index.tsx" highlight />
+      <Tree.File name="index.module.css" />
+      <Tree.File name="magazine.tsx" highlight />
+      <Tree.File name="magazine.module.css" />
+    </Tree.Folder>
+  </Tree.Folder>
+  <Tree.Folder name="docs" defaultOpen>
+    <Tree.File name="docs.json" highlight />
+    <Tree.File name="custom.css" />
+    <Tree.File name="index.mdx" />
+    <Tree.File name="architecture.mdx" />
+    <Tree.File name="agent-publishing.mdx" />
+    <Tree.File name="data-model.mdx" />
+    <Tree.File name="reading-experience.mdx" />
+    <Tree.File name="studio.mdx" />
+    <Tree.File name="media-uploads.mdx" />
+    <Tree.File name="api.mdx" />
+    <Tree.File name="configuration.mdx" />
+    <Tree.File name="deployment.mdx" highlight />
+    <Tree.File name="development.mdx" />
+    <Tree.File name="learnings.mdx" />
+  </Tree.Folder>
+  <Tree.Folder name="static" defaultOpen>
+    <Tree.Folder name="img">
+      <Tree.File name="favicon.ico" />
+      <Tree.File name="logo.svg" />
+    </Tree.Folder>
+    <Tree.File name="_redirects" />
+    <Tree.File name=".nojekyll" />
+  </Tree.Folder>
+  <Tree.File name="docusaurus.config.ts" highlight />
+  <Tree.File name="package.json" />
+  <Tree.File name="tsconfig.json" />
+  <Tree.File name="README.md" />
+  <Tree.File name="AGENTS.md" />
+  <Tree.File name="CLAUDE.md" />
+  <Tree.File name="AI_AGENT_PUBLISH.md" />
+</Tree>
+
+## Quickstart
+
+```bash
+npm install
+npm run start
+```
+
+The frontend development server runs on `http://0.0.0.0:3000` and proxies `/api` calls to `http://127.0.0.1:8787`.

@@ -1,0 +1,88 @@
+---
+title: Architecture
+description: Frontend routes, dynamic plugins, API base configuration, and client-server communication topology.
+---
+
+# Architecture
+
+Amrit Journal is built on Docusaurus 3.10 and React 19. It configures `preset-classic` with `docs: false, blog: false` so that Markdown processing is disabled for standard content; all articles are fetched at runtime via client-side fetch requests to the Cloudflare Worker API.
+
+## System Topology
+
+```mermaid
+flowchart TD
+  subgraph Client["Browser Client (React 19 + Docusaurus)"]
+    Pages["Page Views - Index, Magazine, Admin, Story"]
+    LibAPI["src/lib/api.ts - fetch with Bearer Auth"]
+    ClientMod["src/client-modules/api-base.ts"]
+  end
+  subgraph Gateway["Edge Gateway"]
+    Proxy["Webpack Dev Proxy (:3000 to :8787)"]
+    Worker["Cloudflare Worker (:8787 / Edge)"]
+  end
+  subgraph Storage["Upstash Storage"]
+    UpstashBlob["Upstash Blob - JSON Articles & Media"]
+  end
+  Pages --> LibAPI
+  ClientMod -. sets .-> LibAPI
+  LibAPI --> Proxy
+  Proxy --> Worker
+  Worker --> UpstashBlob
+```
+
+## Route Map
+
+| Route | Component Source | Functionality |
+| --- | --- | --- |
+| `/` | `src/pages/index.tsx` | Cover story, featured brief, and index grid |
+| `/magazine` | `src/pages/magazine.tsx` | Searchable article archive with tag filtering |
+| `/admin` | `src/pages/admin.tsx` | Studio CMS: Compose, Drafts, Published, and Delete tabs |
+| `/story/:slug` | Plugin route → `src/components/StoryPage.tsx` | Full-page reader registered in `amritPlugin.contentLoaded` |
+
+## Source Tree Layout
+
+<Tree>
+  <Tree.Folder name="src" defaultOpen>
+    <Tree.Folder name="client-modules" defaultOpen>
+      <Tree.File name="api-base.ts" highlight />
+    </Tree.Folder>
+    <Tree.Folder name="components" defaultOpen>
+      <Tree.File name="ArticleCard.tsx" highlight />
+      <Tree.File name="ArticleCard.module.css" />
+      <Tree.File name="StoryBody.tsx" highlight />
+      <Tree.File name="StoryBody.module.css" />
+      <Tree.File name="StoryPage.tsx" highlight />
+      <Tree.File name="StoryPage.module.css" />
+      <Tree.File name="VideoEmbed.tsx" />
+      <Tree.File name="VideoEmbed.module.css" />
+    </Tree.Folder>
+    <Tree.Folder name="css" defaultOpen>
+      <Tree.File name="custom.css" />
+    </Tree.Folder>
+    <Tree.Folder name="lib" defaultOpen>
+      <Tree.File name="api.ts" highlight />
+      <Tree.File name="config.ts" />
+      <Tree.File name="media.ts" />
+      <Tree.File name="types.ts" highlight />
+    </Tree.Folder>
+    <Tree.Folder name="pages" defaultOpen>
+      <Tree.Folder name="story">
+        <Tree.File name="[slug].tsx" />
+        <Tree.File name="slug.module.css" />
+      </Tree.Folder>
+      <Tree.File name="admin.tsx" highlight />
+      <Tree.File name="admin.module.css" />
+      <Tree.File name="index.tsx" highlight />
+      <Tree.File name="index.module.css" />
+      <Tree.File name="magazine.tsx" highlight />
+      <Tree.File name="magazine.module.css" />
+    </Tree.Folder>
+  </Tree.Folder>
+</Tree>
+
+## API Base Resolution & Proxy
+
+1. **Build Time**: The environment variable `AMRIT_API_BASE` is injected into `customFields.apiBase` inside `docusaurus.config.ts`.
+2. **Client Initialization**: `src/client-modules/api-base.ts` reads `siteConfig.customFields.apiBase` and attaches it to `window.AMRIT_API_BASE`.
+3. **Runtime Requests**: `src/lib/config.ts` exports `apiUrl(path)`, prepending `window.AMRIT_API_BASE` to all endpoints. If empty, requests default to same-origin relative URLs (`/api/...`).
+4. **Dev Server Proxy**: During development, `devServer.proxy` automatically forwards `/api` requests to `http://127.0.0.1:8787`.

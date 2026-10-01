@@ -1,0 +1,96 @@
+---
+title: Wrangler Configuration
+description: Annotated reference for wrangler.toml — worker name, entry point, compatibility settings, vars, and local dev commands.
+---
+
+# Wrangler Configuration
+
+The worker is configured via `wrangler.toml` at the root of the `worker/` directory. This file is the single source of truth for the worker's identity, runtime compatibility, and environment variables.
+
+## `wrangler.toml` Annotated
+
+```toml
+# Worker name — used as the subdomain in workers.dev URLs
+# and as the identifier for wrangler secret put
+name = "aether-journal"
+
+# Entry point — the single ES Module file wrangler bundles and deploys
+main = "src/index.js"
+
+# Minimum Workers runtime API version this worker targets
+compatibility_date = "2026-09-01"
+
+# Enable Node.js built-in compatibility shims
+# Required for crypto.randomUUID() and TextEncoder/TextDecoder
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# CORS origin for all responses.
+# Set to "*" during development.
+# Tighten to your Cloudflare Pages URL after first deployment.
+CORS_ORIGIN = "*"
+```
+
+## Key Fields Explained
+
+| Field | Value | Purpose |
+| --- | --- | --- |
+| `name` | `"aether-journal"` | Worker identifier in Cloudflare dashboard and `workers.dev` subdomain. |
+| `main` | `"src/index.js"` | Single entry point bundled by Wrangler. Imports `memory.js` and `seed.js`. |
+| `compatibility_date` | `2026-09-01` | Locks Workers runtime behavior to a specific date, preventing unexpected breaking changes on new runtime releases. |
+| `compatibility_flags` | `["nodejs_compat"]` | Enables Node.js compatibility layer for APIs like `crypto`, `Buffer`, `TextEncoder`, and streams. |
+| `CORS_ORIGIN` | `"*"` (default) | Injected into `env.CORS_ORIGIN` in the fetch handler. Overridden to the Pages URL after deployment. |
+
+## `.wranglerignore`
+
+The `docs/` directory is excluded from all Wrangler operations via `.wranglerignore`:
+
+```text
+# Local-only documentation site — not part of Cloudflare Worker deployment
+docs/
+```
+
+Wrangler only bundles `src/index.js` and its transitive imports (`memory.js`, `seed.js`). The `docs/` directory is never uploaded regardless of this setting, but the ignore file makes the exclusion explicit and protected against future Wrangler features such as `--assets`.
+
+## Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start the dev server on port 8787, bound to all interfaces
+npm run start
+# Equivalent: npx wrangler dev --port 8787 --ip 0.0.0.0
+```
+
+With `UPSTASH_BLOB_TOKEN` set in `.dev.vars`, the worker connects to the live Upstash bucket. Without it, articles are served from the in-memory store seeded with four default briefs.
+
+## Deployment
+
+```bash
+# Deploy worker to Cloudflare edge
+npx wrangler deploy
+```
+
+After deploying, update `CORS_ORIGIN` with the Cloudflare Pages domain and redeploy:
+
+```toml
+[vars]
+CORS_ORIGIN = "https://amrit-journal.pages.dev"
+```
+
+```bash
+npx wrangler deploy
+```
+
+## Health Check
+
+```bash
+curl https://aether-journal.<account>.workers.dev/api/health
+```
+
+Expected production response:
+
+```json
+{"ok":true,"storage":"upstash-blob","runtime":"cloudflare-worker"}
+```

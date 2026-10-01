@@ -1,0 +1,49 @@
+---
+title: Studio
+description: Web-based content management system for composing, drafting, editing, and publishing briefs.
+---
+
+# Studio
+
+The Studio interface is located at `/admin` (`src/pages/admin.tsx`). It provides an integrated CMS for writing, editing, organizing, and publishing articles directly into Upstash Blob storage via the Cloudflare Worker API.
+
+## Tab Modes
+
+The Studio features four operational modes accessible via top tab navigation or deep linked via the `?mode=` URL query parameter:
+
+### 1. Compose Mode (`?mode=compose`)
+
+The primary writing environment:
+- **New Articles**: Displays action buttons for **Save draft** (`published: false`) and **Publish** (`published: true`).
+- **Existing Articles**: Loaded via `?edit=<slug>`, displaying an **Update** action that maintains the existing publication state.
+- **Form Controls**: Title, subtitle, excerpt, author name and role, comma-separated tags, accent color swatches from `ACCENTS`, and featured flag.
+- **Visibility Toggles**:
+  - **Private (Unlisted)**: Defaults to checked (`true`). Excludes the article from `/` and `/magazine` feeds while keeping the direct `/story/:slug` URL active.
+  - **AI Generated**: Defaults to unchecked (`false`). Displays the `AI` badge on cards and headers when enabled.
+- **Block Editor**: Dynamic block list supporting `paragraph`, `heading`, `quote`, `image`, and `video` blocks with re-ordering, updating, and removal capabilities.
+
+### 2. Drafts Mode (`?mode=drafts`)
+
+- Calls `listArticles("draft")` (requires admin Bearer token).
+- Features client-side search across title, subtitle, excerpt, and tags.
+- Table rows provide one-click **Edit** (loads in Compose), **Publish** (sets `published: true`), and **Delete** actions.
+
+### 3. Published Mode (`?mode=published`)
+
+- Calls `listArticles("published")` (includes both public and unlisted articles, with unlisted marked with a `Private` badge).
+- Allows searching and filtering across all live publications.
+- Provides direct **Edit** and **View** links for each article.
+
+### 4. Delete Mode (`?mode=delete`)
+
+- Calls `listArticles("all")` to display all stored articles regardless of status.
+- Provides immediate article deletion guarded by a browser confirmation dialog.
+
+## Media Upload Integration
+
+File upload controls are embedded directly in the form fields:
+- **Cover Image Upload** (`accept="image/*"`): Uploads image and updates `draft.coverImage` with live thumbnail preview.
+- **Lead Video Upload** (`accept="video/*"`): Uploads video file and updates `draft.videoUrl`.
+- **Block Uploads**: Image and video blocks feature dedicated file upload pickers.
+
+Uploads are executed through `uploadObject()` in `src/lib/api.ts`, targeting the Upstash browser upload route with an automatic multipart fallback to `/api/objects`.

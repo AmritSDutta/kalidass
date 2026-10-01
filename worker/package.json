@@ -1,0 +1,17 @@
+{
+  "name": "aether-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787 --ip 0.0.0.0",
+    "start": "wrangler dev --port 8787 --ip 0.0.0.0",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@upstash/blob": "0.0.6-canary.20260914173111"
+  },
+  "devDependencies": {
+    "wrangler": "^4.37.0"
+  }
+}

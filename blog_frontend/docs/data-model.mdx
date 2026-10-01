@@ -1,0 +1,105 @@
+---
+title: Data Model
+description: Type definitions, Block unions, Author metadata, and Article draft specifications.
+---
+
+# Data Model
+
+The single source of truth for frontend data contracts resides in `src/lib/types.ts`. The schema consists of three progressive models: `ArticleSummary`, `Article`, and `ArticleDraft`.
+
+## Data Model Flow
+
+```mermaid
+flowchart TD
+  subgraph Draft["Studio & Agent Input"]
+    DraftPayload["ArticleDraft - title, excerpt, author, tags, blocks, flags"]
+  end
+  subgraph Storage["Server State"]
+    StoredObject["Stored Article - server assigned id, publishedAt, readTime"]
+  end
+  subgraph Consumer["Frontend Rendering"]
+    SummaryView["ArticleSummary - ArticleCard & Magazine Grid"]
+    FullReader["Article - StoryPage & StoryBody Blocks"]
+  end
+  DraftPayload --> StoredObject
+  StoredObject --> SummaryView
+  StoredObject --> FullReader
+```
+
+## Author Schema
+
+```typescript
+export interface Author {
+  name: string;
+  role: string;
+  avatar?: string;
+}
+```
+
+- **Cards (`ArticleCard.tsx`)**: Renders the avatar image when provided, or the first uppercase initial of `name` (falling back to `"C"`).
+- **Reader Byline (`StoryPage.tsx`)**: Displays the author's name, role, publication date, and calculated read time.
+
+## Block Union
+
+The body of each essay is composed of an ordered list of polymorphic blocks:
+
+```typescript
+export type Block =
+  | { type: "paragraph"; text: string }
+  | { type: "heading"; text: string }
+  | { type: "quote"; text: string; cite?: string }
+  | { type: "image"; url: string; caption?: string }
+  | { type: "video"; url: string; caption?: string };
+```
+
+| Type | Fields | Rendering Component |
+| --- | --- | --- |
+| `paragraph` | `text` | Native `<p>` element with typography styling |
+| `heading` | `text` | Section heading `<h2>` |
+| `quote` | `text`, `cite?` | Pull quote `<blockquote>` with optional `<cite>` tag |
+| `image` | `url`, `caption?` | Responsive `<figure>` with `<img>` and `<figcaption>` |
+| `video` | `url`, `caption?` | `VideoEmbed` component (YouTube, Vimeo, or direct MP4) |
+
+## Article Models
+
+### `ArticleSummary`
+
+Used in index feeds, search results, and Studio summary listings:
+
+- `id: string` — Server-generated unique identifier.
+- `slug: string` — URL segment slug.
+- `title: string` — Article headline.
+- `subtitle?: string` — Secondary header deck.
+- `excerpt?: string` — Summary description used on cards and meta tags.
+- `coverImage?: string` — URL to hero image asset.
+- `videoUrl?: string` — URL to lead video player asset.
+- `author: Author` — Author metadata.
+- `tags: string[]` — List of topic tags.
+- `accent: string` — Hex color string applied to CSS custom properties.
+- `publishedAt: string` — ISO publication timestamp (empty for drafts).
+- `readTime: string` — Formatted read time estimated from content word count.
+- `featured?: boolean` — Flags article as the lead cover story.
+- `published?: boolean` — `false` for drafts, `true` for live articles.
+- `private?: boolean` — `true` for unlisted articles (accessible only via direct link).
+- `aiGenerated?: boolean` — Displays the `AI` badge across cards and headers.
+- `updatedAt?: string` — ISO timestamp of last modification.
+
+### `Article`
+
+The complete article payload returned by `getArticle()` and consumed by `StoryPage.tsx`:
+- All properties of `ArticleSummary`.
+- `blocks: Block[]` — Array of body content blocks.
+- `createdAt?: string` — ISO record creation timestamp.
+
+### `ArticleDraft`
+
+The payload sent during article creation (`POST /api/articles`) and editing (`PUT /api/articles/:slug`):
+- Contains all content fields: `title`, `subtitle`, `excerpt`, `coverImage`, `videoUrl`, `author`, `tags`, `accent`, `featured`, `blocks`, `published`, `private`, `aiGenerated`, and optional `slug`.
+- **Excludes server-managed fields**: `id`, `publishedAt`, `readTime`, `createdAt`, `updatedAt`.
+- The helper `fromArticle()` in `admin.tsx` converts an existing `Article` into an `ArticleDraft` by stripping server-owned fields.
+
+## Core Operational Flags
+
+- **`published`**: When `false`, the article is saved as a draft. It is excluded from public API responses and direct GET queries return `404` unless authenticated with the Bearer token.
+- **`private`**: Defaults to `true` (unlisted). When `true`, the article is excluded from public feeds (`/` and `/magazine`), but is publicly readable by anyone with the direct `/story/:slug` URL without authentication. Set to `false` in Studio to feature publicly.
+- **`aiGenerated`**: Defaults to `false`. When enabled, renders an `AI` tag chip on cards and story headers.

@@ -1,0 +1,94 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,500;0,8..60,700;1,8..60,500&display=swap");
+
+:root {
+  --ifm-color-primary: #22d3ee;
+  --ifm-color-primary-dark: #06b6d4;
+  --ifm-color-primary-darker: #0891b2;
+  --ifm-color-primary-darkest: #155e75;
+  --ifm-color-primary-light: #67e8f9;
+  --ifm-color-primary-lighter: #a5f3fc;
+  --ifm-color-primary-lightest: #cffafe;
+  --ifm-code-font-size: 95%;
+  --ifm-font-family-base: "Space Grotesk", "Segoe UI", sans-serif;
+  --ifm-heading-font-family: "Source Serif 4", Georgia, serif;
+  --ifm-background-color: #1d1d21;
+  --ifm-navbar-background-color: rgba(29, 29, 33, 0.86);
+  --ifm-footer-background-color: #17171a;
+  --ifm-global-radius: 14px;
+  --ifm-font-color-base: #d7e4ef;
+  --docusaurus-highlighted-code-line-bg: rgba(34, 211, 238, 0.12);
+  --font-display: "Source Serif 4", Georgia, serif;
+  --font-sans: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --paper: rgba(38, 33, 30, 0.86);
+  --ink: #e8f4ff;
+  --ink-soft: #9fb4c9;
+  --ink-mute: #6d8298;
+  --chroma-coral: #22d3ee;
+  --chroma-gold: #c4f542;
+  --chroma-teal: #67e8f9;
+  --chroma-indigo: #a78bfa;
+  --grid: rgba(103, 232, 249, 0.07);
+  --layer-accent: var(--chroma-gold);
+  --page-gradient: linear-gradient(160deg, #2b1a13 0%, #232023 55%, #1d1d21 100%);
+}
+
+[data-theme="light"] {
+  --ifm-background-color: #ffffff;
+  --ifm-navbar-background-color: rgba(250, 244, 231, 0.9);
+  --ifm-font-color-base: #102033;
+  --paper: #fffdf8;
+  --ink: #102033;
+  --ink-soft: #3d5368;
+  --ink-mute: #6a7f93;
+  --grid: rgba(15, 40, 70, 0.06);
+  --layer-accent: #4e9b47;
+  --page-gradient: linear-gradient(160deg, #efe3c8 0%, #fbf6ea 45%, #ffffff 100%);
+}
+
+html,
+body {
+  background-color: var(--ifm-background-color);
+  background-image:
+    var(--page-gradient),
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: auto, 42px 42px, 42px 42px;
+  background-attachment: fixed;
+  color: var(--ink);
+}
+
+.navbar {
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(103, 232, 249, 0.14);
+  box-shadow: none;
+}
+
+.navbar__title {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.86rem;
+}
+
+.footer {
+  background: var(--ifm-footer-background-color) !important;
+  border-top: 1px solid rgba(103, 232, 249, 0.12);
+}
+
+.footer__copyright {
+  color: #7f93a8;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.main-wrapper {
+  min-height: 70vh;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}

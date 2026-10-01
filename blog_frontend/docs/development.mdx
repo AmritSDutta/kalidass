@@ -1,0 +1,92 @@
+---
+title: Development
+description: Local environment setup, script reference, toolchain requirements, and verification procedures.
+---
+
+# Development
+
+## Prerequisites
+
+- **Node.js**: `>=20.0` (validated against Node.js 22).
+- **Package Manager**: `npm` is required (`package-lock.json` is checked into version control).
+
+## Scripts Reference
+
+| Command | Description |
+| --- | --- |
+| `npm run start` | Launches development server on `0.0.0.0:3000` with `/api` proxying to `http://127.0.0.1:8787` |
+| `npm run typecheck` | Runs `tsc --noEmit` to validate all TypeScript code |
+| `npm run build` | Produces production static output in `build/` |
+| `npm run serve` | Serves the production build locally |
+| `npm run clear` | Clears `.docusaurus` cache artifacts |
+
+## Docs7 Documentation Site
+
+The documentation site in `docs/` is powered by the `docs7` framework:
+
+```bash
+# Preview docs site locally
+npx docs7 dev docs --port 3333
+
+# Validate docs site integrity (Mermaid, frontmatter, trees, links)
+node C:/Users/amrit/.gemini/config/skills/docs7/scripts/validate_docs7.mjs docs
+```
+
+## Repository Layout
+
+<Tree>
+  <Tree.Folder name="docs" defaultOpen>
+    <Tree.File name="docs.json" highlight />
+    <Tree.File name="custom.css" />
+    <Tree.File name="index.mdx" />
+    <Tree.File name="architecture.mdx" />
+    <Tree.File name="agent-publishing.mdx" highlight />
+    <Tree.File name="data-model.mdx" />
+    <Tree.File name="reading-experience.mdx" />
+    <Tree.File name="studio.mdx" />
+    <Tree.File name="media-uploads.mdx" />
+    <Tree.File name="api.mdx" />
+    <Tree.File name="configuration.mdx" />
+    <Tree.File name="deployment.mdx" highlight />
+    <Tree.File name="development.mdx" />
+    <Tree.File name="learnings.mdx" />
+  </Tree.Folder>
+  <Tree.Folder name="src" defaultOpen>
+    <Tree.Folder name="client-modules">
+      <Tree.File name="api-base.ts" />
+    </Tree.Folder>
+    <Tree.Folder name="components">
+      <Tree.File name="ArticleCard.tsx" />
+      <Tree.File name="StoryBody.tsx" />
+      <Tree.File name="StoryPage.tsx" />
+      <Tree.File name="VideoEmbed.tsx" />
+    </Tree.Folder>
+    <Tree.Folder name="css">
+      <Tree.File name="custom.css" />
+    </Tree.Folder>
+    <Tree.Folder name="lib">
+      <Tree.File name="api.ts" />
+      <Tree.File name="config.ts" />
+      <Tree.File name="media.ts" />
+      <Tree.File name="types.ts" />
+    </Tree.Folder>
+    <Tree.Folder name="pages">
+      <Tree.File name="admin.tsx" />
+      <Tree.File name="index.tsx" />
+      <Tree.File name="magazine.tsx" />
+    </Tree.Folder>
+  </Tree.Folder>
+  <Tree.File name="docusaurus.config.ts" highlight />
+  <Tree.File name="package.json" />
+  <Tree.File name="tsconfig.json" />
+  <Tree.File name="README.md" />
+  <Tree.File name="AGENTS.md" highlight />
+  <Tree.File name="CLAUDE.md" />
+  <Tree.File name="AI_AGENT_PUBLISH.md" />
+</Tree>
+
+## Toolchain Guidelines
+
+- **Sources are `.ts/.tsx` Only**: Never commit compiled `.js` files in `src/`. Sibling `.js` files will be resolved first by Webpack and cause runtime browser crashes.
+- **Windows Verification**: On Windows, PowerShell may require `npm.cmd run typecheck`. Run `typecheck` + `start` for verification, as dynamic route paths (`/story/:slug`) cause Windows filesystem errors during static build generation.
+- **DOM Guards**: Browser-specific global objects (`window`, `localStorage`) must be guarded with `typeof window !== "undefined"` or `ExecutionEnvironment.canUseDOM`.

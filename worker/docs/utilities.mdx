@@ -1,0 +1,128 @@
+---
+title: Utility Functions
+description: Reference for all pure utility functions in the worker — slug generation, deduplication, read-time estimation, article building, index summarization, and authentication.
+---
+
+# Utility Functions
+
+The worker defines six pure utility functions used across the request handlers. None of these functions perform I/O directly.
+
+## `slugify(value)`
+
+Converts any string into a URL-safe slug.
+
+**Algorithm:**
+1. Coerce to string; default to `"brief"` if empty.
+2. Lowercase.
+3. Unicode normalize via `NFKD` (decompose accented characters).
+4. Strip non-word, non-space, non-dash characters (`[^\w\s-]`).
+5. Trim whitespace.
+6. Replace runs of spaces, underscores, or dashes with a single dash.
+7. Strip leading and trailing dashes.
+8. Truncate to 72 characters.
+9. Fallback to `"brief-<timestamp>"` if the result is empty.
+
+**Examples:**
+
+| Input | Output |
+| --- | --- |
+| `"The Geometry of Attention"` | `"the-geometry-of-attention"` |
+| `"Évolution des Modèles"` | `"evolution-des-modeles"` |
+| `""` | `"brief-1727677200000"` |
+| `"  AI / ML Systems: 2026  "` | `"ai-ml-systems-2026"` |
+
+---
+
+## `uniqueSlug(index, slug, ignoreId?)`
+
+Ensures the candidate slug is unique within the current article index.
+
+```js
+function uniqueSlug(index, slug, ignoreId) {
+  let next = slug;
+  let i = 2;
+  while (index.some((item) => item.slug === next && item.id !== ignoreId)) {
+    next = `${slug}-${i}`;
+    i += 1;
+  }
+  return next;
+}
+```
+
+- On **create** (`POST`): `ignoreId` is `undefined` — any slug collision produces a suffix.
+- On **update** (`PUT`): `ignoreId` is the existing article's `id` — the article's own slug does not count as a collision.
+
+**Example**: If `"agent-memory"` exists, a new article with the same title gets `"agent-memory-2"`. A third gets `"agent-memory-3"`.
+
+---
+
+## `estimateReadTime(blocks)`
+
+Estimates reading time in minutes from a `blocks` array.
+
+```js
+function estimateReadTime(blocks) {
+  const text = (blocks || [])
+    .map((block) => block.text || block.caption || "")
+    .join(" ");
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  return Math.max(3, Math.round(words / 180) || 3);
+}
+```
+
+- Concatenates `text` (from `paragraph`, `heading`, `quote`) and `caption` (from `image`, `video`) fields.
+- Divides word count by 180 (average adult reading speed, wpm).
+- Minimum result is **3 minutes** regardless of content length.
+
+---
+
+## `buildArticle(body, existing?)`
+
+Merges a request body with an optionally existing article record to produce a full article object. Used by both `POST /api/articles` and `PUT /api/articles/:id`.
+
+**Merge strategy (body wins over existing, existing wins over defaults):**
+
+| Field | Source Priority |
+| --- | --- |
+| `id` | `existing.id` → `crypto.randomUUID()` |
+| `slug` | Set by caller after `slugify` + `uniqueSlug` |
+| `title` | `body.title` → `existing.title` → `"Untitled brief"` |
+| `subtitle`, `excerpt`, `coverImage`, `videoUrl` | `body.*` → `existing.*` → `""` |
+| `author.name`, `.role`, `.avatar` | `body.author.*` → `existing.author.*` → defaults |
+| `tags` | `body.tags` (filtered) → `existing.tags` → `[]` |
+| `accent` | `body.accent` → `existing.accent` → `"#22d3ee"` |
+| `published` | `body.published` → `existing.published` → `true` |
+| `private` | `body.private` → `existing.private` → `true` |
+| `aiGenerated` | `body.aiGenerated` → `existing.aiGenerated` → `false` |
+| `publishedAt` | `body.publishedAt` → `existing.publishedAt` → now (if publishing) → `""` |
+| `featured` | `body.featured` → `existing.featured` → `false` |
+| `blocks` | `body.blocks` (if array) → `existing.blocks` → `[]` |
+| `createdAt` | `existing.createdAt` → now |
+| `updatedAt` | Always set to now |
+
+---
+
+## `summarize(article)`
+
+Projects a full article object to the lighter `ArticleSummary` shape stored in `journal/index.json`.
+
+Included fields: `id`, `slug`, `title`, `subtitle`, `excerpt`, `coverImage`, `videoUrl`, `author`, `tags`, `accent`, `publishedAt`, `readTime`, `featured`, `published`, `private`, `aiGenerated`, `updatedAt`.
+
+Excluded fields: `blocks`, `createdAt` (the full article has these; the index does not).
+
+---
+
+## `adminOk(request, env)`
+
+Returns `true` if the request is authorized to perform an admin operation.
+
+```js
+function adminOk(request, env) {
+  if (!env.ADMIN_TOKEN) return true;
+  return (request.headers.get("authorization") || "") === `Bearer ${env.ADMIN_TOKEN}`;
+}
+```
+
+- **Open mode** (`ADMIN_TOKEN` not set): All requests pass — suitable for local development and personal deployments.
+- **Locked mode** (`ADMIN_TOKEN` set): Header must be exactly `Authorization: Bearer <token>`.
+- Returns `401 { error: "Unauthorized" }` on failure.

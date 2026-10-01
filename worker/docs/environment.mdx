@@ -1,0 +1,53 @@
+---
+title: Environment Variables
+description: All environment variables and secrets consumed by the Cloudflare Worker — required, optional, and their effect on runtime behavior.
+---
+
+# Environment Variables
+
+The worker reads configuration from two sources: **Cloudflare secrets** (set via `wrangler secret put`) and **`[vars]`** in `wrangler.toml`. Locally, secrets are loaded from `.dev.vars`.
+
+## Variable Reference
+
+| Variable | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `UPSTASH_BLOB_TOKEN` | Secret | For persistence | *(absent)* | Upstash Blob read/write token. When absent, the worker falls back to in-memory storage and articles do not persist across restarts. |
+| `ADMIN_TOKEN` | Secret | Optional | *(absent)* | Bearer token for Studio write operations. When absent, all write endpoints are open — suitable for personal or local deployments. |
+| `CORS_ORIGIN` | Var (`wrangler.toml`) | Yes | `"*"` | Value of the `Access-Control-Allow-Origin` response header. Set to `"*"` during development; tighten to your Pages domain (`https://amrit-journal.pages.dev`) after deployment. |
+
+## Effect on Storage Mode
+
+| `UPSTASH_BLOB_TOKEN` | Storage Mode | `/api/health` Response |
+| --- | --- | --- |
+| Set | `upstash-blob` | `{"ok":true,"storage":"upstash-blob","runtime":"cloudflare-worker"}` |
+| Absent | `memory` | `{"ok":true,"storage":"memory","runtime":"cloudflare-worker"}` |
+
+## Local Development (`.dev.vars`)
+
+Copy `.dev.vars.example` to `.dev.vars` and populate as needed:
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+```text
+UPSTASH_BLOB_TOKEN=replace-with-upstash-blob-token
+ADMIN_TOKEN=
+```
+
+> [!IMPORTANT]
+> `.dev.vars` is listed in `.gitignore` and must never be committed. It is read exclusively by `wrangler dev` and is never deployed.
+
+## Setting Production Secrets
+
+Use the `wrangler secret put` command to store secrets in Cloudflare's encrypted secret store:
+
+```bash
+npx wrangler secret put UPSTASH_BLOB_TOKEN
+# Paste your token when prompted — input is hidden
+
+npx wrangler secret put ADMIN_TOKEN
+# Leave blank to keep the endpoint open, or enter a passphrase
+```
+
+Secrets are bound to the named worker (`aether-journal`) and are available on `env` in the `fetch` handler.

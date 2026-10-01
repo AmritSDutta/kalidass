@@ -1,0 +1,119 @@
+---
+title: Storage Abstraction
+description: How the worker selects between Upstash Blob and the in-memory fallback, blob path conventions, and cold-start seeding.
+---
+
+# Storage Abstraction
+
+The worker supports two storage backends selected at startup by `blobClient(env)`. Both backends expose the same `get`, `put`, and `del` interface, making the rest of the worker storage-agnostic.
+
+## Backend Selection
+
+```mermaid
+flowchart TD
+  EnvCheck["blobClient: env.UPSTASH_BLOB_TOKEN present?"]
+  UpstashMode["mode = 'upstash' - new Bucket with token"]
+  MemoryMode["mode = 'memory' - memoryBucket from memory.js"]
+  SeedCheck["ensureSeed: read journal/index.json"]
+  Populated["Index exists and non-empty - serve as-is"]
+  Empty["Index missing or empty - write 4 seed articles"]
+  EnvCheck -->|"Yes"| UpstashMode
+  EnvCheck -->|"No"| MemoryMode
+  UpstashMode --> SeedCheck
+  MemoryMode --> SeedCheck
+  SeedCheck -->|"Populated"| Populated
+  SeedCheck -->|"Empty"| Empty
+```
+
+### Upstash Mode
+
+Activated when `env.UPSTASH_BLOB_TOKEN` is set (production and configured local dev):
+
+```js
+new Bucket({ token: env.UPSTASH_BLOB_TOKEN, enableTelemetry: false })
+```
+
+All `get`, `put`, and `del` operations resolve against the Upstash Blob bucket. Article JSON and media objects are durable and survive worker restarts.
+
+### Memory Mode
+
+Activated when no token is present (local dev without `.dev.vars`):
+
+```js
+memoryBucket() // from src/memory.js
+```
+
+The memory store is a module-level `Map`. Data persists only for the lifetime of the `wrangler dev` process. Restarting wrangler resets all articles.
+
+## Memory Bucket API (`memory.js`)
+
+`memoryBucket()` returns an object implementing the same interface as `@upstash/blob`'s `Bucket`:
+
+| Method | Behavior |
+| --- | --- |
+| `get(path)` | Returns `{ path, size, contentType, url, body }`. Throws `{ code: "not_found" }` if absent. |
+| `put(path, body, options)` | Converts body to `Uint8Array`, stores with content type. URL is `/api/blob/<encoded-path>`. |
+| `del(path)` | Removes entry from store. |
+
+### Memory Blob Serving
+
+The `/api/blob/:path` route serves in-memory objects directly:
+
+```js
+if (url.pathname.startsWith("/api/blob/")) {
+  const path = decodeURIComponent(url.pathname.replace(/^\/api\/blob\//, ""));
+  const item = getMemoryObject(path);
+  if (!item) return json({ error: "Object not found" }, 404, origin);
+  return new Response(item.bytes, {
+    headers: corsHeaders(origin, { "content-type": item.contentType }),
+  });
+}
+```
+
+This route is only meaningful in memory mode — in Upstash mode, media objects have public Upstash CDN URLs.
+
+## Blob Path Conventions
+
+| Content | Path Pattern | Format |
+| --- | --- | --- |
+| Article index | `journal/index.json` | `ArticleSummary[]` JSON |
+| Full article | `journal/articles/<id>.json` | `Article` JSON |
+| Uploaded media | `media/<filename>-<unique-suffix>` | Image or video binary |
+
+The `uniquePath` template tag from `@upstash/blob` generates collision-safe media paths.
+
+## JSON Helpers
+
+Two thin wrappers handle JSON serialization uniformly:
+
+```js
+// Read with fallback on any error (missing key, network, parse failure)
+async function readJson(bucket, path, fallback = null) {
+  try {
+    const res = await bucket.get(path);
+    return await new Response(res.body).json();
+  } catch {
+    return fallback;
+  }
+}
+
+// Write with no-store cache hint and 2-space pretty print
+function putJson(bucket, path, value) {
+  return bucket.put(path, JSON.stringify(value, null, 2), {
+    contentType: "application/json",
+    cache: "no-store",
+  });
+}
+```
+
+## Cold-Start Seeding (`ensureSeed`)
+
+On the first request to any articles endpoint, `ensureSeed(bucket)` is called:
+
+1. Reads `journal/index.json`.
+2. If the index is already a non-empty array, returns it immediately.
+3. Otherwise, writes all four articles from `seed.js` as individual `journal/articles/<id>.json` objects.
+4. Builds and writes a fresh `journal/index.json` from the summarized seed articles.
+5. Returns the populated index array.
+
+The four seed articles cover: *The Geometry of Attention*, *Agents That Remember Too Much*, *Eval Is a Product Decision*, and *Multimodal Is a Plumbing Problem*. Each has a full `blocks` array, cover image URL, author, tags, accent color, and `featured` flag.

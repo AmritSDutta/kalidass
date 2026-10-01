@@ -1,0 +1,111 @@
+import {themes as prismThemes} from "prism-react-renderer";
+import type {Config} from "@docusaurus/types";
+import type * as Preset from "@docusaurus/preset-classic";
+
+const config: Config = {
+  title: "Amrit Journal",
+  tagline: "Field notes from the model layer.",
+  favicon: "img/favicon.ico",
+  future: {
+    v4: true,
+  },
+  url: "https://amrit-journal.pages.dev",
+  baseUrl: "/",
+  organizationName: "amrit-journal",
+  projectName: "amrit-journal",
+  onBrokenLinks: "throw",
+  i18n: {
+    defaultLocale: "en",
+    locales: ["en"],
+  },
+  customFields: {
+    apiBase: process.env.AMRIT_API_BASE || "",
+  },
+  clientModules: ["./src/client-modules/api-base.ts"],
+  plugins: [
+    function amritPlugin() {
+      return {
+        name: "amrit-journal",
+        configureWebpack() {
+          return {
+            mergeStrategy: {"devServer.proxy": "replace"},
+            devServer: {
+              host: "0.0.0.0",
+              allowedHosts: [".monkeycode-ai.live"],
+              proxy: [
+                {
+                  context: ["/api"],
+                  target: "http://127.0.0.1:8787",
+                  changeOrigin: true,
+                },
+              ],
+            },
+          };
+        },
+        async contentLoaded({actions}) {
+          actions.addRoute({
+            path: "/story/:slug",
+            component: "@site/src/components/StoryPage",
+            exact: true,
+          });
+        },
+      };
+    },
+  ],
+  presets: [
+    [
+      "classic",
+      {
+        docs: false,
+        blog: false,
+        theme: {
+          customCss: "./src/css/custom.css",
+        },
+      } satisfies Preset.Options,
+    ],
+  ],
+  themeConfig: {
+    image: "img/docusaurus-social-card.jpg",
+    colorMode: {
+      defaultMode: "dark",
+      respectPrefersColorScheme: true,
+    },
+    navbar: {
+      title: "Amrit Journal",
+      logo: {
+        alt: "Amrit Journal",
+        src: "img/logo.svg",
+      },
+      items: [
+        {to: "/magazine", label: "Issue", position: "left"},
+        {to: "/admin", label: "Studio", position: "right"},
+      ],
+    },
+    footer: {
+      style: "dark",
+      links: [
+        {
+          title: "Read",
+          items: [
+            {label: "Issue", to: "/magazine"},
+            {label: "Studio", to: "/admin"},
+          ],
+        },
+        {
+          title: "Stack",
+          items: [
+            {label: "Upstash Blob", to: "/admin"},
+            {label: "Cloudflare Worker", to: "/"},
+          ],
+        },
+      ],
+      copyright: `Copyright © ${new Date().getFullYear()} Amrit Journal. Stored as objects.`,
+    },
+    prism: {
+      theme: prismThemes.github,
+      darkTheme: prismThemes.dracula,
+    },
+  } satisfies Preset.ThemeConfig,
+};
+
+export default config;

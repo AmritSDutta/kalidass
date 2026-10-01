@@ -1,0 +1,26 @@
+{
+  "name": "Aether Journal Worker",
+  "theme": "maple",
+  "colors": {
+    "primary": "#22d3ee",
+    "light": "#22d3ee",
+    "dark": "#0e7490"
+  },
+  "filterSidebar": true,
+  "navigation": {
+    "groups": [
+      {
+        "group": "Overview",
+        "pages": ["index"]
+      },
+      {
+        "group": "Internals",
+        "pages": ["routing", "storage", "utilities"]
+      },
+      {
+        "group": "Configuration",
+        "pages": ["environment", "wrangler"]
+      }
+    ]
+  }
+}

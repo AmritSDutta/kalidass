@@ -1,0 +1,33 @@
+---
+title: API Reference
+description: Cloudflare Worker REST endpoints, authentication protocols, and upload endpoints.
+---
+
+# API Reference
+
+The frontend interacts with the Cloudflare Worker API via the client library in `src/lib/api.ts`. All endpoints are resolved through `apiUrl(path)` (see [Architecture](/architecture)).
+
+## Endpoints
+
+| Method | Path | Client Function | Auth Required | Description / Payload |
+| --- | --- | --- | --- | --- |
+| `GET` | `/api/articles` | `listArticles()` | No | Public feed: returns published, non-private articles only. |
+| `GET` | `/api/articles?status=draft` | `listArticles("draft")` | **Yes** | Returns draft articles (`published: false`). |
+| `GET` | `/api/articles?status=published` | `listArticles("published")` | **Yes** | Returns all published articles (including unlisted `private: true`). |
+| `GET` | `/api/articles?status=all` | `listArticles("all")` | **Yes** | Returns all stored articles. |
+| `GET` | `/api/articles/:idOrSlug` | `getArticle(slug)` | Conditional | Returns full article. If article is a draft, requires Bearer token. Unlisted articles do not require auth. |
+| `POST` | `/api/articles` | `createArticle(draft)` | **Yes** | Creates a new article. Body: JSON `ArticleDraft`. Returns created `Article`. |
+| `PUT` | `/api/articles/:idOrSlug` | `updateArticle(id, draft)` | **Yes** | Updates an existing article. Body: JSON `ArticleDraft`. |
+| `DELETE` | `/api/articles/:idOrSlug` | `removeArticle(id)` | **Yes** | Deletes article object from Upstash storage. |
+| `POST` | `/api/upload` | `uploadObject(file)` | **Yes** | Primary Upstash browser upload route handler. |
+| `POST` | `/api/objects` | `uploadObject(file)` fallback | **Yes** | Fallback multipart upload (`FormData` with `file` field). Returns `{ url, name }`. |
+
+## Authentication
+
+- **Admin Token**: Configured on the client via `localStorage.getItem("amrit-admin-token")`.
+- **Header**: Included on all mutating requests and privileged list queries as `Authorization: Bearer <token>`.
+- **Content Type**: All JSON API requests send `Content-Type: application/json`. File uploads send raw `FormData` without manually overriding the browser-managed multipart boundary.
+
+## Server-to-Server Publishing
+
+For automated script execution and AI agent pipelines, review the dedicated [AI Agent Publishing Guide](/agent-publishing) for sample payloads and automated workflows.

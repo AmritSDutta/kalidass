@@ -1,0 +1,47 @@
+---
+title: Media and Uploads
+description: Video URL parsing, responsive embedded players, and Upstash Blob file upload pipelines.
+---
+
+# Media and Uploads
+
+Amrit Journal supports rich media integration across articles, including cover image uploads, lead video players, and inline image/video body blocks.
+
+## Video URL Parsing (`src/lib/media.ts`)
+
+The `parseVideo(url)` helper analyzes video input strings and categorizes them:
+
+1. **YouTube**: Matches patterns such as `youtube.com/watch?v=`, `youtube.com/embed/`, `youtube.com/shorts/`, and `youtu.be/`, capturing an alphanumeric ID of 6+ characters.
+2. **Vimeo**: Matches `vimeo.com/<digits>` and `vimeo.com/video/<digits>`.
+3. **Direct File**: Any other non-empty URL string is treated as a direct media stream URL (e.g., MP4, WebM).
+
+Empty or invalid strings return `null`, which causes the video component to safely render nothing.
+
+## VideoEmbed Component (`src/components/VideoEmbed.tsx`)
+
+The `VideoEmbed` component renders the appropriate player:
+
+| Provider | Rendered Element | Attributes & Permissions |
+| --- | --- | --- |
+| `youtube` | `<iframe>` | `src="https://www.youtube.com/embed/<id>"` with fullscreen, autoplay, and encrypted media permissions |
+| `vimeo` | `<iframe>` | `src="https://player.vimeo.com/video/<id>"` with picture-in-picture and autoplay capabilities |
+| `file` | `<video>` | Native HTML5 video player with `controls`, `playsInline`, and responsive sizing |
+
+When a `caption` property is provided, it is rendered within an enclosing `<figcaption>` tag.
+
+## Upload Pipeline (`src/lib/api.ts`)
+
+File uploads are processed by the `uploadObject(file)` function:
+
+```mermaid
+flowchart TD
+  UploadInit["File Selected in Browser"] --> TryUpstash["Primary: Upstash Browser SDK upload()"]
+  TryUpstash -->|Success| Complete["Public Blob URL Returned"]
+  TryUpstash -->|Fail / Unsupported| Fallback["Fallback: FormData POST /api/objects"]
+  Fallback -->|Success| Complete
+  Fallback -->|Error| ErrorHandler["Surface Error in UI"]
+```
+
+1. **Primary Path**: Uses the Upstash browser SDK `upload(file, { route: apiUrl("/api/upload") })`, awaiting completion of the upload task to extract `blob.url`.
+2. **Fallback Path**: If the SDK fails or is unavailable, sends a `multipart/form-data` `POST` request to `/api/objects` containing the file and admin authorization header.
+3. **Status Feedback**: On completion, the UI updates with `Uploaded to Upstash Blob` and populates the corresponding URL input.
