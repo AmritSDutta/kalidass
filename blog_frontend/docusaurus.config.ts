@@ -5,7 +5,24 @@ import type * as Preset from "@docusaurus/preset-classic";
 const config: Config = {
   title: "Kalidass Journal",
   tagline: "Field notes from the model layer.",
-  favicon: "img/favicon.ico",
+  favicon: "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png",
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "icon",
+        type: "image/png",
+        href: "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "apple-touch-icon",
+        href: "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png",
+      },
+    },
+  ],
   future: {
     v4: true,
   },
@@ -19,7 +36,7 @@ const config: Config = {
     locales: ["en"],
   },
   customFields: {
-    apiBase: process.env.KALIDASS_API_BASE || "",
+    apiBase: "",
   },
   clientModules: ["./src/client-modules/api-base.ts"],
   plugins: [
