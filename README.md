@@ -9,15 +9,20 @@ The application is structured as a **combined monorepo** consisting of a **Docus
 ## 1. System Architecture & Data Flow
 
 ```mermaid
-graph LR
+flowchart LR
     subgraph Client["Reader & Studio UI"]
         Reader["Reader (/story/:slug, /magazine, /)"]
         Studio["Studio CMS (/admin)"]
+        Agent["AI Publishing Agent"]
     end
 
-    subgraph Edge["Cloudflare Edge Network"]
-        Pages["Cloudflare Pages (Static Frontend)"]
-        Worker["Cloudflare Worker API (/api/*)"]
+    subgraph PagesEdge["Cloudflare Pages Edge (kalidass.amrit.fyi)"]
+        Pages["Docusaurus 3.10 Static SPA"]
+        Proxy["Pages Function (functions/api/[[route]].ts)"]
+    end
+
+    subgraph PrivateWorker["Private Cloudflare Worker (workers_dev = false)"]
+        Worker["Worker REST API (/api/*)"]
     end
 
     subgraph Storage["Persistence Layer"]
@@ -25,21 +30,19 @@ graph LR
         Memory["In-Memory Store (Dev Fallback)"]
     end
 
-    subgraph Automation["AI Pipelines"]
-        Agent["AI Publishing Agent"]
-    end
-
     Reader -->|Browse & Read| Pages
-    Pages -->|Runtime Fetch /api| Worker
-    Studio -->|Bearer Auth Writes| Worker
-    Agent -->|POST /api/articles| Worker
+    Pages -->|Same-Origin fetch /api/*| Proxy
+    Studio -->|Bearer Auth /api/*| Proxy
+    Agent -->|POST /api/articles + Bearer| Proxy
+    Proxy ==>|env.JOURNAL_WORKER.fetch (Isolate RPC)| Worker
     Worker -->|Persistent Mode| Blob
     Worker -->|Fallback Mode| Memory
 ```
 
-- **Static Frontend**: Pre-rendered Docusaurus 3.10 + React 19 SPA. Articles are loaded dynamically via runtime REST calls to the Cloudflare Worker.
-- **Dynamic Worker API**: Cloudflare Worker handling CRUD operations (`/api/articles`), health checks (`/api/health`), media uploads (`/api/objects`), and signed Upstash browser uploads (`/api/upload`).
-- **Persistence**: Production articles and media are stored as durable JSON objects and binary blobs in Upstash Blob. If no token is present, the Worker falls back to an in-memory store seeded with sample briefs.
+- **Static Frontend**: Pre-rendered Docusaurus 3.10 + React 19 SPA served on `https://kalidass.amrit.fyi`.
+- **Pages Function Gateway**: Catch-all function (`blog_frontend/functions/api/[[route]].ts`) intercepts `/api/*` and invokes the private worker via the `JOURNAL_WORKER` Service Binding in memory.
+- **Private Worker API**: Cloudflare Worker (`workers_dev = false`, zero public exposure) handling CRUD operations (`/api/articles`), health checks (`/api/health`), media uploads (`/api/objects`), and signed Upstash browser uploads (`/api/upload`).
+- **Persistence**: Durable JSON articles and binary media blobs stored in Upstash Blob (with an in-memory fallback for local development).
 
 ---
 
@@ -165,29 +168,26 @@ node C:/Users/amrit/.gemini/config/skills/docs7/scripts/validate_docs7.mjs docs
 
 ---
 
-## 6. How to Deploy
+## 6. How to Deploy (Cloudflare Pages + Worker Service Binding)
 
-### Option 1: Standard Cloudflare Deployment (Pages + Worker)
-
-#### Step 1: Upstash Blob Setup
+### Step 1: Upstash Blob Setup
 1. Create a public bucket in [Upstash Console](https://console.upstash.com).
 2. Copy the bucket token (`UPSTASH_BLOB_TOKEN`).
 
-#### Step 2: Deploy the Cloudflare Worker
+### Step 2: Deploy the Private Cloudflare Worker
 ```bash
 cd worker
 npm install
 
 # Configure secret tokens (do not commit secrets)
 npx wrangler secret put UPSTASH_BLOB_TOKEN
-npx wrangler secret put ADMIN_TOKEN  # Optional password for Studio writes
+npx wrangler secret put ADMIN_TOKEN  # Password for Studio writes and M2M agent publishing
 
-# Deploy worker to Cloudflare
+# Deploy private worker to Cloudflare (workers_dev = false, zero public exposure)
 npx wrangler deploy
 ```
-*Note your deployed Worker URL (e.g. `https://kalidass-journal.<account>.workers.dev`).*
 
-#### Step 3: Deploy the Frontend to Cloudflare Pages
+### Step 3: Deploy the Frontend to Cloudflare Pages
 1. Connect your Git repository in the Cloudflare Dashboard under **Workers & Pages** → **Create application** → **Pages**.
 2. Set Build Settings:
    - **Framework preset**: None / Docusaurus
@@ -195,29 +195,17 @@ npx wrangler deploy
    - **Build command**: `npm run build`
    - **Build output directory**: `build`
    - **Environment variables**:
-     - `KALIDASS_API_BASE`: Your deployed Worker URL (e.g., `https://kalidass-journal.<account>.workers.dev`).
      - `NODE_VERSION`: `20`
-3. Deploy. `blog_frontend/static/_redirects` ensures dynamic `/story/*` client-side routes resolve properly.
+3. Configure the **Service Binding**:
+   - Under Pages **Settings** → **Bindings** (or **Functions** → **Service bindings**), add:
+     - **Type**: `Service binding`
+     - **Name**: `JOURNAL_WORKER`
+     - **Value**: `kalidass-journal-worker`
+4. Set Custom Domain:
+   - Add `kalidass.amrit.fyi` to Pages Custom Domains.
+5. Deploy. `blog_frontend/functions/api/[[route]].ts` automatically proxies all `/api/*` requests in-memory via `context.env.JOURNAL_WORKER.fetch(request)`.
 
-#### Step 4: Lock Down CORS
-In `worker/wrangler.toml`, set `CORS_ORIGIN` to your deployed Pages URL and redeploy:
-```toml
-[vars]
-CORS_ORIGIN = "https://kalidass-journal.pages.dev"
-```
-
----
-
-### Option 2: Zero Trust Access Deployment (`journal.kalidass.fyi` + `api.kalidass.fyi`)
-
-For high-security production deployments where the Worker API is completely private behind Cloudflare Zero Trust:
-
-1. **Pages Function Proxy**: The frontend uses `blog_frontend/functions/api/[[route]].ts` to proxy all `/api/*` calls server-side, injecting `CF-Access-Client-Id` and `CF-Access-Client-Secret`.
-2. **Worker Custom Domain**: The Worker runs on `api.kalidass.fyi` with `workers_dev = false`.
-3. **Zero Trust Access Application**: Protects `api.kalidass.fyi` using a Service Token policy (`kalidass-journal-pages`).
-4. **Custom Domain on Pages**: The frontend runs on `journal.kalidass.fyi` and calls same-origin `/api/*` without exposing tokens to the browser.
-
-> Refer to [`ZERO_TRUST_DEPLOY.md`](./ZERO_TRUST_DEPLOY.md) for the complete step-by-step dashboard runbook.
+> Refer to [`ZERO_TRUST_DEPLOY.md`](./ZERO_TRUST_DEPLOY.md) and [`DEPLOY.md`](./DEPLOY.md) for complete runbooks.
 
 ---
 
@@ -238,10 +226,10 @@ For high-security production deployments where the Worker API is completely priv
 
 ## 8. Machine-to-Machine Agent Publishing
 
-Autonomous AI agents can publish articles directly via HTTP without using the browser UI:
+Autonomous AI agents can publish articles directly via HTTP through the edge gateway:
 
 ```bash
-curl -X POST https://api.kalidass.fyi/api/articles \
+curl -X POST https://kalidass.amrit.fyi/api/articles \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

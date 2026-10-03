@@ -12,25 +12,27 @@ Kalidass Journal uses a serverless 3-tier production architecture combining a st
 ```mermaid
 flowchart TD
   subgraph Client["Client Tier"]
-    Browser["User Web Browser"]
+    Browser["User Web Browser (kalidass.amrit.fyi)"]
   end
   subgraph PagesTier["Hosting Tier - Cloudflare Pages"]
     Static["Static Docusaurus 3.10 SPA Assets"]
+    PagesFunction["Pages Function (functions/api/[[route]].ts)"]
     Redirects["_redirects SPA Fallback Rule"]
   end
-  subgraph WorkerTier["Edge API Tier - Cloudflare Worker"]
-    Worker["Cloudflare Worker - Edge REST API"]
-    UploadHandler["@upstash/blob uploadHandler"]
+  subgraph WorkerTier["Private Edge API Tier - Cloudflare Worker"]
+    ServiceBinding["env.JOURNAL_WORKER Service Binding"]
+    Worker["Cloudflare Worker (workers_dev = false)"]
   end
   subgraph StorageTier["Object Storage Tier - Upstash Blob"]
-    JSON["journal/index.json and articles/:id.json"]
-    Media["media/* - Images, Clips, and Covers"]
+    JSON["kalidass/index.json and articles/:id.json"]
+    Media["kalidass/media/* - Images, Clips, and Covers"]
   end
   Browser -->|1. Loads SPA UI| Static
-  Browser -->|2. Client fetch /api/*| Worker
-  Browser -->|3. Signed Direct Upload| UploadHandler
-  Worker -->|4. Read / Write Articles| JSON
-  UploadHandler -->|5. Store Blobs| Media
+  Browser -->|2. Client fetch /api/* (same-origin)| PagesFunction
+  PagesFunction -->|3. In-Memory Isolate RPC| ServiceBinding
+  ServiceBinding --> Worker
+  Worker -->|4. Read / Write Articles & Blobs| JSON
+  Worker -->|5. Store Blobs| Media
 ```
 
 ## Prerequisites Checklist
@@ -89,7 +91,7 @@ npx wrangler secret put ADMIN_TOKEN
 # Enter a secure passphrase or secret
 ```
 
-### Step 2.2: Deploy Worker to Cloudflare
+### Step 2.2: Deploy Private Worker to Cloudflare
 
 Run the Wrangler deployment command:
 
@@ -97,14 +99,14 @@ Run the Wrangler deployment command:
 npx wrangler deploy
 ```
 
-Take note of the resulting Worker URL (e.g., `https://kalidass-journal.<subdomain>.workers.dev`).
+*Note: In `worker/wrangler.toml`, `workers_dev = false` ensures the worker has no public `*.workers.dev` routing and remains strictly private.*
 
-### Step 2.3: Verify Worker Health
+### Step 2.3: Verify Live Gateway Health via Pages
 
-Test that the worker is connected to Upstash Blob:
+Once the Cloudflare Pages Service Binding (`JOURNAL_WORKER`) is attached, test the health endpoint through the Pages domain:
 
 ```bash
-curl https://kalidass-journal.<subdomain>.workers.dev/api/health
+curl https://kalidass.amrit.fyi/api/health
 ```
 
 Expected response:

@@ -1,48 +1,47 @@
 # How to Deploy Kalidass Journal
 
-The live stack is three pieces:
+The live production stack comprises three components:
 
-- `blog_frontend` — Docusaurus static site (Cloudflare Pages or GitHub Pages)
-- `worker` — Cloudflare Worker API
-- Upstash Blob — article JSON and media objects
+- `blog_frontend` — Docusaurus 3.10 static SPA on Cloudflare Pages (`kalidass.amrit.fyi`)
+- `worker` — Private Cloudflare Worker API (`kalidass-journal-worker`, `workers_dev = false`)
+- Upstash Blob — Durable JSON article storage and media objects
 
 ```text
-Browser  ->  Pages (static UI)
-                |
-                |  /api/*  (prod: KALIDASS_API_BASE, local: dev server proxy)
-                v
-             Worker  ->  Upstash Blob
+Browser  ->  Cloudflare Pages (https://kalidass.amrit.fyi)
+                 |
+                 |  fetch /api/* (same-origin)
+                 v
+             Pages Function Proxy (functions/api/[[route]].ts)
+                 |
+                 |  env.JOURNAL_WORKER.fetch(request)  (Edge RPC in memory)
+                 v
+             Private Worker  ->  Upstash Blob
 ```
 
 ## 1. Create an Upstash Blob Bucket
 
-1. Open the [Upstash Blob quickstart](https://upstash.com/docs/blob/overall/quickstart).
-2. Create a **public** bucket (article covers, images, and videos need public URLs).
-3. Copy the bucket token.
+1. Open the [Upstash Blob console](https://console.upstash.com/blob).
+2. Create a **public** bucket (article covers, images, and videos need public CDN URLs).
+3. Copy the bucket read-write token.
 
-Keep the token on the Worker only. Never put `UPSTASH_BLOB_TOKEN` in the frontend or in client variables.
+> [!IMPORTANT]
+> Keep `UPSTASH_BLOB_TOKEN` on the Worker only. Never put `UPSTASH_BLOB_TOKEN` in the frontend client code or environment variables.
 
-## 2. Deploy the Worker
+## 2. Deploy the Private Worker
 
 From `worker`:
 
 ```bash
+cd worker
 npm install
 ```
 
-Set secrets (do not commit them):
+Set secrets (do not commit them to Git):
 
 ```bash
 npx wrangler secret put UPSTASH_BLOB_TOKEN
+npx wrangler secret put ADMIN_TOKEN  # Password for Studio writes and M2M agent publishing
 ```
-
-Optional studio lock. If set, `/admin` writes and uploads need `Authorization: Bearer <token>` (the UI reads `localStorage.getItem('kalidass-admin-token')`):
-
-```bash
-npx wrangler secret put ADMIN_TOKEN
-```
-
-Point CORS at the Pages origin after you know the URL. Until then `CORS_ORIGIN = "*"` in `worker/wrangler.toml` is fine.
 
 Deploy:
 
@@ -50,63 +49,29 @@ Deploy:
 npx wrangler deploy
 ```
 
-Note the Worker URL, for example `https://kalidass-journal.<account>.workers.dev`.
-
-Health check:
-
-```bash
-curl https://kalidass-journal.<account>.workers.dev/api/health
-```
-
-Expected:
-
-```json
-{"ok":true}
-```
+*Note: In `worker/wrangler.toml`, `workers_dev = false` ensures the worker remains completely private with zero public internet exposure.*
 
 ## 3. Deploy the UI on Cloudflare Pages
 
-Build settings:
+Build settings in Cloudflare Dashboard (**Workers & Pages** → **Create application** → **Pages**):
 
 - Root directory: `blog_frontend`
-- Build command:
-
-```bash
-npm install && npm run build
-```
-
+- Build command: `npm install && npm run build`
 - Output directory: `build`
+- Environment variable: `NODE_VERSION=20`
 
-Set this Pages environment variable **before** the build:
+Configure the **Service Binding**:
+- Under Pages **Settings** → **Bindings** (or **Functions** → **Service bindings**):
+  - **Type**: `Service binding`
+  - **Name**: `JOURNAL_WORKER`
+  - **Value**: `kalidass-journal-worker`
 
-```text
-KALIDASS_API_BASE=https://kalidass-journal.<account>.workers.dev
-```
+Configure Custom Domain:
+- Add `kalidass.amrit.fyi` to Pages Custom Domains.
 
-No trailing slash. The static site inlines that value and calls the Worker for `/api/articles` and Upstash uploads.
+Deploy. The Pages catch-all function (`blog_frontend/functions/api/[[route]].ts`) forwards all `/api/*` traffic via `context.env.JOURNAL_WORKER.fetch(request)` across the internal isolate boundary, injecting security headers (`HSTS`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`).
 
-`blog_frontend/static/_redirects` sends `/story/*` to the SPA so client article routes work on Pages.
-
-After the first Pages URL exists, tighten Worker CORS:
-
-```toml
-[vars]
-CORS_ORIGIN = "https://kalidass-journal.pages.dev"
-```
-
-Redeploy the Worker.
-
-## 4. GitHub Pages (optional)
-
-GitHub Pages can host the same static build. It cannot run the Worker.
-
-1. Deploy the Worker as above.
-2. Set `KALIDASS_API_BASE` to the Worker URL at build time.
-3. If the site is not at the domain root, set Docusaurus `baseUrl` (for example `/kalidass-journal/`) and rebuild.
-
-GitHub Pages has no `_redirects`. Direct loads of `/story/:slug` 404 unless you add a `404.html` copy of `index.html` or use a custom domain with SPA fallback. Cloudflare Pages is the intended host.
-
-## Local preview
+## 4. Local Preview
 
 ```bash
 # Worker on :8787 (memory store if no token)
@@ -130,20 +95,20 @@ Or from the repo root:
 ./start.sh
 ```
 
-Without `UPSTASH_BLOB_TOKEN`, the Worker seeds four AI briefs in memory. Reloading wrangler clears them. Uploads fall back to `/api/objects` on that memory store. Direct browser uploads to Upstash (`/api/upload`) need the token.
+Without `UPSTASH_BLOB_TOKEN`, the Worker seeds sample AI briefs in memory. Direct browser uploads to Upstash (`/api/upload`) require the token.
 
-## Studio notes
+## 5. Studio Notes
 
 - `/admin` composes text, image, and video blocks.
 - With a Blob token, files go browser -> Upstash (Worker only signs the upload).
-- Published articles are JSON objects at `journal/articles/<id>.json` plus `journal/index.json`.
-- Optional `ADMIN_TOKEN`: in the browser console, `localStorage.setItem('kalidass-admin-token', '<token>')`.
+- Published articles are JSON objects at `kalidass/articles/<id>.json` plus `kalidass/index.json`.
+- Optional `ADMIN_TOKEN`: in the browser console or Studio prompt, enter the token to unlock.
 
-## Checklist
+## 6. Verification Checklist
 
-1. Public Upstash Blob bucket and token
-2. `wrangler secret put UPSTASH_BLOB_TOKEN`
-3. `npx wrangler deploy`
-4. Pages build with `KALIDASS_API_BASE=<worker-url>`
-5. Confirm `/api/health` reports `{"ok":true}`
-6. Confirm `/magazine` and `/admin` on the Pages URL
+1. Public Upstash Blob bucket and token configured on Worker.
+2. `wrangler secret put UPSTASH_BLOB_TOKEN` executed.
+3. `npx wrangler deploy` executed on Worker.
+4. Pages Service Binding `JOURNAL_WORKER` configured to `kalidass-journal-worker`.
+5. Confirm `curl https://kalidass.amrit.fyi/api/health` reports `{"ok":true}`.
+6. Confirm `/` and `/magazine` render without console errors on `https://kalidass.amrit.fyi`.
