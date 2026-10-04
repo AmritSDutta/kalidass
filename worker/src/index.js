@@ -24,6 +24,38 @@ function getJWKS(domain) {
   return _jwks;
 }
 
+const _userinfoCache = new Map();
+
+async function getUserInfo(domain, accessToken) {
+  if (!domain || !accessToken) return null;
+  const cached = _userinfoCache.get(accessToken);
+  if (cached && Date.now() < cached.expires) {
+    return cached.data;
+  }
+
+  try {
+    const response = await fetch(`https://${domain}/userinfo`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      _userinfoCache.set(accessToken, {data, expires: Date.now() + 5 * 60 * 1000});
+      if (_userinfoCache.size > 200) {
+        const firstKey = _userinfoCache.keys().next().value;
+        _userinfoCache.delete(firstKey);
+      }
+      return data;
+    }
+  } catch (err) {
+    console.warn("Auth0 UserInfo fetch error:", err.message);
+  }
+
+  return null;
+}
+
 async function getAuthUser(request, env) {
   const auth = request.headers.get("authorization") || "";
   let token = "";
@@ -68,6 +100,26 @@ async function getAuthUser(request, env) {
           rawEmail = payload[emailClaimKey];
         }
       }
+
+      let rawName = typeof payload.name === "string" ? payload.name : "";
+      let rawPicture = typeof payload.picture === "string" ? payload.picture : "";
+
+      // If email or profile is missing from JWT access token claims, query Auth0 UserInfo
+      if ((!rawEmail || !rawName || !rawPicture) && env.AUTH0_DOMAIN) {
+        const userinfo = await getUserInfo(env.AUTH0_DOMAIN, token);
+        if (userinfo) {
+          if (!rawEmail && typeof userinfo.email === "string") {
+            rawEmail = userinfo.email;
+          }
+          if (!rawName && (userinfo.name || userinfo.nickname)) {
+            rawName = userinfo.name || userinfo.nickname;
+          }
+          if (!rawPicture && typeof userinfo.picture === "string") {
+            rawPicture = userinfo.picture;
+          }
+        }
+      }
+
       const email = rawEmail.trim().toLowerCase();
 
       let customRoles = [];
@@ -94,8 +146,8 @@ async function getAuthUser(request, env) {
       return {
         sub: payload.sub,
         email,
-        name: payload.name || payload.nickname || email || "Author",
-        avatar: payload.picture || "",
+        name: rawName || payload.nickname || email || "Author",
+        avatar: rawPicture || "",
         role: isElevated ? "admin" : "author",
         isSuperuserEligible,
       };

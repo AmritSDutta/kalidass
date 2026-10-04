@@ -9,6 +9,7 @@ interface KalidassWindow extends Window {
   AUTH0_DOMAIN?: string;
   AUTH0_CLIENT_ID?: string;
   AUTH0_AUDIENCE?: string;
+  ADMIN_EMAILS?: string;
 }
 
 interface AuthContextValue {
@@ -39,6 +40,11 @@ export function AuthProvider({children}: {children: ReactNode}) {
   const auth0Domain = customFields.auth0Domain || kw.AUTH0_DOMAIN || "";
   const auth0ClientId = customFields.auth0ClientId || kw.AUTH0_CLIENT_ID || "";
   const auth0Audience = customFields.auth0Audience || kw.AUTH0_AUDIENCE || "";
+  const adminEmailsStr = customFields.adminEmails || kw.ADMIN_EMAILS || "";
+  const adminEmailsList = adminEmailsStr
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
 
   // PRIVATE_APP=true: Auth0 is dead from the UI — no button, no client, no token
   // provider. Only the admin-token unlock works; the worker still 401s anything else.
@@ -133,6 +139,10 @@ export function AuthProvider({children}: {children: ReactNode}) {
                 const data = await getAuthMe(rawToken, elevationToken || undefined);
                 if (isMounted) {
                   const email = (auth0User.email || data.user.email || "").toLowerCase().trim();
+                  const isEligible = Boolean(
+                    data.user.isSuperuserEligible ||
+                    (email && adminEmailsList.includes(email))
+                  );
                   setToken(rawToken);
                   setUser({
                     sub: data.user.sub || auth0User.sub || "user",
@@ -140,7 +150,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
                     name: auth0User.name || auth0User.nickname || data.user.name || email || "Author",
                     avatar: auth0User.picture || data.user.avatar || "",
                     role: data.user.role || "author",
-                    isSuperuserEligible: Boolean(data.user.isSuperuserEligible),
+                    isSuperuserEligible: isEligible,
                   });
                   setIsLoading(false);
                   return;
@@ -148,6 +158,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
               } catch {
                 if (isMounted) {
                   const email = (auth0User.email || "").toLowerCase().trim();
+                  const isEligible = Boolean(email && adminEmailsList.includes(email));
                   setToken(rawToken);
                   setUser({
                     sub: auth0User.sub || "user",
@@ -155,7 +166,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
                     name: auth0User.name || auth0User.nickname || email || "Author",
                     avatar: auth0User.picture || "",
                     role: "author",
-                    isSuperuserEligible: false,
+                    isSuperuserEligible: isEligible,
                   });
                   setIsLoading(false);
                   return;
@@ -244,13 +255,18 @@ export function AuthProvider({children}: {children: ReactNode}) {
         const auth0User = auth0ClientInstance ? await auth0ClientInstance.getUser() : null;
         const me = await getAuthMe(rawToken || undefined, trimmed);
         const email = (auth0User?.email || me.user.email || user?.email || "").toLowerCase().trim();
+        const isEligible = Boolean(
+          me.user.isSuperuserEligible ??
+          user?.isSuperuserEligible ??
+          (email && adminEmailsList.includes(email))
+        );
         setUser({
           sub: me.user.sub || auth0User?.sub || user?.sub || "user",
           email,
           name: auth0User?.name || auth0User?.nickname || me.user.name || user?.name || email || "Author",
           avatar: auth0User?.picture || me.user.avatar || user?.avatar || "",
           role: me.user.role || "admin",
-          isSuperuserEligible: Boolean(me.user.isSuperuserEligible ?? user?.isSuperuserEligible),
+          isSuperuserEligible: isEligible,
         });
         return true;
       }
@@ -268,13 +284,18 @@ export function AuthProvider({children}: {children: ReactNode}) {
         const auth0User = auth0ClientInstance ? await auth0ClientInstance.getUser() : null;
         const me = await getAuthMe(token);
         const email = (auth0User?.email || me.user.email || user?.email || "").toLowerCase().trim();
+        const isEligible = Boolean(
+          me.user.isSuperuserEligible ??
+          user?.isSuperuserEligible ??
+          (email && adminEmailsList.includes(email))
+        );
         setUser({
           sub: me.user.sub || auth0User?.sub || user?.sub || "user",
           email,
           name: auth0User?.name || auth0User?.nickname || me.user.name || user?.name || email || "Author",
           avatar: auth0User?.picture || me.user.avatar || user?.avatar || "",
           role: me.user.role || "author",
-          isSuperuserEligible: Boolean(me.user.isSuperuserEligible ?? user?.isSuperuserEligible),
+          isSuperuserEligible: isEligible,
         });
       } catch {
         setUser((prev) => (prev ? {...prev, role: "author"} : null));
