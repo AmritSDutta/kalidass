@@ -50,8 +50,15 @@
   --chroma-indigo: var(--chroma-neel);
   --layer-accent: var(--chroma-neel);
 
-  /* Page Ambient Aura */
-  --page-gradient: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(99, 102, 241, 0.18), rgba(6, 182, 212, 0.05) 50%, transparent 85%);
+  /* Page Ambient Rainbow Aura (Dark Mode: Deep Prismatic Shades) */
+  --page-gradient:
+    radial-gradient(at 12% 15%, rgba(244, 63, 94, 0.18) 0px, transparent 50%),
+    radial-gradient(at 88% 12%, rgba(249, 115, 22, 0.16) 0px, transparent 48%),
+    radial-gradient(at 50% 28%, rgba(99, 102, 241, 0.22) 0px, transparent 55%),
+    radial-gradient(at 15% 85%, rgba(6, 182, 212, 0.15) 0px, transparent 50%),
+    radial-gradient(at 85% 80%, rgba(16, 185, 129, 0.13) 0px, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(234, 179, 8, 0.12) 0px, transparent 50%),
+    linear-gradient(180deg, #080a10 0%, #06070b 100%);
   --shadow-card: 0 10px 30px -8px rgba(0, 0, 0, 0.5);
 }
 
@@ -70,7 +77,15 @@
   --border-subtle: rgba(0, 0, 0, 0.08);
   --border-hover: rgba(79, 70, 229, 0.4);
 
-  --page-gradient: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(99, 102, 241, 0.1), rgba(6, 182, 212, 0.04) 50%, transparent 85%);
+  /* Page Ambient Rainbow Aura (Light Mode: Mild Luminous Prismatic Glow) */
+  --page-gradient:
+    radial-gradient(at 12% 15%, rgba(244, 63, 94, 0.08) 0px, transparent 50%),
+    radial-gradient(at 88% 12%, rgba(249, 115, 22, 0.07) 0px, transparent 48%),
+    radial-gradient(at 50% 28%, rgba(99, 102, 241, 0.09) 0px, transparent 55%),
+    radial-gradient(at 15% 85%, rgba(6, 182, 212, 0.07) 0px, transparent 50%),
+    radial-gradient(at 85% 80%, rgba(16, 185, 129, 0.06) 0px, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(234, 179, 8, 0.06) 0px, transparent 50%),
+    linear-gradient(180deg, #fbf8f3 0%, #f4eee3 100%);
   --shadow-card: 0 8px 24px -6px rgba(0, 0, 0, 0.06), 0 2px 6px -2px rgba(0, 0, 0, 0.03);
 }
 

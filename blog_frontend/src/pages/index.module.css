@@ -20,19 +20,19 @@
 }
 
 .orb {
-  width: 420px;
-  height: 420px;
+  width: 440px;
+  height: 440px;
   right: 5%;
   top: -10%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.28) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, rgba(249, 115, 22, 0.12) 45%, transparent 70%);
 }
 
 .orbAlt {
-  width: 320px;
-  height: 320px;
-  left: 0;
-  bottom: 0;
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 70%);
+  width: 360px;
+  height: 360px;
+  left: -5%;
+  bottom: -5%;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.16) 0%, rgba(244, 63, 94, 0.1) 45%, transparent 70%);
 }
 
 .kicker {
