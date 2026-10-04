@@ -35,50 +35,54 @@ node C:/Users/amrit/.gemini/config/skills/docs7/scripts/validate_docs7.mjs docs
 ## Repository Layout
 
 <Tree>
+  <Tree.Folder name="blog_frontend" defaultOpen>
+    <Tree.Folder name="src" defaultOpen>
+      <Tree.Folder name="client-modules">
+        <Tree.File name="api-base.ts" />
+      </Tree.Folder>
+      <Tree.Folder name="components">
+        <Tree.File name="ArticleCard.tsx" />
+        <Tree.File name="StoryBody.tsx" />
+        <Tree.File name="StoryPage.tsx" />
+        <Tree.File name="VideoEmbed.tsx" />
+      </Tree.Folder>
+      <Tree.Folder name="css">
+        <Tree.File name="custom.css" />
+      </Tree.Folder>
+      <Tree.Folder name="lib">
+        <Tree.File name="api.ts" />
+        <Tree.File name="config.ts" />
+        <Tree.File name="media.ts" />
+        <Tree.File name="types.ts" />
+      </Tree.Folder>
+      <Tree.Folder name="pages">
+        <Tree.File name="admin.tsx" />
+        <Tree.File name="index.tsx" />
+        <Tree.File name="magazine.tsx" />
+      </Tree.Folder>
+    </Tree.Folder>
+    <Tree.File name="docusaurus.config.ts" highlight />
+    <Tree.File name="package.json" />
+    <Tree.File name="tsconfig.json" />
+  </Tree.Folder>
+  <Tree.Folder name="worker" defaultOpen>
+    <Tree.Folder name="src" defaultOpen>
+      <Tree.File name="index.js" highlight />
+      <Tree.File name="memory.js" />
+      <Tree.File name="seed.js" />
+    </Tree.Folder>
+    <Tree.File name="wrangler.toml" highlight />
+    <Tree.File name="package.json" />
+  </Tree.Folder>
   <Tree.Folder name="docs" defaultOpen>
     <Tree.File name="docs.json" highlight />
     <Tree.File name="custom.css" />
-    <Tree.File name="index.mdx" />
-    <Tree.File name="architecture.mdx" />
-    <Tree.File name="agent-publishing.mdx" highlight />
-    <Tree.File name="data-model.mdx" />
-    <Tree.File name="reading-experience.mdx" />
-    <Tree.File name="studio.mdx" />
-    <Tree.File name="media-uploads.mdx" />
-    <Tree.File name="api.mdx" />
-    <Tree.File name="configuration.mdx" />
-    <Tree.File name="deployment.mdx" highlight />
-    <Tree.File name="development.mdx" />
-    <Tree.File name="learnings.mdx" />
-  </Tree.Folder>
-  <Tree.Folder name="src" defaultOpen>
-    <Tree.Folder name="client-modules">
-      <Tree.File name="api-base.ts" />
-    </Tree.Folder>
-    <Tree.Folder name="components">
-      <Tree.File name="ArticleCard.tsx" />
-      <Tree.File name="StoryBody.tsx" />
-      <Tree.File name="StoryPage.tsx" />
-      <Tree.File name="VideoEmbed.tsx" />
-    </Tree.Folder>
-    <Tree.Folder name="css">
-      <Tree.File name="custom.css" />
-    </Tree.Folder>
-    <Tree.Folder name="lib">
-      <Tree.File name="api.ts" />
-      <Tree.File name="config.ts" />
-      <Tree.File name="media.ts" />
-      <Tree.File name="types.ts" />
-    </Tree.Folder>
-    <Tree.Folder name="pages">
-      <Tree.File name="admin.tsx" />
-      <Tree.File name="index.tsx" />
-      <Tree.File name="magazine.tsx" />
+    <Tree.Folder name="worker">
+      <Tree.File name="index.mdx" />
+      <Tree.File name="routing.mdx" />
+      <Tree.File name="storage.mdx" />
     </Tree.Folder>
   </Tree.Folder>
-  <Tree.File name="docusaurus.config.ts" highlight />
-  <Tree.File name="package.json" />
-  <Tree.File name="tsconfig.json" />
   <Tree.File name="README.md" />
   <Tree.File name="AGENTS.md" highlight />
   <Tree.File name="CLAUDE.md" />

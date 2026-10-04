@@ -16,11 +16,11 @@ The frontend interacts with the Cloudflare Worker API via the client library in 
 | `GET` | `/api/articles?status=published` | `listArticles("published")` | **Yes** | Returns all published articles (including unlisted `private: true`). |
 | `GET` | `/api/articles?status=all` | `listArticles("all")` | **Yes** | Returns all stored articles. |
 | `GET` | `/api/articles/:idOrSlug` | `getArticle(slug)` | Conditional | Returns full article. If article is a draft, requires Bearer token. Unlisted articles do not require auth. |
-| `POST` | `/api/articles` | `createArticle(draft)` | **Yes** | Creates a new article. Body: JSON `ArticleDraft`. Returns created `Article`. |
-| `PUT` | `/api/articles/:idOrSlug` | `updateArticle(id, draft)` | **Yes** | Updates an existing article. Body: JSON `ArticleDraft`. |
+| `POST` | `/api/articles` | `createArticle(draft)` | **Yes** | Creates a new article. Auto-slugifies title and dedupes. Body: JSON `ArticleDraft`. Returns created `Article`. |
+| `PUT` | `/api/articles/:idOrSlug` | `updateArticle(id, draft)` | **Yes** | Updates an existing article. Preserves or updates slug (deduped). Body: JSON `ArticleDraft`. |
 | `DELETE` | `/api/articles/:idOrSlug` | `removeArticle(id)` | **Yes** | Deletes article object from Upstash storage. |
-| `POST` | `/api/upload` | `uploadObject(file)` | **Yes** | Primary Upstash browser upload route handler. |
-| `POST` | `/api/objects` | `uploadObject(file)` fallback | **Yes** | Fallback multipart upload (`FormData` with `file` field). Returns `{ url, name }`. |
+| `POST` | `/api/upload` | Direct Upstash SDK | Conditional | Upstash Blob direct browser upload route. |
+| `POST` | `/api/objects` | `uploadObject(file)` | **Yes** | Direct binary upload (`FormData` with `file` field) persisted to Upstash Blob. Returns `{ url, name }`. |
 
 ## Authentication
 

@@ -1,6 +1,6 @@
 # Kalidass Journal — Systems Research Magazine
 
-**Kalidass Journal** is a colorful research publication exploring the model layer: attention architectures, agent workflows, evals, and multimodal systems plumbing.
+**Kalidass Journal** is a colorful research publication exploring the neural heart: attention architectures, agent workflows, evals, and multimodal systems plumbing.
 
 The application is structured as a **combined monorepo** consisting of a **Docusaurus 3.10** static frontend, a **Cloudflare Worker REST API**, and **Upstash Blob** object storage.
 
@@ -54,11 +54,11 @@ kalidass/
 │   ├── src/
 │   │   ├── client-modules/    # window.KALIDASS_API_BASE client initialization
 │   │   ├── components/        # ArticleCard, StoryBody, StoryPage, VideoEmbed
-│   │   ├── css/               # Theming variables and color gradients
+│   │   ├── css/               # Neel theme, pigment tokens, and rainbow gradients
 │   │   ├── lib/               # api.ts (CRUD/uploads), media.ts, types.ts
-│   │   └── pages/             # /, /magazine, /admin, /story/[slug]
+│   │   └── pages/             # /, /magazine, /admin (dynamic /story/:slug* via plugin)
 │   ├── static/                # Static assets, _redirects, .nojekyll
-│   ├── docusaurus.config.ts   # Docusaurus config and Webpack dev proxy
+│   ├── docusaurus.config.ts   # Docusaurus config, addRoute, and dev proxy
 │   ├── package.json           # Frontend dependencies and scripts
 │   └── tsconfig.json          # TypeScript strict configuration (noEmit: true)
 ├── worker/                    # Cloudflare Worker REST API
@@ -88,10 +88,10 @@ kalidass/
 ## 3. Core Features & Data Contracts
 
 ### Routes
-- `/` — Homepage featuring the primary cover story, lead article grid, and issue index.
-- `/magazine` — Issue archive with real-time text search and tag filtering.
-- `/admin` — Studio CMS with four tab modes: **Compose**, **Drafts**, **Published**, and **Delete**. Deep linking supported via `?mode=` and `?edit=<slug>`.
-- `/story/:slug` — Full-page article reader rendering polymorphic blocks with custom accent tints.
+- `/` — Homepage featuring the publication header, dedicated **Featured Story** section (`Lead Dispatch`), 3-column "In This Cycle", and issue index.
+- `/magazine` — Issue archive with real-time text search and dynamic tag filtering.
+- `/admin` — Studio CMS with four tab modes: **Compose**, **Drafts**, **Published**, and **Delete**. Includes editable URL slugs (`/story/<slug>`), real-time title sync, and customizable pigment swatches (`ACCENTS`). Deep linking supported via `?mode=` and `?edit=<slug>`.
+- `/story/:slug*` — Dynamic story reader registered via plugin `actions.addRoute` rendering polymorphic blocks with custom accent tints.
 
 ### Publication Flags
 - `published`: When `false`, saved as a draft (requires Bearer authentication; unauthenticated queries return `404`).
@@ -238,7 +238,7 @@ curl -X POST https://kalidass.amrit.fyi/api/articles \
     "excerpt": "A summary deck for search cards.",
     "author": {"name": "Agent", "role": "Correspondent", "avatar": ""},
     "tags": ["Evals", "Agents"],
-    "accent": "#c4f542",
+    "accent": "#6366f1",
     "published": false,
     "private": true,
     "aiGenerated": true,
@@ -275,7 +275,7 @@ cd blog_frontend && npm run clear
 | **Data Modeling** | **9.2 / 10** | Polymorphic block union (`Block`) provides structured content without CMS vendor lock-in. |
 | **Developer Experience** | **8.5 / 10** | Fast local multi-terminal / unified startup, Webpack dev proxy for zero-CORS dev workflow, and strict TypeScript checking. |
 | **Security & Automation** | **8.8 / 10** | Bearer auth, Cloudflare Access Zero Trust proxy support, and structured machine-to-machine AI agent publishing. |
-| **Documentation Quality** | **9.5 / 10** | Unified Docs7 documentation suite (18+ verified MDX pages, valid Mermaid diagrams, strict frontmatter). |
+| **Documentation Quality** | **9.5 / 10** | Unified Docs7 documentation suite (21 verified MDX pages, valid Mermaid diagrams, strict frontmatter). |
 | **Testing & CI/CD** | **7.5 / 10** | Robust compile-time type validation, but lacks automated E2E and Worker endpoint integration tests. |
 
 ### Core Architectural Advantages

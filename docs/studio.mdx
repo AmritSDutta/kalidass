@@ -15,10 +15,17 @@ The Studio features four operational modes accessible via top tab navigation or 
 
 The primary writing environment:
 - **New Articles**: Displays action buttons for **Save draft** (`published: false`) and **Publish** (`published: true`).
-- **Existing Articles**: Loaded via `?edit=<slug>`, displaying an **Update** action that maintains the existing publication state.
-- **Form Controls**: Title, subtitle, excerpt, author name and role, comma-separated tags, accent color swatches from `ACCENTS`, and featured flag.
+- **Existing Articles**: Loaded via `?edit=<slug>`, displaying an **Update** action that maintains the existing publication state and ID while allowing slug changes.
+- **Form Controls**:
+  - **Title**: Story headline. Auto-generates the URL slug as you type until manually edited.
+  - **URL Slug**: Editable path slug displayed with `/story/` prefix. Auto-slugified with hyphenation, lowercase conversion, and punctuation removal.
+  - **Subtitle & Excerpt**: Subheadings and summary deck text.
+  - **Author**: Name, role, and avatar URL.
+  - **Tags**: Comma-separated categorization tags.
+  - **Accent Swatch**: 6-color swatch picker matching the publication pigment tokens (`ACCENTS`).
+  - **Featured Flag**: Highlights the story in the dedicated homepage Featured section.
 - **Visibility Toggles**:
-  - **Private (Unlisted)**: Defaults to checked (`true`). Excludes the article from `/` and `/magazine` feeds while keeping the direct `/story/:slug` URL active.
+  - **Private (Unlisted)**: Defaults to checked (`true`). Excludes the article from `/` and `/magazine` public feeds while keeping direct `/story/:slug` links active.
   - **AI Generated**: Defaults to unchecked (`false`). Displays the `AI` badge on cards and headers when enabled.
 - **Block Editor**: Dynamic block list supporting `paragraph`, `heading`, `quote`, `image`, and `video` blocks with re-ordering, updating, and removal capabilities.
 
@@ -46,4 +53,4 @@ File upload controls are embedded directly in the form fields:
 - **Lead Video Upload** (`accept="video/*"`): Uploads video file and updates `draft.videoUrl`.
 - **Block Uploads**: Image and video blocks feature dedicated file upload pickers.
 
-Uploads are executed through `uploadObject()` in `src/lib/api.ts`, targeting the Upstash browser upload route with an automatic multipart fallback to `/api/objects`.
+Uploads are executed through `uploadObject()` in `src/lib/api.ts`, sending raw binary buffers to `POST /api/objects` with Bearer auth, which the Cloudflare Worker persists directly to Upstash Blob.

@@ -9,7 +9,7 @@ The central configuration for the frontend site is declared in `docusaurus.confi
 
 ## Site Identity & Build Metadata
 
-- **Title & Tagline**: `title: "Kalidass Journal"`, `tagline: "Field notes from the model layer."`.
+- **Title & Tagline**: `title: "Kalidass Journal"`, `tagline: "Field notes from the neural heart."`.
 - **Target URL**: `url: "https://kalidass.amrit.fyi"`, `baseUrl: "/"`.
 - **Tab Icon (Favicon)**: Remote PNG `https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png` declared via `favicon` and `headTags` (icon + apple-touch-icon).
 - **Link Checking**: `onBrokenLinks: "throw"` ensures any broken internal routes immediately fail production builds.
@@ -29,15 +29,17 @@ The frontend enforces relative same-origin routing for all client requests:
 The custom plugin implements two core lifecycle hooks:
 
 - **`configureWebpack`**: Replaces `devServer.proxy` with a proxy forwarding `/api` requests to `http://127.0.0.1:8787`. Configures host binding to `0.0.0.0` with `allowedHosts` support.
-- **`contentLoaded`**: Registers the dynamic client-side route `/story/:slug` mapping directly to `@site/src/components/StoryPage`.
+- **`contentLoaded`**: Registers the dynamic client-side route `/story/:slug*` mapping directly to `@site/src/components/StoryPage`.
 
 ## Theme & CSS Custom Properties
 
 Global styling is defined in `src/css/custom.css`:
 
+- **Primary Brand (`Neel`)**: Configured as `#6366f1` / `#4f46e5` for buttons, active state, and brand accents.
+- **Pigment Tokens**: Six CSS pigment variables (`--pigment-neel`, `--pigment-haldi`, `--pigment-sindoor`, `--pigment-gulabi`, `--pigment-mehendi`, `--pigment-aakash`).
+- **Rainbow Gradients**: Multi-stop warm and cool rainbow gradients (`--rainbow-gradient-warm`, `--rainbow-gradient-cool`).
 - **Color Mode**: Default mode is `dark`, with automatic detection for user OS preferences (`respectPrefersColorScheme: true`).
 - **Page Gradient (`--page-gradient`)**:
   - Dark mode: Dark chocolate to charcoal (`#2b1a13` to `#1d1d21`).
   - Light mode: Cream to pure white (`#efe3c8` to `#ffffff`).
-- **Hero Accent (`--layer-accent`)**: Colors the hero tagline emphasis (`<em>the model layer.</em>`) — gold in dark mode, vibrant green (`#4e9b47`) in light mode.
 - **Card Accent (`--card-accent`) / Story Accent (`--story-accent`)**: Dynamic accent colors injected per article from the article's `accent` hex value.

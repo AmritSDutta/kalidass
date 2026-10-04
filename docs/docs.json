@@ -3,9 +3,9 @@
   "name": "Kalidass Journal",
   "theme": "maple",
   "colors": {
-    "primary": "#22d3ee",
-    "light": "#22d3ee",
-    "dark": "#0e7490"
+    "primary": "#6366f1",
+    "light": "#6366f1",
+    "dark": "#4f46e5"
   },
   "filterSidebar": true,
   "poweredByDocs7": true,

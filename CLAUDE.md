@@ -24,11 +24,11 @@ kalidass/
 │   ├── src/
 │   │   ├── client-modules/    # window.KALIDASS_API_BASE client initialization
 │   │   ├── components/        # ArticleCard, StoryBody, StoryPage, VideoEmbed
-│   │   ├── css/               # Theming gradients and custom properties
+│   │   ├── css/               # Neel theme, pigment tokens, and rainbow gradients
 │   │   ├── lib/               # api.ts (CRUD & uploads), media.ts, types.ts
-│   │   └── pages/             # /, /magazine, /admin, /story/[slug]
+│   │   └── pages/             # /, /magazine, /admin (dynamic /story/:slug* via plugin)
 │   ├── static/                # Static assets, _redirects, .nojekyll
-│   ├── docusaurus.config.ts   # Central config & dev proxy to :8787
+│   ├── docusaurus.config.ts   # Central config, addRoute, and dev proxy to :8787
 │   ├── package.json           # Dependencies and scripts
 │   └── tsconfig.json          # TypeScript strict config (noEmit: true)
 ├── worker/                    # Cloudflare Worker REST API
@@ -76,13 +76,14 @@ kalidass/
    - `blog_frontend/src/` is strictly TypeScript (`.ts/.tsx`). Sibling `.js` files shadow `.tsx` files in Webpack resolution and cause runtime `exports is not defined` crashes.
    - Always run `tsc` with `noEmit: true`. If `.js` twins appear in `src/`, delete them and execute `npm run clear`.
 2. **Windows Path Colon Quirk**:
-   - `npm run build` fails on Windows due to the dynamic route `/story/:slug` (`:` is illegal in Windows filenames).
+   - `npm run build` fails on Windows due to the dynamic route `/story/:slug*` (`:` is illegal in Windows filenames).
    - On Windows, verify using `npm.cmd run typecheck` and `npm run start`. Production builds run cleanly on Linux CI.
 3. **Browser DOM Guards**:
    - Wrap browser globals (`window`, `localStorage`, `document`) with `typeof window !== "undefined"` or `ExecutionEnvironment.canUseDOM`.
-4. **Storage Modes**:
+4. **Storage Modes & Cloudflare Fetch Guard**:
    - In-memory fallback seeds 4 default articles when `UPSTASH_BLOB_TOKEN` is unset.
    - Upstash Blob storage activates automatically when `UPSTASH_BLOB_TOKEN` is configured.
+   - Cloudflare Workers buffer stream bodies to `Uint8Array` in `globalThis.fetch` to ensure `Content-Length` preservation on `@upstash/blob` S3 calls.
 
 ---
 

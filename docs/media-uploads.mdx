@@ -35,13 +35,15 @@ File uploads are processed by the `uploadObject(file)` function:
 
 ```mermaid
 flowchart TD
-  UploadInit["File Selected in Browser"] --> TryUpstash["Primary: Upstash Browser SDK upload()"]
-  TryUpstash -->|Success| Complete["Public Blob URL Returned"]
-  TryUpstash -->|Fail / Unsupported| Fallback["Fallback: FormData POST /api/objects"]
-  Fallback -->|Success| Complete
-  Fallback -->|Error| ErrorHandler["Surface Error in UI"]
+  UploadInit["File Selected in Browser"] --> FormDataPost["FormData POST /api/objects with Bearer Auth"]
+  FormDataPost --> WorkerHandle["Cloudflare Worker receives File FormData"]
+  WorkerHandle --> StreamAdapter["Fetch Stream Adapter (ArrayBuffer conversion)"]
+  StreamAdapter --> UpstashBlob["@upstash/blob put() S3 Storage"]
+  UpstashBlob -->|Success| Complete["Public Blob URL Returned to Client"]
+  UpstashBlob -->|Error| ErrorHandler["Surface Error in UI"]
 ```
 
-1. **Primary Path**: Uses the Upstash browser SDK `upload(file, { route: apiUrl("/api/upload") })`, awaiting completion of the upload task to extract `blob.url`.
-2. **Fallback Path**: If the SDK fails or is unavailable, sends a `multipart/form-data` `POST` request to `/api/objects` containing the file and admin authorization header.
-3. **Status Feedback**: On completion, the UI updates with `Uploaded to Upstash Blob` and populates the corresponding URL input.
+1. **Client Upload (`uploadObject`)**: Bundles the selected file into a `FormData` payload and issues a `POST` request to `/api/objects` with Bearer authentication headers.
+2. **Worker Streaming & Buffering**: The Cloudflare Worker reads the file stream into an in-memory `Uint8Array` buffer. This guarantees an explicit `Content-Length` header on the outgoing Upstash S3 request, preventing signature mismatch errors.
+3. **Upstash Blob Persistence**: Calls `@upstash/blob` `put(name, buffer, { access: "public", contentType })` to persist the asset.
+4. **Public URL Propagation**: Returns `{ url, name }` to the client, populating the draft form and updating live image/video previews.

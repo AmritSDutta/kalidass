@@ -9,10 +9,18 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 
 ## Home Page (`src/pages/index.tsx`, `/`)
 
-- **Hero & Cover Brief**: Displays the publication tagline and selects the cover story (`articles.find(a => a.featured) || articles[0]`). The lead story is rendered with the featured `ArticleCard` variant.
-- **In This Cycle**: The next 3 articles are arranged in a multi-column responsive grid.
+- **Hero & Publication Header**: Displays the publication tagline *"Field notes from the neural heart."*, live system indicators, and primary navigation actions.
+- **Dedicated Featured Story (`Lead Dispatch`)**: A visually distinct featured section with generous top spacing (`margin-top: 4.5rem;`) and a section divider. Renders the lead story (`articles.find(a => a.featured) || articles[0]`) using the featured card variant.
+- **In This Cycle**: The next 3 articles are arranged in a 3-column responsive grid with tag chips, author avatars, and read times.
 - **Index List**: All remaining articles are presented as streamlined row entries linking to `/story/:slug` with their primary tag.
-- **Error Handling**: Network and API errors are caught and surfaced directly in the UI with contextual troubleshooting hints.
+- **Error Handling**: Network and API errors are caught and surfaced in a dedicated notification banner with troubleshooting hints.
+
+## Color Tokens & Branding System
+
+- **Primary Accent (`Neel` - Royal Indigo)**: Configured as `#6366f1` / `#4f46e5` for branding, buttons, active tabs, and link hover states.
+- **Pigment Spectrum**: Six CSS theme tokens (`--pigment-neel`, `--pigment-haldi`, `--pigment-sindoor`, `--pigment-gulabi`, `--pigment-mehendi`, `--pigment-aakash`) provide categorical color coding.
+- **Dual Gradients**: Warm and cool rainbow gradients (`--rainbow-gradient-warm`, `--rainbow-gradient-cool`) style dividers, hero accents, and card borders.
+- **Top Navigation**: Navigation bar places `Issue` (Magazine archive) and `Studio` (CMS) side-by-side with distinct icon accents.
 
 ## Magazine Archive (`src/pages/magazine.tsx`, `/magazine`)
 
@@ -27,9 +35,9 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 - **Meta Chips**: Displays primary tag chips and an `AI` indicator badge if `aiGenerated: true`.
 - **Author Row**: Displays the author's avatar image or first initial, alongside publication date and estimated read time.
 
-## Story Reader (`src/components/StoryPage.tsx`, `/story/:slug`)
+## Story Reader (`src/components/StoryPage.tsx`, `/story/:slug*`)
 
-- **Dynamic Route**: The dynamic path `/story/:slug` is registered via `kalidassPlugin.contentLoaded` in `docusaurus.config.ts`.
+- **Dynamic Route**: The dynamic path `/story/:slug*` is registered via `kalidassPlugin.contentLoaded` using `actions.addRoute` in `docusaurus.config.ts`.
 - **Slug Resolution**: The article slug is extracted from `location.pathname` and fetched via `getArticle(slug)`.
 - **Hero Header**: Full-width veil overlay with cover image, topic kicker tag, headline, subtitle, and author byline.
 - **Story Body**: Renders lead `excerpt` deck, optional hero `VideoEmbed` player, and delegates content blocks to `StoryBody.tsx`.

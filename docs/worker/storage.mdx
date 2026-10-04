@@ -14,7 +14,7 @@ flowchart TD
   EnvCheck["blobClient: env.UPSTASH_BLOB_TOKEN present?"]
   UpstashMode["mode = 'upstash' - new Bucket with token"]
   MemoryMode["mode = 'memory' - memoryBucket from memory.js"]
-  SeedCheck["ensureSeed: read journal/index.json"]
+  SeedCheck["ensureSeed: read getIndexPath(env)"]
   Populated["Index exists and non-empty - serve as-is"]
   Empty["Index missing or empty - write 4 seed articles"]
   EnvCheck -->|"Yes"| UpstashMode
@@ -34,6 +34,22 @@ new Bucket({ token: env.UPSTASH_BLOB_TOKEN, enableTelemetry: false })
 ```
 
 All `get`, `put`, and `del` operations resolve against the Upstash Blob bucket. Article JSON and media objects are durable and survive worker restarts.
+
+### Cloudflare Workers Fetch Guard
+
+Cloudflare Workers use streaming fetch bodies by default (`ReadableStream`). To prevent S3/R2 AWS-v4 signature mismatches caused by missing `Content-Length` headers, the worker overrides `globalThis.fetch` to buffer streaming bodies into `Uint8Array` when executing `@upstash/blob` calls:
+
+```js
+const nativeFetch = globalThis.fetch;
+globalThis.fetch = async function (input, init) {
+  if (init?.body && typeof init.body.getReader === "function") {
+    const bytes = new Uint8Array(await new Response(init.body).arrayBuffer());
+    const { duplex, ...rest } = init;
+    return nativeFetch(input, { ...rest, body: bytes });
+  }
+  return nativeFetch(input, init);
+};
+```
 
 ### Memory Mode
 
@@ -110,12 +126,12 @@ function putJson(bucket, path, value) {
 
 ## Cold-Start Seeding (`ensureSeed`)
 
-On the first request to any articles endpoint, `ensureSeed(bucket)` is called:
+On the first request to any articles endpoint, `ensureSeed(bucket, env)` is called:
 
-1. Reads `journal/index.json`.
+1. Reads `<rootBucket>/index.json` (via `getIndexPath(env)`).
 2. If the index is already a non-empty array, returns it immediately.
-3. Otherwise, writes all four articles from `seed.js` as individual `journal/articles/<id>.json` objects.
-4. Builds and writes a fresh `journal/index.json` from the summarized seed articles.
+3. Otherwise, writes all four articles from `seed.js` as individual `<rootBucket>/articles/<id>.json` objects.
+4. Builds and writes a fresh `<rootBucket>/index.json` from the summarized seed articles.
 5. Returns the populated index array.
 
 The four seed articles cover: *The Geometry of Attention*, *Agents That Remember Too Much*, *Eval Is a Product Decision*, and *Multimodal Is a Plumbing Problem*. Each has a full `blocks` array, cover image URL, author, tags, accent color, and `featured` flag.

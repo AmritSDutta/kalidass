@@ -104,7 +104,7 @@ Merges a request body with an optionally existing article record to produce a fu
 
 ## `summarize(article)`
 
-Projects a full article object to the lighter `ArticleSummary` shape stored in `journal/index.json`.
+Projects a full article object to the lighter `ArticleSummary` shape stored in `<rootBucket>/index.json`.
 
 Included fields: `id`, `slug`, `title`, `subtitle`, `excerpt`, `coverImage`, `videoUrl`, `author`, `tags`, `accent`, `publishedAt`, `readTime`, `featured`, `published`, `private`, `aiGenerated`, `updatedAt`.
 
@@ -118,11 +118,12 @@ Returns `true` if the request is authorized to perform an admin operation.
 
 ```js
 function adminOk(request, env) {
-  if (!env.ADMIN_TOKEN) return true;
-  return (request.headers.get("authorization") || "") === `Bearer ${env.ADMIN_TOKEN}`;
+  if (!env.ADMIN_TOKEN) return false;
+  const auth = request.headers.get("authorization") || "";
+  return auth === `Bearer ${env.ADMIN_TOKEN}`;
 }
 ```
 
-- **Open mode** (`ADMIN_TOKEN` not set): All requests pass — suitable for local development and personal deployments.
-- **Locked mode** (`ADMIN_TOKEN` set): Header must be exactly `Authorization: Bearer <token>`.
+- **Fail-Closed Security**: If `ADMIN_TOKEN` is not configured, write endpoints fail closed by returning `false`.
+- **Bearer Token Verification**: When configured, the header must be exactly `Authorization: Bearer <token>`.
 - Returns `401 { error: "Unauthorized" }` on failure.

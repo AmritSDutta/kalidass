@@ -34,10 +34,10 @@ flowchart TD
 
 | Route | Component Source | Functionality |
 | --- | --- | --- |
-| `/` | `src/pages/index.tsx` | Cover story, featured brief, and index grid |
+| `/` | `src/pages/index.tsx` | Cover story, dedicated featured dispatch, and index grid |
 | `/magazine` | `src/pages/magazine.tsx` | Searchable article archive with tag filtering |
 | `/admin` | `src/pages/admin.tsx` | Studio CMS: Compose, Drafts, Published, and Delete tabs |
-| `/story/:slug` | Plugin route → `src/components/StoryPage.tsx` | Full-page reader registered in `kalidassPlugin.contentLoaded` |
+| `/story/:slug*` | Dynamic Route → `src/components/StoryPage.tsx` | Dynamic story reader registered in `kalidassPlugin.contentLoaded` via `actions.addRoute` |
 
 ## Source Tree Layout
 
@@ -66,10 +66,6 @@ flowchart TD
       <Tree.File name="types.ts" highlight />
     </Tree.Folder>
     <Tree.Folder name="pages" defaultOpen>
-      <Tree.Folder name="story">
-        <Tree.File name="[slug].tsx" />
-        <Tree.File name="slug.module.css" />
-      </Tree.Folder>
       <Tree.File name="admin.tsx" highlight />
       <Tree.File name="admin.module.css" />
       <Tree.File name="index.tsx" highlight />

@@ -23,9 +23,14 @@ compatibility_date = "2026-09-01"
 # Required for crypto.randomUUID() and TextEncoder/TextDecoder
 compatibility_flags = ["nodejs_compat"]
 
-# Disable public workers.dev routing — Worker is private and reachable
-# exclusively via Pages Service Binding (JOURNAL_WORKER)
+# Disable public workers.dev routing and preview URLs
 workers_dev = false
+preview_urls = false
+
+# Route definition for direct API subdomains
+routes = [
+  { pattern = "api.kalidass.amrit.fyi/*", zone_name = "amrit.fyi" }
+]
 
 [vars]
 # CORS origin for allowed client origins
@@ -42,6 +47,8 @@ ROOT_BUCKET = "kalidass"
 | `compatibility_date` | `2026-09-01` | Locks Workers runtime behavior to a specific date, preventing unexpected breaking changes on new runtime releases. |
 | `compatibility_flags` | `["nodejs_compat"]` | Enables Node.js compatibility layer for APIs like `crypto`, `Buffer`, `TextEncoder`, and streams. |
 | `workers_dev` | `false` | Completely disables public `*.workers.dev` DNS exposure. |
+| `preview_urls` | `false` | Disables automated preview deployments on workers.dev. |
+| `routes` | `api.kalidass.amrit.fyi/*` | Binds worker directly to custom zone subdomain `api.kalidass.amrit.fyi`. |
 | `CORS_ORIGIN` | `"https://kalidass.amrit.fyi"` | Value of the `Access-Control-Allow-Origin` response header. |
 | `ROOT_BUCKET` | `"kalidass"` | Root folder prefix inside Upstash Blob for article JSON and media objects. |
 
