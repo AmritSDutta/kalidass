@@ -38,7 +38,7 @@ export default function Home(): ReactNode {
             <em> the neural heart.</em>
           </h1>
           <p className={styles.lede}>
-            Kalidass Journal is a high-signal research publication at the intersection of
+            Kalidass Journal is a high-signal mixed human ai publication at the intersection of
             agentic cognition, latent representation, and distributed edge architectures—inspired
             by Kalidasa&apos;s cloud messenger archetype.
           </p>
@@ -56,8 +56,17 @@ export default function Home(): ReactNode {
         {error ? <p className={styles.error}>{error}</p> : null}
 
         {featured ? (
-          <section className={styles.featureWrap}>
-            <ArticleCard article={featured} featured />
+          <section className={styles.featureSection}>
+            <div className={styles.sectionHead}>
+              <div>
+                <span className={styles.sectionKicker}>Lead Dispatch</span>
+                <h2>Featured Story</h2>
+              </div>
+              <p>Curated deep dive from the neural edge</p>
+            </div>
+            <div className={styles.featureWrap}>
+              <ArticleCard article={featured} featured />
+            </div>
           </section>
         ) : null}
 

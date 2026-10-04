@@ -172,6 +172,23 @@ export default function Admin(): ReactNode {
       .catch(() => setStatus("Could not load that story."));
   }, [editSlug]);
 
+  const slugifyText = (value: string) =>
+    String(value || "")
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^\w\s-]/g, "")
+      .trim()
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 72);
+
+  const onTitleChange = (newTitle: string) => {
+    const oldSlug = draft.slug;
+    const autoOld = slugifyText(draft.title);
+    const nextSlug = !oldSlug || oldSlug === autoOld ? slugifyText(newTitle) : oldSlug;
+    setDraft((current) => ({...current, title: newTitle, slug: nextSlug}));
+  };
+
   const setField = <K extends keyof ArticleDraft>(key: K, value: ArticleDraft[K]) => {
     setDraft((current) => ({...current, [key]: value}));
   };
@@ -419,9 +436,17 @@ export default function Admin(): ReactNode {
               Title
               <input
                 value={draft.title}
-                onChange={(event) => setField("title", event.target.value)}
+                onChange={(event) => onTitleChange(event.target.value)}
                 placeholder="A systems sentence"
                 required
+              />
+            </label>
+            <label>
+              Slug (/story/{draft.slug || "auto"})
+              <input
+                value={draft.slug || ""}
+                onChange={(event) => setField("slug", slugifyText(event.target.value))}
+                placeholder="custom-slug-or-auto"
               />
             </label>
             <label>
