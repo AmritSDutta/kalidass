@@ -1,4 +1,3 @@
-import {upload} from "@upstash/blob/browser";
 import {apiUrl} from "./config";
 import type {Article, ArticleDraft, ArticleSummary} from "./types";
 
@@ -63,22 +62,23 @@ export function removeArticle(idOrSlug: string) {
   });
 }
 
-export async function uploadObject(file: File) {
-  try {
-    const task = upload(file, {route: apiUrl("/api/upload")});
-    const blob = await task.done;
-    const url = blob.url || (blob as {data?: {url?: string}}).data?.url;
-    if (!url) throw new Error("Upload did not return a public URL");
-    return {url, name: file.name};
-  } catch {
-    const body = new FormData();
-    body.append("file", file);
-    const response = await fetch(apiUrl("/api/objects"), {
-      method: "POST",
-      headers: authHeaders(),
-      body,
-    });
-    if (!response.ok) throw new Error("Upload failed");
-    return response.json() as Promise<{url: string; name: string}>;
+export async function uploadObject(file: File): Promise<{url: string; name: string}> {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch(apiUrl("/api/objects"), {
+    method: "POST",
+    headers: authHeaders(),
+    body,
+  });
+  if (!response.ok) {
+    let message = "Upload failed";
+    try {
+      const data = await response.json();
+      message = data.error || message;
+    } catch {
+      message = response.statusText || message;
+    }
+    throw new Error(message);
   }
+  return response.json() as Promise<{url: string; name: string}>;
 }

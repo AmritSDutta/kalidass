@@ -251,7 +251,8 @@ export default {
         if (!(file instanceof File)) return json({error: "file field required"}, 400, origin);
         const prefix = getRootPrefix(env);
         const path = uniquePath`${prefix}/media/${file.name}`;
-        const blob = await bucket.put(path, file, {
+        const buffer = new Uint8Array(await file.arrayBuffer());
+        const blob = await bucket.put(path, buffer, {
           contentType: file.type || "application/octet-stream",
           contentTypes: ["image/*", "video/*"],
           maxSize: "20mb",
