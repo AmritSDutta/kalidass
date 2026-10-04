@@ -139,8 +139,8 @@ export default function AuthNavbarItem({mobile}: {mobile?: boolean}): React.JSX.
             </span>
           </div>
 
-          {/* Sudo Elevation Section: ONLY for eligible whitelist emails */}
-          {isSuperuserEligible && !isAdmin && (
+          {/* Sudo Elevation Section: Always available for authors to elevate with ADMIN_TOKEN */}
+          {!isAdmin && (
             <>
               <div className={styles.divider} />
               <button
@@ -155,7 +155,7 @@ export default function AuthNavbarItem({mobile}: {mobile?: boolean}): React.JSX.
             </>
           )}
 
-          {isAdmin && isSuperuserEligible && (
+          {isAdmin && (
             <>
               <div className={styles.divider} />
               <div className={styles.elevatedSection}>

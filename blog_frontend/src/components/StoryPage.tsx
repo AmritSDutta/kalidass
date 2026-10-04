@@ -5,11 +5,13 @@ import {useLocation} from "@docusaurus/router";
 import StoryBody from "@site/src/components/StoryBody";
 import VideoEmbed from "@site/src/components/VideoEmbed";
 import {getArticle} from "@site/src/lib/api";
+import {useAuth} from "@site/src/lib/auth";
 import {formatDate} from "@site/src/lib/media";
 import type {Article} from "@site/src/lib/types";
 import styles from "./StoryPage.module.css";
 
 export default function StoryPage(): ReactNode {
+  const {user, isAdmin, isAuthenticated} = useAuth();
   const location = useLocation();
   const slug = location.pathname.replace(/^\/story\//, "").replace(/\/$/, "");
   const [article, setArticle] = useState<Article | null>(null);
@@ -46,6 +48,11 @@ export default function StoryPage(): ReactNode {
   }
 
   const storyAccent = article.accent || "var(--chroma-neel)";
+  const userEmail = (user?.email || "").toLowerCase().trim();
+  const authorEmail = (article.authorEmail || "").toLowerCase().trim();
+  const canEdit = Boolean(
+    isAuthenticated && (isAdmin || (authorEmail && userEmail === authorEmail))
+  );
 
   return (
     <Layout title={article.title} description={article.excerpt}>
@@ -97,9 +104,11 @@ export default function StoryPage(): ReactNode {
             <Link to="/magazine" className={styles.footerLink}>
               ← All briefs
             </Link>
-            <Link to={`/admin?edit=${article.slug}`} className={styles.footerLink}>
-              Edit in studio →
-            </Link>
+            {canEdit ? (
+              <Link to={`/admin?edit=${article.slug}`} className={styles.footerLink}>
+                Edit in studio →
+              </Link>
+            ) : null}
           </div>
         </article>
       </main>

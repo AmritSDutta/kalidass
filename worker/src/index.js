@@ -139,9 +139,9 @@ async function getAuthUser(request, env) {
 
       // Step-up elevation check via x-admin-token header
       const elevationToken = (request.headers.get("x-admin-token") || "").trim();
-      const isElevated =
-        isSuperuserEligible &&
-        Boolean(env.ADMIN_TOKEN && elevationToken && elevationToken === env.ADMIN_TOKEN);
+      const isElevated = Boolean(
+        env.ADMIN_TOKEN && elevationToken && elevationToken === env.ADMIN_TOKEN
+      );
 
       return {
         sub: payload.sub,
@@ -428,9 +428,6 @@ export default {
       if (url.pathname === "/api/auth/elevate" && request.method === "POST") {
         const user = await getAuthUser(request, env);
         if (!user) return json({error: "Unauthorized"}, 401, origin);
-        if (!user.isSuperuserEligible) {
-          return json({error: "User is not eligible for superuser elevation"}, 403, origin);
-        }
         let body = {};
         try {
           body = await request.json();
