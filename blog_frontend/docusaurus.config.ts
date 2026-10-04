@@ -50,7 +50,7 @@ const config: Config = {
         name: "kalidass-journal",
         async contentLoaded({actions}: any) {
           actions.addRoute({
-            path: "/story/:slug*",
+            path: "/story",
             component: "@site/src/components/StoryPage.tsx",
             exact: false,
           });
@@ -101,6 +101,7 @@ const config: Config = {
       items: [
         {to: "/magazine", label: "Issue", position: "right"},
         {to: "/admin", label: "Studio", position: "right"},
+        {type: "custom-auth" as any, position: "right"},
       ],
     },
     footer: {

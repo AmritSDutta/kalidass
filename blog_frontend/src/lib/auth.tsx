@@ -121,7 +121,10 @@ export function AuthProvider({children}: {children: ReactNode}) {
 
           // Handle redirect callback from Auth0 Universal Login
           const search = window.location.search;
-          if (search.includes("code=") && search.includes("state=")) {
+          if (search.includes("error=") && search.includes("state=")) {
+            console.warn("Auth0 returned error on callback:", search);
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } else if (search.includes("code=") && search.includes("state=")) {
             await auth0ClientInstance.handleRedirectCallback();
             window.history.replaceState({}, document.title, window.location.pathname);
             if (window.location.pathname === "/" || !window.location.pathname) {
