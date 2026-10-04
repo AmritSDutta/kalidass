@@ -148,6 +148,48 @@ function AdminInner(): ReactNode {
     }
   }, [isAuthenticated, user, editingId]);
 
+  const draftAnalysis = useMemo(() => {
+    const headings: {index: number; text: string; id: string; wordCount: number}[] = [];
+    let totalWords = 0;
+    let currentHeading: {index: number; text: string; id: string; wordCount: number} | null = null;
+    const blockCounts = {paragraph: 0, heading: 0, quote: 0, image: 0, video: 0};
+
+    const metaWords = `${draft.title} ${draft.subtitle} ${draft.excerpt}`
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean).length;
+    totalWords += metaWords;
+
+    (draft.blocks || []).forEach((block, index) => {
+      const text =
+        block.type === "quote" || block.type === "paragraph" || block.type === "heading"
+          ? block.text || ""
+          : block.caption || "";
+      const words = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+      totalWords += words;
+
+      if (block.type in blockCounts) {
+        blockCounts[block.type as keyof typeof blockCounts] += 1;
+      }
+
+      if (block.type === "heading") {
+        currentHeading = {
+          index,
+          text: block.text.trim() || "Untitled Heading",
+          id: `editor-block-${block._id || index}`,
+          wordCount: 0,
+        };
+        headings.push(currentHeading);
+      } else if (currentHeading && (block.type === "paragraph" || block.type === "quote")) {
+        currentHeading.wordCount += words;
+      }
+    });
+
+    const estimatedReadTime = Math.max(1, Math.round(totalWords / 180) || 1);
+
+    return {headings, totalWords, blockCounts, estimatedReadTime};
+  }, [draft]);
+
   const handleUnlockToken = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
@@ -635,7 +677,10 @@ function AdminInner(): ReactNode {
               </div>
 
               {draft.blocks.map((block, index) => (
-                <div key={block._id || `${block.type}-${index}`} className={styles.block}>
+                <div
+                  key={block._id || `${block.type}-${index}`}
+                  id={`editor-block-${block._id || index}`}
+                  className={styles.block}>
                   <div className={styles.blockBar}>
                     <strong>{blockLabel(block.type)}</strong>
                     <div>
@@ -655,6 +700,7 @@ function AdminInner(): ReactNode {
                       value={block.text}
                       rows={block.type === "heading" ? 2 : 5}
                       onChange={(event) => updateBlock(index, {text: event.target.value})}
+                      placeholder={block.type === "heading" ? "Section heading..." : "Paragraph text..."}
                     />
                   ) : null}
                   {block.type === "quote" ? (
@@ -663,6 +709,7 @@ function AdminInner(): ReactNode {
                         value={block.text}
                         rows={3}
                         onChange={(event) => updateBlock(index, {text: event.target.value})}
+                        placeholder="Quote text..."
                       />
                       <input
                         value={block.cite || ""}
@@ -699,6 +746,81 @@ function AdminInner(): ReactNode {
                 </div>
               ))}
             </form>
+
+            {/* Right 20% Heading Analysis & Live Outline Panel */}
+            <aside className={styles.editorSidebar}>
+              <div className={styles.analysisCard}>
+                <div className={styles.analysisHeader}>
+                  <span className={styles.analysisKicker}>Heading Analysis</span>
+                  <h3>Live Outline</h3>
+                </div>
+
+                <div className={styles.metricsGrid}>
+                  <div className={styles.metric}>
+                    <span className={styles.metricVal}>{draftAnalysis.headings.length}</span>
+                    <span className={styles.metricLabel}>Sections</span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricVal}>{draftAnalysis.totalWords}</span>
+                    <span className={styles.metricLabel}>Words</span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricVal}>{draftAnalysis.estimatedReadTime}m</span>
+                    <span className={styles.metricLabel}>Read</span>
+                  </div>
+                </div>
+
+                {draftAnalysis.headings.length > 0 ? (
+                  <div className={styles.tocSection}>
+                    <p className={styles.tocTitle}>Document Structure</p>
+                    <nav className={styles.tocNav}>
+                      {draftAnalysis.headings.map((h, i) => (
+                        <button
+                          key={`${h.id}-${i}`}
+                          type="button"
+                          onClick={() => {
+                            const el = document.getElementById(h.id);
+                            if (el) el.scrollIntoView({behavior: "smooth", block: "center"});
+                          }}
+                          className={styles.tocItem}>
+                          <span className={styles.tocNum}>0{i + 1}</span>
+                          <span className={styles.tocText}>{h.text}</span>
+                          {h.wordCount > 0 ? (
+                            <span className={styles.tocWords}>{h.wordCount}w</span>
+                          ) : null}
+                        </button>
+                      ))}
+                    </nav>
+                  </div>
+                ) : (
+                  <div className={styles.noHeadingsBox}>
+                    <p className={styles.noHeadings}>No section headings</p>
+                    <button
+                      type="button"
+                      className={styles.addHeadingBtn}
+                      onClick={() => addBlock("heading")}>
+                      + Add Heading
+                    </button>
+                  </div>
+                )}
+
+                <div className={styles.distribution}>
+                  <p className={styles.tocTitle}>Block Breakdown</p>
+                  <div className={styles.tagsList}>
+                    <span>{draftAnalysis.blockCounts.paragraph} paragraphs</span>
+                    {draftAnalysis.blockCounts.quote > 0 ? (
+                      <span>{draftAnalysis.blockCounts.quote} quotes</span>
+                    ) : null}
+                    {draftAnalysis.blockCounts.image > 0 ? (
+                      <span>{draftAnalysis.blockCounts.image} images</span>
+                    ) : null}
+                    {draftAnalysis.blockCounts.video > 0 ? (
+                      <span>{draftAnalysis.blockCounts.video} video</span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </aside>
           </div>
         ) : (
           <section className={styles.rail}>

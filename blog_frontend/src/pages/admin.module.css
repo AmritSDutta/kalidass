@@ -1,5 +1,5 @@
 .page {
-  max-width: 1140px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 3rem 1.5rem 5rem;
 }
@@ -104,8 +104,9 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: minmax(0, 4fr) minmax(260px, 1fr);
+  gap: 2rem;
+  align-items: start;
 }
 
 .tabs {
@@ -545,5 +546,209 @@
   border: 1px solid rgba(16, 185, 129, 0.3);
   border-radius: 6px;
   padding: 0.15rem 0.45rem;
+}
+
+/* Studio 80-20 Heading Analysis Sidebar */
+.editorSidebar {
+  position: sticky;
+  top: 4.5rem;
+  width: 100%;
+}
+
+.analysisCard {
+  background: var(--paper);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 1.4rem;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.analysisHeader h3 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  margin: 0.2rem 0 0;
+  color: var(--ink);
+}
+
+.analysisKicker {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--chroma-neel);
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  background: var(--paper-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+}
+
+.metricVal {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.metricLabel {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-mute);
+  margin-top: 0.15rem;
+}
+
+.tocSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tocTitle {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+  margin: 0;
+}
+
+.tocNav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 38vh;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.tocItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  line-height: 1.35;
+  transition: all 0.15s ease;
+}
+
+.tocItem:hover {
+  background: var(--paper-hover);
+  color: var(--ink);
+  border-color: var(--border-subtle);
+}
+
+.tocNum {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--chroma-neel);
+  flex-shrink: 0;
+}
+
+.tocText {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tocWords {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ink-mute);
+  flex-shrink: 0;
+}
+
+.noHeadingsBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: var(--paper-hover);
+  border: 1px dashed var(--border-subtle);
+  border-radius: 10px;
+  padding: 0.9rem;
+  text-align: center;
+}
+
+.noHeadings {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink-mute);
+  margin: 0;
+}
+
+.addHeadingBtn {
+  background: transparent;
+  border: 1px solid var(--chroma-neel);
+  color: var(--chroma-neel);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.addHeadingBtn:hover {
+  background: var(--chroma-neel);
+  color: #ffffff;
+}
+
+.distribution {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tagsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tagsList span {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  background: var(--paper-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .editorSidebar {
+    position: static;
+    order: 2;
+  }
 }
 

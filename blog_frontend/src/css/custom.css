@@ -13,27 +13,27 @@
   --ifm-code-font-size: 92%;
   --ifm-font-family-base: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ifm-heading-font-family: "Source Serif 4", Georgia, serif;
-  --ifm-background-color: #080a10;
-  --ifm-navbar-background-color: rgba(8, 10, 16, 0.75);
-  --ifm-footer-background-color: #06070b;
+  --ifm-background-color: #0d1222;
+  --ifm-navbar-background-color: rgba(13, 18, 34, 0.82);
+  --ifm-footer-background-color: #090e1a;
   --ifm-global-radius: 12px;
   --ifm-font-color-base: #f8fafc;
-  --docusaurus-highlighted-code-line-bg: rgba(99, 102, 241, 0.15);
+  --docusaurus-highlighted-code-line-bg: rgba(99, 102, 241, 0.2);
 
   /* Typography */
   --font-display: "Source Serif 4", Georgia, serif;
   --font-sans: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
 
-  /* Surfaces & Ink (Kajjala / Midnight Slate) */
-  --paper: rgba(15, 20, 32, 0.75);
-  --paper-solid: #101522;
-  --paper-hover: rgba(22, 29, 46, 0.85);
+  /* Surfaces & Ink (Elevated Sapphire Slate) */
+  --paper: rgba(18, 25, 46, 0.78);
+  --paper-solid: #131b31;
+  --paper-hover: rgba(26, 36, 64, 0.88);
   --ink: #f8fafc;
   --ink-soft: #94a3b8;
   --ink-mute: #64748b;
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(99, 102, 241, 0.4);
+  --border-subtle: rgba(99, 102, 241, 0.15);
+  --border-hover: rgba(99, 102, 241, 0.55);
 
   /* Classical Pigment System (षड्रस वर्ण) */
   --chroma-neel: #6366f1;       /* Neel (Indigo / Cloud Messenger) — Primary */
@@ -50,15 +50,15 @@
   --chroma-indigo: var(--chroma-neel);
   --layer-accent: var(--chroma-neel);
 
-  /* Page Ambient Rainbow Aura (Dark Mode: Deep Prismatic Shades) */
+  /* Page Ambient Rainbow Aura (Dark Mode: Vibrant Luminous Prismatic Glow) */
   --page-gradient:
-    radial-gradient(at 12% 15%, rgba(244, 63, 94, 0.18) 0px, transparent 50%),
-    radial-gradient(at 88% 12%, rgba(249, 115, 22, 0.16) 0px, transparent 48%),
-    radial-gradient(at 50% 28%, rgba(99, 102, 241, 0.22) 0px, transparent 55%),
-    radial-gradient(at 15% 85%, rgba(6, 182, 212, 0.15) 0px, transparent 50%),
-    radial-gradient(at 85% 80%, rgba(16, 185, 129, 0.13) 0px, transparent 50%),
-    radial-gradient(at 50% 90%, rgba(234, 179, 8, 0.12) 0px, transparent 50%),
-    linear-gradient(180deg, #080a10 0%, #06070b 100%);
+    radial-gradient(at 12% 15%, rgba(244, 63, 94, 0.24) 0px, transparent 50%),
+    radial-gradient(at 88% 12%, rgba(249, 115, 22, 0.22) 0px, transparent 48%),
+    radial-gradient(at 50% 28%, rgba(99, 102, 241, 0.28) 0px, transparent 55%),
+    radial-gradient(at 15% 85%, rgba(6, 182, 212, 0.20) 0px, transparent 50%),
+    radial-gradient(at 85% 80%, rgba(16, 185, 129, 0.18) 0px, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(234, 179, 8, 0.16) 0px, transparent 50%),
+    linear-gradient(180deg, #0d1222 0%, #090e1a 100%);
   --shadow-card: 0 10px 30px -8px rgba(0, 0, 0, 0.5);
 }
 

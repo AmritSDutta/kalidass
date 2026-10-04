@@ -12,10 +12,10 @@
 
 .hero {
   position: relative;
-  min-height: 55vh;
-  display: grid;
-  place-items: end start;
-  background: #080a10;
+  min-height: 52vh;
+  display: flex;
+  align-items: flex-end;
+  background: var(--ifm-background-color);
   color: #f8fafc;
   overflow: hidden;
 }
@@ -32,14 +32,23 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(8, 10, 16, 0.25) 0%, rgba(8, 10, 16, 0.85) 100%),
-    linear-gradient(90deg, color-mix(in srgb, var(--story-accent, #6366f1) 25%, transparent), transparent 60%);
+    linear-gradient(180deg, rgba(13, 18, 34, 0.3) 0%, rgba(13, 18, 34, 0.92) 100%),
+    linear-gradient(90deg, color-mix(in srgb, var(--story-accent, #6366f1) 25%, transparent), transparent 65%);
+}
+
+.heroInner {
+  position: relative;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  z-index: 2;
 }
 
 .heroCopy {
   position: relative;
-  max-width: 960px;
-  padding: 4.5rem 1.5rem 2.8rem;
+  max-width: 1100px;
+  padding: 4.5rem 0 2.8rem;
   z-index: 2;
 }
 
@@ -55,16 +64,16 @@
 
 .heroCopy h1 {
   font-family: var(--font-display);
-  font-size: clamp(2.4rem, 6vw, 4.6rem);
+  font-size: clamp(2.4rem, 5.5vw, 4.2rem);
   letter-spacing: -0.035em;
-  line-height: 1.05;
+  line-height: 1.08;
   margin: 0 0 0.8rem;
   color: #ffffff;
 }
 
 .sub {
-  font-size: 1.15rem;
-  max-width: 44rem;
+  font-size: 1.2rem;
+  max-width: 52rem;
   color: #cbd5e1;
   line-height: 1.6;
 }
@@ -118,9 +127,24 @@
   line-height: 1.3;
 }
 
+.layoutWrap {
+  width: 100%;
+  max-width: 1440px;
+  margin: -1.8rem auto 0;
+  padding: 0 1.5rem;
+  position: relative;
+  z-index: 3;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(260px, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
 .article {
-  max-width: 760px;
-  margin: -1.5rem auto 0;
+  width: 100%;
   background: var(--paper-solid);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -129,12 +153,11 @@
   position: relative;
   border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-card);
-  z-index: 3;
 }
 
 .deck {
   font-family: var(--font-display);
-  font-size: 1.22rem;
+  font-size: 1.25rem;
   line-height: 1.7;
   color: var(--ink-soft);
   margin-bottom: 2rem;
@@ -165,8 +188,212 @@
   text-decoration: none;
 }
 
+/* Right Panel: Heading Analysis & Structure */
+.sidebar {
+  position: sticky;
+  top: 4.5rem;
+  width: 100%;
+}
+
+.analysisCard {
+  background: var(--paper);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 1.4rem;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.analysisHeader h3 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  margin: 0.2rem 0 0;
+  color: var(--ink);
+}
+
+.analysisKicker {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--story-accent, var(--chroma-neel));
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  background: var(--paper-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+}
+
+.metricVal {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.metricLabel {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-mute);
+  margin-top: 0.15rem;
+}
+
+.tocSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tocTitle {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+  margin: 0;
+}
+
+.tocNav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.tocItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  line-height: 1.35;
+  transition: all 0.15s ease;
+}
+
+.tocItem:hover {
+  background: var(--paper-hover);
+  color: var(--ink);
+  border-color: var(--border-subtle);
+}
+
+.tocItemActive {
+  background: color-mix(in srgb, var(--story-accent, var(--chroma-neel)) 12%, transparent);
+  border-color: color-mix(in srgb, var(--story-accent, var(--chroma-neel)) 35%, transparent);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tocNum {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--story-accent, var(--chroma-neel));
+  flex-shrink: 0;
+}
+
+.tocText {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tocWords {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ink-mute);
+  flex-shrink: 0;
+}
+
+.noHeadings {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink-mute);
+  font-style: italic;
+  margin: 0;
+}
+
+.distribution {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tagsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tagsList span {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  background: var(--paper-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.2rem 0.45rem;
+  color: var(--ink-soft);
+}
+
+.scrollTopBtn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.scrollTopBtn:hover {
+  border-color: var(--chroma-neel);
+  color: var(--ink);
+  background: var(--paper-hover);
+}
+
 @media (min-width: 860px) {
   .article {
     padding: 3.2rem 3.5rem 3.8rem;
   }
 }
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: static;
+    order: 2;
+  }
+}
+

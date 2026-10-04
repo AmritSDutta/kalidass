@@ -1,8 +1,8 @@
-import {useEffect, useState, type CSSProperties, type ReactNode} from "react";
+import {useEffect, useMemo, useState, type CSSProperties, type ReactNode} from "react";
 import Layout from "@theme/Layout";
 import Link from "@docusaurus/Link";
 import {useLocation} from "@docusaurus/router";
-import StoryBody from "@site/src/components/StoryBody";
+import StoryBody, {headingSlug} from "@site/src/components/StoryBody";
 import VideoEmbed from "@site/src/components/VideoEmbed";
 import {getArticle} from "@site/src/lib/api";
 import {useAuth} from "@site/src/lib/auth";
@@ -10,12 +10,19 @@ import {formatDate} from "@site/src/lib/media";
 import type {Article} from "@site/src/lib/types";
 import styles from "./StoryPage.module.css";
 
+interface HeadingItem {
+  id: string;
+  text: string;
+  wordCount: number;
+}
+
 export default function StoryPage(): ReactNode {
   const {user, isAdmin, isAuthenticated} = useAuth();
   const location = useLocation();
   const slug = location.pathname.replace(/^\/story\//, "").replace(/\/$/, "");
   const [article, setArticle] = useState<Article | null>(null);
   const [error, setError] = useState("");
+  const [activeHeadingId, setActiveHeadingId] = useState<string>("");
 
   useEffect(() => {
     if (!slug) return;
@@ -23,6 +30,67 @@ export default function StoryPage(): ReactNode {
       .then(setArticle)
       .catch((err: Error) => setError(err.message));
   }, [slug]);
+
+  const headingsAnalysis = useMemo(() => {
+    if (!article?.blocks) {
+      return {headings: [] as HeadingItem[], totalWords: 0, blockCounts: {p: 0, h: 0, q: 0, img: 0, vid: 0}};
+    }
+
+    const headings: HeadingItem[] = [];
+    let currentHeading: HeadingItem | null = null;
+    let totalWords = 0;
+    const blockCounts = {p: 0, h: 0, q: 0, img: 0, vid: 0};
+
+    article.blocks.forEach((block, index) => {
+      const text = block.type === "quote" || block.type === "paragraph" || block.type === "heading"
+        ? block.text || ""
+        : block.caption || "";
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      totalWords += words;
+
+      if (block.type === "heading") {
+        blockCounts.h += 1;
+        const id = headingSlug(block.text, index);
+        currentHeading = {id, text: block.text, wordCount: 0};
+        headings.push(currentHeading);
+      } else if (block.type === "paragraph") {
+        blockCounts.p += 1;
+        if (currentHeading) currentHeading.wordCount += words;
+      } else if (block.type === "quote") {
+        blockCounts.q += 1;
+        if (currentHeading) currentHeading.wordCount += words;
+      } else if (block.type === "image") {
+        blockCounts.img += 1;
+      } else if (block.type === "video") {
+        blockCounts.vid += 1;
+      }
+    });
+
+    return {headings, totalWords, blockCounts};
+  }, [article]);
+
+  // Track active heading with IntersectionObserver
+  useEffect(() => {
+    if (!headingsAnalysis.headings.length || typeof window === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveHeadingId(entry.target.id);
+          }
+        });
+      },
+      {rootMargin: "0px 0px -65% 0px", threshold: 0.1}
+    );
+
+    headingsAnalysis.headings.forEach((h) => {
+      const el = document.getElementById(h.id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [headingsAnalysis]);
 
   if (error) {
     return (
@@ -54,6 +122,14 @@ export default function StoryPage(): ReactNode {
     isAuthenticated && (isAdmin || (authorEmail && userEmail === authorEmail))
   );
 
+  const scrollToHeading = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({behavior: "smooth", block: "start"});
+      setActiveHeadingId(id);
+    }
+  };
+
   return (
     <Layout title={article.title} description={article.excerpt}>
       <main
@@ -64,53 +140,134 @@ export default function StoryPage(): ReactNode {
             <img className={styles.cover} src={article.coverImage} alt="" />
           ) : null}
           <div className={styles.veil} />
-          <div className={styles.heroCopy}>
-            <p className={styles.kicker}>
-              {(article.tags || []).join(" · ") || "Essay"}
-            </p>
-            <h1>{article.title}</h1>
-            {article.subtitle ? <p className={styles.sub}>{article.subtitle}</p> : null}
-            <div className={styles.byline}>
-              {article.author?.avatar ? (
-                <img src={article.author.avatar} alt="" />
-              ) : (
-                <span className={styles.initial}>
-                  {(article.author?.name || "K").slice(0, 1)}
-                </span>
-              )}
-              <div>
-                <strong>{article.author?.name || "Kalidass Author"}</strong>
-                <span>
-                  {article.author?.role || "Research Note"} · {formatDate(article.publishedAt)} ·{" "}
-                  {article.readTime} min
-                  {article.aiGenerated ? (
-                    <>
-                      {" · "}
-                      <span className={styles.aiTag}>AI</span>
-                    </>
-                  ) : null}
-                </span>
+          <div className={styles.heroInner}>
+            <div className={styles.heroCopy}>
+              <p className={styles.kicker}>
+                {(article.tags || []).join(" · ") || "Essay"}
+              </p>
+              <h1>{article.title}</h1>
+              {article.subtitle ? <p className={styles.sub}>{article.subtitle}</p> : null}
+              <div className={styles.byline}>
+                {article.author?.avatar ? (
+                  <img src={article.author.avatar} alt="" />
+                ) : (
+                  <span className={styles.initial}>
+                    {(article.author?.name || "K").slice(0, 1)}
+                  </span>
+                )}
+                <div>
+                  <strong>{article.author?.name || "Kalidass Author"}</strong>
+                  <span>
+                    {article.author?.role || "Research Note"} · {formatDate(article.publishedAt)} ·{" "}
+                    {article.readTime} min
+                    {article.aiGenerated ? (
+                      <>
+                        {" · "}
+                        <span className={styles.aiTag}>AI</span>
+                      </>
+                    ) : null}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <article className={styles.article}>
-          <p className={styles.deck}>{article.excerpt}</p>
-          {article.videoUrl ? (
-            <VideoEmbed url={article.videoUrl} title={article.title} />
-          ) : null}
-          <StoryBody article={article} />
-          <div className={styles.footer}>
-            <Link to="/magazine" className={styles.footerLink}>
-              ← All briefs
-            </Link>
-            {canEdit ? (
-              <Link to={`/admin?edit=${article.slug}`} className={styles.footerLink}>
-                Edit in studio →
-              </Link>
-            ) : null}
+
+        <div className={styles.layoutWrap}>
+          <div className={styles.layout}>
+            {/* Left 80% Main Reading Pane */}
+            <article className={styles.article}>
+              <p className={styles.deck}>{article.excerpt}</p>
+              {article.videoUrl ? (
+                <VideoEmbed url={article.videoUrl} title={article.title} />
+              ) : null}
+              <StoryBody article={article} />
+              <div className={styles.footer}>
+                <Link to="/magazine" className={styles.footerLink}>
+                  ← All briefs
+                </Link>
+                {canEdit ? (
+                  <Link to={`/admin?edit=${article.slug}`} className={styles.footerLink}>
+                    Edit in studio →
+                  </Link>
+                ) : null}
+              </div>
+            </article>
+
+            {/* Right 20% Heading Analysis Panel */}
+            <aside className={styles.sidebar}>
+              <div className={styles.analysisCard}>
+                <div className={styles.analysisHeader}>
+                  <span className={styles.analysisKicker}>Heading Analysis</span>
+                  <h3>Structure & Outline</h3>
+                </div>
+
+                <div className={styles.metricsGrid}>
+                  <div className={styles.metric}>
+                    <span className={styles.metricVal}>{headingsAnalysis.headings.length}</span>
+                    <span className={styles.metricLabel}>Sections</span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricVal}>{headingsAnalysis.totalWords}</span>
+                    <span className={styles.metricLabel}>Words</span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricVal}>{article.readTime}m</span>
+                    <span className={styles.metricLabel}>Pace</span>
+                  </div>
+                </div>
+
+                {headingsAnalysis.headings.length > 0 ? (
+                  <div className={styles.tocSection}>
+                    <p className={styles.tocTitle}>Document Flow</p>
+                    <nav className={styles.tocNav}>
+                      {headingsAnalysis.headings.map((h, i) => (
+                        <button
+                          key={h.id}
+                          type="button"
+                          onClick={() => scrollToHeading(h.id)}
+                          className={`${styles.tocItem} ${
+                            activeHeadingId === h.id ? styles.tocItemActive : ""
+                          }`}>
+                          <span className={styles.tocNum}>0{i + 1}</span>
+                          <span className={styles.tocText}>{h.text}</span>
+                          {h.wordCount > 0 ? (
+                            <span className={styles.tocWords}>{h.wordCount}w</span>
+                          ) : null}
+                        </button>
+                      ))}
+                    </nav>
+                  </div>
+                ) : (
+                  <p className={styles.noHeadings}>Single continuous dispatch</p>
+                )}
+
+                <div className={styles.distribution}>
+                  <p className={styles.tocTitle}>Element Density</p>
+                  <div className={styles.tagsList}>
+                    <span>{headingsAnalysis.blockCounts.p} paragraphs</span>
+                    {headingsAnalysis.blockCounts.q > 0 ? (
+                      <span>{headingsAnalysis.blockCounts.q} quotes</span>
+                    ) : null}
+                    {headingsAnalysis.blockCounts.img > 0 ? (
+                      <span>{headingsAnalysis.blockCounts.img} images</span>
+                    ) : null}
+                    {headingsAnalysis.blockCounts.vid > 0 ? (
+                      <span>{headingsAnalysis.blockCounts.vid} video</span>
+                    ) : null}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className={styles.scrollTopBtn}
+                  onClick={() => window.scrollTo({top: 0, behavior: "smooth"})}>
+                  ↑ Back to masthead
+                </button>
+              </div>
+            </aside>
           </div>
-        </article>
+        </div>
       </main>
     </Layout>
   );

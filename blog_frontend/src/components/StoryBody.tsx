@@ -3,6 +3,17 @@ import type {Article} from "../lib/types";
 import VideoEmbed from "./VideoEmbed";
 import styles from "./StoryBody.module.css";
 
+export function headingSlug(text: string, index?: number): string {
+  const base = String(text || "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return base || `section-${(index ?? 0) + 1}`;
+}
+
 type Props = {
   article: Article;
 };
@@ -12,8 +23,9 @@ export default function StoryBody({article}: Props): ReactNode {
     <div className={styles.body}>
       {(article.blocks || []).map((block, index) => {
         if (block.type === "heading") {
+          const id = headingSlug(block.text, index);
           return (
-            <h2 key={index} className={styles.heading}>
+            <h2 key={index} id={id} className={styles.heading}>
               {block.text}
             </h2>
           );
