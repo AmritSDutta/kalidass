@@ -7,15 +7,22 @@ description: Web-based content management system for composing, drafting, editin
 
 The Studio interface is located at `/admin` (`src/pages/admin.tsx`). It provides an integrated CMS for writing, editing, organizing, and publishing articles directly into Upstash Blob storage via the Cloudflare Worker API.
 
-## Authentication & User Roles
+## Authentication, Identity & Sudo Elevation
 
 Access to Studio requires authentication via **Auth0** (or developer unlock with `ADMIN_TOKEN`):
 
-- **Auth0 Login (`@auth0/auth0-spa-js`)**: Authors log in with their email and credentials via Auth0 Universal Login.
-- **Role Detection**:
-  - **Super-Admin**: Granted via `ADMIN_TOKEN` or when the user's email matches `ADMIN_EMAILS` (or contains the `admin` role claim). Super-Admins have unrestricted global access to all articles.
-  - **Author**: Standard logged-in users who can compose, draft, edit, and delete **their own articles**.
-- **User Profile Bar**: Displays the logged-in user's avatar, name, email address, and active role badge (`Super Admin` in Royal Indigo or `Author` in Emerald), along with a one-click **Log out** action.
+- **Auth0 Login (`@auth0/auth0-spa-js`)**: Authors log in with their email and credentials via Auth0 Universal Login. Login preserves the user's active page via `appState.returnTo` without forcing an unwanted redirect to `/admin`.
+- **Top Navbar Profile Dropdown (`AuthNavbarItem.tsx`)**: All user identity information, role indicators, and authentication controls are consolidated in the top navigation bar:
+  - **Unauthenticated**: Displays a clean **Sign In** action.
+  - **Authenticated Author**: Displays avatar/initials, full name, email, and `Author` badge.
+  - **Super Admin**: Displays `Super Admin` badge, `🛡️ Superuser Active` status indicator, and an **Exit Superuser** action.
+- **2-Factor Superuser Elevation**:
+  - **Factor 1 (Identity Whitelist)**: The `⚡ Login as Superuser` button is only shown if the author's email is present in `ADMIN_EMAILS` (or contains the Auth0 `admin` role). Unauthorized users cannot elevate and API calls to `/api/auth/elevate` return `403 Forbidden`.
+  - **Factor 2 (Passphrase)**: Submitting the valid `ADMIN_TOKEN` passphrase in the elevation modal elevates the session to `Super Admin` (`role: "admin"`).
+- **Exit Superuser & Instant Privilege Drop**:
+  - Clicking **Exit Superuser** immediately drops session privileges back to `role: "author"`, removing `X-Admin-Token` from storage and hiding `Edit in studio →` links across non-owned stories without requiring a page refresh.
+- **Sign Out**:
+  - Clicking **Sign out** flushes all storage keys, resets auth state, triggers Auth0 logout, and redirects to `/`.
 
 ## Private App Mode (`PRIVATE_APP=true`)
 

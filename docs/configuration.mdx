@@ -15,6 +15,16 @@ The central configuration for the frontend site is declared in `docusaurus.confi
 - **Link Checking**: `onBrokenLinks: "throw"` ensures any broken internal routes immediately fail production builds.
 - **Future Flags**: `future.v4: true` enables early support for Docusaurus v4 features.
 
+## Authentication & Environment Fields (`customFields`)
+
+The frontend imports environment variables via `docusaurus.config.ts` into `customFields`:
+
+- **`auth0Domain`**: Tenant domain (`AUTH0_DOMAIN`).
+- **`auth0ClientId`**: SPA application client ID (`AUTH0_CLIENT_ID`).
+- **`auth0Audience`**: Worker API audience (`AUTH0_AUDIENCE`, default: `https://api.kalidass.amrit.fyi`).
+- **`adminEmails`**: Comma-separated list of whitelisted administrator emails (`ADMIN_EMAILS`). Used by the frontend to determine `isSuperuserEligible`.
+- **`privateApp`**: When `true`, disables Auth0 entirely in the client bundle and restricts CMS access to standalone `ADMIN_TOKEN`.
+
 ## API Base Resolution & Edge Routing
 
 The frontend enforces relative same-origin routing for all client requests:

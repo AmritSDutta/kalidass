@@ -12,7 +12,8 @@ The frontend interacts with the Cloudflare Worker API via the client library in 
 | Method | Path | Client Function | Auth Required | Description / Payload |
 | --- | --- | --- | --- | --- |
 | `GET` | `/api/health` | `getHealth()` | No | Health check — returns `{ ok: true }`. |
-| `GET` | `/api/auth/me` | `getAuthMe()` | **Yes** | Returns authenticated user profile `{ user: { email, role, sub } }`. |
+| `GET` | `/api/auth/me` | `getAuthMe()` | **Yes** | Returns authenticated user profile `{ user: { email, role, sub, isSuperuserEligible } }`. |
+| `POST` | `/api/auth/elevate` | `elevateAuth(adminToken)` | **Yes** | 2-Factor Superuser Elevation. Requires whitelisted email (`ADMIN_EMAILS`) and valid `adminToken` body. Returns `{ ok: true, elevated: true }`. |
 | `GET` | `/api/articles` | `listArticles()` | No | Public feed: returns published, non-private articles only. |
 | `GET` | `/api/articles?status=draft` | `listArticles("draft")` | **Yes** | Returns draft articles belonging to current author (or all for Super-Admin). |
 | `GET` | `/api/articles?status=published` | `listArticles("published")` | **Yes** | Returns published articles (excluding other users' private unlisted articles unless admin). |
@@ -27,7 +28,8 @@ The frontend interacts with the Cloudflare Worker API via the client library in 
 ## Authentication
 
 - **Auth0 Bearer Token**: When logged in via the Auth0 SPA SDK, incoming API requests include an Auth0 Access Token header: `Authorization: Bearer <auth0-jwt>`.
-- **Admin Token**: Configured on the client via `localStorage.getItem("kalidass-admin-token")` as fallback or for automated M2M publishing.
+- **Superuser Step-Up Token (`X-Admin-Token`)**: When an eligible author elevates to Super Admin, subsequent requests include `X-Admin-Token: <adminToken>`. The worker validates both email eligibility and token value before granting global administrative privileges.
+- **Standalone Admin Token**: Configured on the client via `localStorage.getItem("kalidass-admin-token")` as fallback or for automated M2M publishing.
 - **Header**: Included on all mutating requests and privileged list queries as `Authorization: Bearer <token>`.
 - **Content Type**: All JSON API requests send `Content-Type: application/json`. File uploads send raw `FormData` without manually overriding the browser-managed multipart boundary.
 

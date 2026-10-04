@@ -40,5 +40,9 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 - **Dynamic Route**: The dynamic path `/story/:slug*` is registered via `kalidassPlugin.contentLoaded` using `actions.addRoute` in `docusaurus.config.ts`.
 - **Slug Resolution**: The article slug is extracted from `location.pathname` and fetched via `getArticle(slug)`.
 - **Hero Header**: Full-width veil overlay with cover image, topic kicker tag, headline, subtitle, and author byline.
-- **Story Body**: Renders lead `excerpt` deck, optional hero `VideoEmbed` player, and delegates content blocks to `StoryBody.tsx`.
-- **Navigation Footer**: Direct links back to the main index and `/admin?edit=<slug>` for instant editorial access.
+- **Navigation Footer**: Direct link back to the main index (`← All briefs`).
+- **Authorization Gated Editorial Link (`Edit in studio →`)**:
+  - The `Edit in studio →` link is strictly gated via `canEdit = isAuthenticated && (isAdmin || (authorEmail && userEmail === authorEmail))`.
+  - Hidden for anonymous readers and non-owner authors.
+  - Rendered only for the story's original author and active Super Admins.
+  - Automatically vanishes when dropping superuser privileges.
