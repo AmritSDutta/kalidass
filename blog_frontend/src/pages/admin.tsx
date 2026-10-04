@@ -81,10 +81,13 @@ function AdminInner(): ReactNode {
     user,
     isAuthenticated,
     isAdmin,
+    isSuperuserEligible,
     isLoading,
     isAuth0Configured,
     loginWithAuth0,
     logout,
+    elevateToSuperuser,
+    dropSuperuser,
     unlockWithAdminToken,
   } = useAuth();
 
@@ -105,6 +108,10 @@ function AdminInner(): ReactNode {
   const [passwordInput, setPasswordInput] = useState("");
   const [authError, setAuthError] = useState("");
   const [showAdminTokenInput, setShowAdminTokenInput] = useState(false);
+  const [showElevationModal, setShowElevationModal] = useState(false);
+  const [elevationInput, setElevationInput] = useState("");
+  const [elevationError, setElevationError] = useState("");
+  const [elevationBusy, setElevationBusy] = useState(false);
 
   const refresh = () => {
     const current = MODES.find((m) => m.key === mode);
@@ -167,6 +174,28 @@ function AdminInner(): ReactNode {
       setAuthError("Invalid admin token or unauthorized.");
     }
     setBusy(false);
+  };
+
+  const handleElevateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setElevationError("");
+    setElevationBusy(true);
+    const candidate = elevationInput.trim();
+    if (!candidate) {
+      setElevationError("Please enter the admin passphrase.");
+      setElevationBusy(false);
+      return;
+    }
+
+    const success = await elevateToSuperuser(candidate);
+    setElevationBusy(false);
+    if (success) {
+      setShowElevationModal(false);
+      setElevationInput("");
+      refresh();
+    } else {
+      setElevationError("Invalid superuser credentials. Please try again.");
+    }
   };
 
   const slugifyText = (value: string) =>
@@ -437,9 +466,30 @@ function AdminInner(): ReactNode {
               {isAdmin ? "Super Admin" : "Author"}
             </span>
           </div>
-          <button type="button" className={styles.ghost} onClick={logout}>
-            Log out
-          </button>
+          <div className={styles.userBarActions}>
+            {isSuperuserEligible && !isAdmin && (
+              <button
+                type="button"
+                className={styles.elevateBtn}
+                onClick={() => setShowElevationModal(true)}>
+                ⚡ Login as Superuser
+              </button>
+            )}
+            {isAdmin && isSuperuserEligible && (
+              <button
+                type="button"
+                className={styles.dropBtn}
+                onClick={async () => {
+                  await dropSuperuser();
+                  refresh();
+                }}>
+                Exit Superuser
+              </button>
+            )}
+            <button type="button" className={styles.ghost} onClick={logout}>
+              Log out
+            </button>
+          </div>
         </div>
 
         <header className={styles.top}>
@@ -780,6 +830,46 @@ function AdminInner(): ReactNode {
               ) : null}
             </div>
           </section>
+        )}
+        {/* Superuser Elevation Passphrase Modal */}
+        {showElevationModal && (
+          <div className={styles.modalOverlay} onClick={() => setShowElevationModal(false)}>
+            <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <span className={styles.modalIcon}>⚡</span>
+                <h3 className={styles.modalTitle}>Superuser Elevation</h3>
+              </div>
+              <p className={styles.modalDesc}>
+                Enter your administrative passphrase to elevate your session and unlock superuser privileges across all briefs and drafts.
+              </p>
+              <form onSubmit={handleElevateSubmit}>
+                <input
+                  type="password"
+                  className={styles.modalInput}
+                  placeholder="Enter ADMIN_TOKEN"
+                  value={elevationInput}
+                  onChange={(e) => setElevationInput(e.target.value)}
+                  autoFocus
+                  required
+                />
+                {elevationError && <p className={styles.modalError}>{elevationError}</p>}
+                <div className={styles.modalActions}>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={() => setShowElevationModal(false)}>
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={styles.confirmBtn}
+                    disabled={elevationBusy}>
+                    {elevationBusy ? "Verifying..." : "Elevate"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
       </main>
     </Layout>

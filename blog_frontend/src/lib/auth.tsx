@@ -132,8 +132,16 @@ export function AuthProvider({children}: {children: ReactNode}) {
               try {
                 const data = await getAuthMe(rawToken, elevationToken || undefined);
                 if (isMounted) {
+                  const email = (auth0User.email || data.user.email || "").toLowerCase().trim();
                   setToken(rawToken);
-                  setUser(data.user);
+                  setUser({
+                    sub: data.user.sub || auth0User.sub || "user",
+                    email,
+                    name: auth0User.name || auth0User.nickname || data.user.name || email || "Author",
+                    avatar: auth0User.picture || data.user.avatar || "",
+                    role: data.user.role || "author",
+                    isSuperuserEligible: Boolean(data.user.isSuperuserEligible),
+                  });
                   setIsLoading(false);
                   return;
                 }
@@ -233,8 +241,17 @@ export function AuthProvider({children}: {children: ReactNode}) {
       if (res.ok) {
         sessionStorage.setItem("kalidass-elevation-token", trimmed);
         const rawToken = token || (auth0ClientInstance ? await auth0ClientInstance.getTokenSilently() : "");
+        const auth0User = auth0ClientInstance ? await auth0ClientInstance.getUser() : null;
         const me = await getAuthMe(rawToken || undefined, trimmed);
-        setUser(me.user);
+        const email = (auth0User?.email || me.user.email || user?.email || "").toLowerCase().trim();
+        setUser({
+          sub: me.user.sub || auth0User?.sub || user?.sub || "user",
+          email,
+          name: auth0User?.name || auth0User?.nickname || me.user.name || user?.name || email || "Author",
+          avatar: auth0User?.picture || me.user.avatar || user?.avatar || "",
+          role: me.user.role || "admin",
+          isSuperuserEligible: Boolean(me.user.isSuperuserEligible ?? user?.isSuperuserEligible),
+        });
         return true;
       }
       return false;
@@ -248,8 +265,17 @@ export function AuthProvider({children}: {children: ReactNode}) {
     sessionStorage.removeItem("kalidass-elevation-token");
     if (token) {
       try {
+        const auth0User = auth0ClientInstance ? await auth0ClientInstance.getUser() : null;
         const me = await getAuthMe(token);
-        setUser(me.user);
+        const email = (auth0User?.email || me.user.email || user?.email || "").toLowerCase().trim();
+        setUser({
+          sub: me.user.sub || auth0User?.sub || user?.sub || "user",
+          email,
+          name: auth0User?.name || auth0User?.nickname || me.user.name || user?.name || email || "Author",
+          avatar: auth0User?.picture || me.user.avatar || user?.avatar || "",
+          role: me.user.role || "author",
+          isSuperuserEligible: Boolean(me.user.isSuperuserEligible ?? user?.isSuperuserEligible),
+        });
       } catch {
         setUser((prev) => (prev ? {...prev, role: "author"} : null));
       }
