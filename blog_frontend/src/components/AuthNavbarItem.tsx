@@ -139,8 +139,8 @@ export default function AuthNavbarItem({mobile}: {mobile?: boolean}): React.JSX.
             </span>
           </div>
 
-          {/* Sudo Elevation Section: Always available for authors to elevate with ADMIN_TOKEN */}
-          {!isAdmin && (
+          {/* Sudo Elevation Section: Available only for authors whose email is in ADMIN_EMAILS */}
+          {!isAdmin && isSuperuserEligible && (
             <>
               <div className={styles.divider} />
               <button

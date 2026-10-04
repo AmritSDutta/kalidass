@@ -110,12 +110,9 @@ export function AuthProvider({children}: {children: ReactNode}) {
             console.warn("Auth0 returned error on callback:", search);
             window.history.replaceState({}, document.title, window.location.pathname);
           } else if (search.includes("code=") && search.includes("state=")) {
-            await auth0ClientInstance.handleRedirectCallback();
-            window.history.replaceState({}, document.title, window.location.pathname);
-            if (window.location.pathname === "/" || !window.location.pathname) {
-              window.location.href = "/admin";
-              return;
-            }
+            const callbackResult = await auth0ClientInstance.handleRedirectCallback();
+            const returnTo = callbackResult.appState?.returnTo || window.location.pathname || "/";
+            window.history.replaceState({}, document.title, returnTo);
           }
 
           const isAuth = await auth0ClientInstance.isAuthenticated();
@@ -225,7 +222,11 @@ export function AuthProvider({children}: {children: ReactNode}) {
     }
 
     if (auth0ClientInstance) {
-      await auth0ClientInstance.loginWithRedirect();
+      await auth0ClientInstance.loginWithRedirect({
+        appState: {
+          returnTo: window.location.pathname + window.location.search,
+        },
+      });
     }
   };
 
@@ -236,11 +237,22 @@ export function AuthProvider({children}: {children: ReactNode}) {
     setToken(null);
     setAuthTokenProvider(null);
     if (auth0ClientInstance) {
-      await auth0ClientInstance.logout({
-        logoutParams: {
-          returnTo: window.location.origin,
-        },
-      });
+      try {
+        const isAuth = await auth0ClientInstance.isAuthenticated();
+        if (isAuth) {
+          await auth0ClientInstance.logout({
+            logoutParams: {
+              returnTo: window.location.origin,
+            },
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn("Auth0 logout error:", err);
+      }
+    }
+    if (typeof window !== "undefined") {
+      window.location.href = "/";
     }
   };
 
@@ -289,28 +301,35 @@ export function AuthProvider({children}: {children: ReactNode}) {
 
   const dropSuperuser = async () => {
     sessionStorage.removeItem("kalidass-elevation-token");
-    if (token) {
+    localStorage.removeItem("kalidass-admin-token");
+    if (token && auth0ClientInstance) {
       try {
-        const auth0User = auth0ClientInstance ? await auth0ClientInstance.getUser() : null;
-        const me = await getAuthMe(token);
-        const email = (auth0User?.email || me.user.email || user?.email || "").toLowerCase().trim();
-        const isEligible = Boolean(
-          me.user.isSuperuserEligible ??
-          user?.isSuperuserEligible ??
-          (email && adminEmailsList.includes(email))
-        );
-        setUser({
-          sub: me.user.sub || auth0User?.sub || user?.sub || "user",
-          email,
-          name: auth0User?.name || auth0User?.nickname || me.user.name || user?.name || email || "Author",
-          avatar: auth0User?.picture || me.user.avatar || user?.avatar || "",
-          role: me.user.role || "author",
-          isSuperuserEligible: isEligible,
-        });
+        const isAuth = await auth0ClientInstance.isAuthenticated();
+        if (isAuth) {
+          const auth0User = await auth0ClientInstance.getUser();
+          const email = (auth0User?.email || user?.email || "").toLowerCase().trim();
+          const isEligible = Boolean(
+            user?.isSuperuserEligible ||
+            (email && adminEmailsList.includes(email))
+          );
+          setUser({
+            sub: auth0User?.sub || user?.sub || "user",
+            email,
+            name: auth0User?.name || auth0User?.nickname || user?.name || email || "Author",
+            avatar: auth0User?.picture || user?.avatar || "",
+            role: "author",
+            isSuperuserEligible: isEligible,
+          });
+          return;
+        }
       } catch {
         setUser((prev) => (prev ? {...prev, role: "author"} : null));
+        return;
       }
     }
+    setUser(null);
+    setToken(null);
+    setAuthTokenProvider(null);
   };
 
   const unlockWithAdminToken = async (candidateToken: string): Promise<boolean> => {

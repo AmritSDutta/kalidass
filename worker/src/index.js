@@ -53,6 +53,9 @@ async function getUserInfo(domain, accessToken) {
     console.warn("Auth0 UserInfo fetch error:", err.message);
   }
 
+  return null;
+}
+
 function matchesAdminToken(candidate, env) {
   if (!candidate || !env?.ADMIN_TOKEN) return false;
   const target = String(env.ADMIN_TOKEN).trim().replace(/^["']|["']$/g, "").trim();
@@ -143,7 +146,7 @@ async function getAuthUser(request, env) {
 
       // Step-up elevation check via x-admin-token header
       const elevationToken = (request.headers.get("x-admin-token") || "").trim();
-      const isElevated = matchesAdminToken(elevationToken, env);
+      const isElevated = isSuperuserEligible && matchesAdminToken(elevationToken, env);
 
       return {
         sub: payload.sub,
@@ -430,6 +433,9 @@ export default {
       if (url.pathname === "/api/auth/elevate" && request.method === "POST") {
         const user = await getAuthUser(request, env);
         if (!user) return json({error: "Unauthorized"}, 401, origin);
+        if (!user.isSuperuserEligible) {
+          return json({error: "Forbidden: Account is not authorized for superuser elevation"}, 403, origin);
+        }
         let body = {};
         try {
           body = await request.json();
