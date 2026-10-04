@@ -248,30 +248,40 @@ export function AuthProvider({children}: {children: ReactNode}) {
     const trimmed = candidateToken.trim();
     if (!trimmed) return false;
     try {
-      const res = await elevateAuth(trimmed);
+      let rawToken = token;
+      if (!rawToken && auth0ClientInstance) {
+        try {
+          rawToken = (await auth0ClientInstance.getTokenSilently({
+            authorizationParams: auth0Audience ? {audience: auth0Audience} : undefined,
+          })) || "";
+        } catch {
+          // silent refresh failed
+        }
+      }
+
+      const res = await elevateAuth(trimmed, rawToken || undefined);
       if (res.ok) {
         sessionStorage.setItem("kalidass-elevation-token", trimmed);
-        const rawToken = token || (auth0ClientInstance ? await auth0ClientInstance.getTokenSilently() : "");
         const auth0User = auth0ClientInstance ? await auth0ClientInstance.getUser() : null;
-        const me = await getAuthMe(rawToken || undefined, trimmed);
-        const email = (auth0User?.email || me.user.email || user?.email || "").toLowerCase().trim();
-        const isEligible = Boolean(
-          me.user.isSuperuserEligible ??
-          user?.isSuperuserEligible ??
-          (email && adminEmailsList.includes(email))
-        );
-        setUser({
-          sub: me.user.sub || auth0User?.sub || user?.sub || "user",
-          email,
-          name: auth0User?.name || auth0User?.nickname || me.user.name || user?.name || email || "Author",
-          avatar: auth0User?.picture || me.user.avatar || user?.avatar || "",
-          role: me.user.role || "admin",
-          isSuperuserEligible: isEligible,
-        });
+        try {
+          const me = await getAuthMe(rawToken || undefined, trimmed);
+          const email = (auth0User?.email || me.user.email || user?.email || "").toLowerCase().trim();
+          setUser({
+            sub: me.user.sub || auth0User?.sub || user?.sub || "user",
+            email,
+            name: auth0User?.name || auth0User?.nickname || me.user.name || user?.name || email || "Author",
+            avatar: auth0User?.picture || me.user.avatar || user?.avatar || "",
+            role: "admin",
+            isSuperuserEligible: true,
+          });
+        } catch {
+          setUser((prev) => (prev ? {...prev, role: "admin", isSuperuserEligible: true} : null));
+        }
         return true;
       }
       return false;
-    } catch {
+    } catch (err) {
+      console.warn("Superuser elevation failed:", err);
       sessionStorage.removeItem("kalidass-elevation-token");
       return false;
     }

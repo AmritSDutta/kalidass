@@ -53,7 +53,11 @@ async function getUserInfo(domain, accessToken) {
     console.warn("Auth0 UserInfo fetch error:", err.message);
   }
 
-  return null;
+function matchesAdminToken(candidate, env) {
+  if (!candidate || !env?.ADMIN_TOKEN) return false;
+  const target = String(env.ADMIN_TOKEN).trim().replace(/^["']|["']$/g, "").trim();
+  const input = String(candidate).trim().replace(/^["']|["']$/g, "").trim();
+  return Boolean(target && input && input === target);
 }
 
 async function getAuthUser(request, env) {
@@ -71,7 +75,7 @@ async function getAuthUser(request, env) {
   const primaryAdminEmail = adminEmails[0] || "admin";
 
   // 1. Super-Admin secret token match (M2M scripts and standalone admin token mode)
-  if (env.ADMIN_TOKEN && token === env.ADMIN_TOKEN) {
+  if (matchesAdminToken(token, env)) {
     return {
       sub: "admin",
       email: primaryAdminEmail,
@@ -139,9 +143,7 @@ async function getAuthUser(request, env) {
 
       // Step-up elevation check via x-admin-token header
       const elevationToken = (request.headers.get("x-admin-token") || "").trim();
-      const isElevated = Boolean(
-        env.ADMIN_TOKEN && elevationToken && elevationToken === env.ADMIN_TOKEN
-      );
+      const isElevated = matchesAdminToken(elevationToken, env);
 
       return {
         sub: payload.sub,
@@ -435,7 +437,7 @@ export default {
           return json({error: "Invalid JSON payload"}, 400, origin);
         }
         const candidateToken = String(body.adminToken || "").trim();
-        if (!env.ADMIN_TOKEN || candidateToken !== env.ADMIN_TOKEN) {
+        if (!matchesAdminToken(candidateToken, env)) {
           return json({error: "Invalid superuser credentials"}, 401, origin);
         }
         return json({ok: true, elevated: true}, 200, origin);

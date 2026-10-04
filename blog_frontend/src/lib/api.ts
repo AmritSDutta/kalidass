@@ -70,10 +70,13 @@ export function getAuthMe(tokenOverride?: string, elevationOverride?: string) {
   return request<{ok: boolean; user: AuthUser}>("/api/auth/me", {headers});
 }
 
-export function elevateAuth(adminToken: string) {
+export function elevateAuth(adminToken: string, tokenOverride?: string) {
+  const headers: Record<string, string> = {};
+  if (tokenOverride) headers["Authorization"] = `Bearer ${tokenOverride}`;
   return request<{ok: boolean; elevated: boolean}>("/api/auth/elevate", {
     method: "POST",
-    body: JSON.stringify({adminToken}),
+    headers,
+    body: JSON.stringify({adminToken: adminToken.trim()}),
   });
 }
 
