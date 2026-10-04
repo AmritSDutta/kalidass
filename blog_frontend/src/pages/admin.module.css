@@ -742,6 +742,176 @@
   color: var(--ink-soft);
 }
 
+/* Safety Alert Banner */
+.safetyAlertBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: rgba(225, 29, 72, 0.12);
+  border: 1px solid var(--chroma-sindoor, #e11d48);
+  border-radius: 10px;
+  padding: 0.85rem 1.2rem;
+  margin-bottom: 1.25rem;
+  color: var(--chroma-sindoor, #e11d48);
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.safetyAlertIcon {
+  font-size: 1.1rem;
+}
+
+/* TypeSafe Jev Quality Audit Card */
+.auditCard {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.auditHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.auditHeader h4 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  margin: 0;
+  color: var(--ink);
+}
+
+.auditDesc {
+  font-size: 0.78rem;
+  color: var(--ink-mute);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.auditBtn {
+  background: var(--paper-hover);
+  border: 1px solid var(--chroma-neel);
+  color: var(--chroma-neel);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auditBtn:hover:not(:disabled) {
+  background: var(--chroma-neel);
+  color: #ffffff;
+}
+
+.auditBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auditResults {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: var(--paper-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 0.8rem;
+}
+
+.auditBadgeRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.safetyBadge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.safetyBadge.safe {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.safetyBadge.flagged {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.safetyBadge.rejected {
+  background: rgba(225, 29, 72, 0.15);
+  color: #e11d48;
+  border: 1px solid rgba(225, 29, 72, 0.3);
+}
+
+.readinessBadge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--chroma-neel);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+
+.auditGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  text-align: center;
+}
+
+.auditItem {
+  background: var(--paper);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.4rem 0.2rem;
+}
+
+.auditVal {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.auditKey {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-top: 0.1rem;
+}
+
+.violationsBox {
+  background: rgba(225, 29, 72, 0.08);
+  border-left: 3px solid var(--chroma-sindoor);
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: var(--chroma-sindoor);
+}
+
+.violationsBox ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+}
+
 @media (max-width: 1024px) {
   .layout {
     grid-template-columns: 1fr;

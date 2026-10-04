@@ -65,3 +65,50 @@ export type ArticleDraft = {
   aiGenerated?: boolean;
   userId?: string;
 };
+
+export interface QualitySafetyRisks {
+  violence: number;
+  sexual: number;
+  antisocial: number;
+  verdict: "safe" | "flagged" | "rejected";
+  violations: string[];
+}
+
+export interface QualityEditorialMetrics {
+  isAiWritten: {
+    probability: number;
+    label: string;
+  };
+  accuracy: {
+    score: number;
+    level: string;
+    confidence: number;
+  };
+  engagement: {
+    score: number;
+    level: string;
+    confidence: number;
+  };
+  editorialReadiness: {
+    choice: string;
+    confidence: number;
+  };
+}
+
+export interface QualityEvalResult {
+  ok: boolean;
+  source: "typesafe-jev" | "local-heuristic";
+  safety: QualitySafetyRisks;
+  metrics: QualityEditorialMetrics;
+  summary: string;
+}
+
+export interface QualityEvalRequest {
+  title?: string;
+  subtitle?: string;
+  excerpt?: string;
+  text?: string;
+  blocks?: Block[];
+  slug?: string;
+  apiKey?: string;
+}

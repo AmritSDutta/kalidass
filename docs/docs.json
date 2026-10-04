@@ -40,7 +40,8 @@
           "worker/storage",
           "worker/environment",
           "worker/wrangler",
-          "worker/utilities"
+          "worker/utilities",
+          "worker/quality-eval"
         ]
       },
       {

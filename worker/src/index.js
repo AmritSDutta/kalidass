@@ -287,6 +287,238 @@ function estimateReadTime(blocks) {
   return Math.max(3, Math.round(words / 180) || 3);
 }
 
+function extractArticleText(payload) {
+  if (!payload) return "";
+  const parts = [
+    payload.title || "",
+    payload.subtitle || "",
+    payload.excerpt || "",
+    payload.text || "",
+  ];
+  if (Array.isArray(payload.blocks)) {
+    for (const b of payload.blocks) {
+      if (b.text) parts.push(b.text);
+      if (b.caption) parts.push(b.caption);
+    }
+  }
+  return parts.filter(Boolean).join("\n\n").trim();
+}
+
+async function runQualityEvaluation(text, apiKey, env) {
+  const effectiveKey = apiKey || env?.TYPESAFE_API_KEY || env?.JEV_API_KEY;
+
+  if (effectiveKey && text.length > 10) {
+    try {
+      const response = await fetch("https://api.typesafe.ai/v1/systemone", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${effectiveKey}`,
+        },
+        body: JSON.stringify({
+          state: text.slice(0, 16000),
+          questions: [
+            {
+              name: "is_ai_written",
+              type: "noul",
+              question: "Was this article substantially written or drafted by an AI language model?",
+            },
+            {
+              name: "technical_accuracy",
+              type: "score",
+              question: "Rate the technical rigor, factual accuracy, and depth of systems engineering claims.",
+              levels: ["misleading", "elementary", "competent", "rigorous", "expert"],
+            },
+            {
+              name: "engagement",
+              type: "score",
+              question: "How engaging, well-paced, and compelling is this article for engineering and research readers?",
+              levels: ["dry", "clear", "engaging", "captivating"],
+            },
+            {
+              name: "editorial_readiness",
+              type: "choice",
+              question: "What is the editorial readiness of this draft for publication?",
+              choices: ["needs_major_revision", "needs_minor_polish", "ready_for_publication"],
+            },
+            {
+              name: "risk_violence",
+              type: "noul",
+              question: "Does this text contain descriptions or glorification of physical violence, weapons, or self-harm?",
+            },
+            {
+              name: "risk_sexual",
+              type: "noul",
+              question: "Does this text contain sexually explicit content, pornography, or erotic material?",
+            },
+            {
+              name: "risk_antisocial",
+              type: "noul",
+              question: "Does this text promote hate speech, harassment, severe anti-social behavior, or illegal activities?",
+            },
+          ],
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const results = data.results || {};
+
+        const isAi = results.is_ai_written?.probability ?? 0.5;
+        const accScore = results.technical_accuracy?.score ?? 3.5;
+        const accLevel = results.technical_accuracy?.level ?? "competent";
+        const accConf = results.technical_accuracy?.confidence ?? 0.85;
+
+        const engScore = results.engagement?.score ?? 3.5;
+        const engLevel = results.engagement?.level ?? "clear";
+        const engConf = results.engagement?.confidence ?? 0.85;
+
+        const editChoice = results.editorial_readiness?.choice ?? "ready_for_review";
+        const editConf = results.editorial_readiness?.confidence ?? 0.88;
+
+        const violence = results.risk_violence?.probability ?? 0.02;
+        const sexual = results.risk_sexual?.probability ?? 0.01;
+        const antisocial = results.risk_antisocial?.probability ?? 0.02;
+
+        const violations = [];
+        if (violence > 0.65) violations.push("Violence or self-harm risk detected");
+        if (sexual > 0.65) violations.push("Sexually explicit or NSFW content detected");
+        if (antisocial > 0.65) violations.push("Anti-social, hate, or harassment risk detected");
+
+        const maxRisk = Math.max(violence, sexual, antisocial);
+        const verdict = violations.length === 0 ? "safe" : maxRisk > 0.85 ? "rejected" : "flagged";
+
+        return {
+          ok: true,
+          source: "typesafe-jev",
+          safety: {
+            violence: Number(violence.toFixed(3)),
+            sexual: Number(sexual.toFixed(3)),
+            antisocial: Number(antisocial.toFixed(3)),
+            verdict,
+            violations,
+          },
+          metrics: {
+            isAiWritten: {
+              probability: Number(isAi.toFixed(3)),
+              label: isAi > 0.7 ? "AI-Synthesized" : isAi > 0.35 ? "Hybrid / AI-Assisted" : "Human-Authored",
+            },
+            accuracy: {
+              score: Number(accScore.toFixed(2)),
+              level: accLevel,
+              confidence: Number(accConf.toFixed(2)),
+            },
+            engagement: {
+              score: Number(engScore.toFixed(2)),
+              level: engLevel,
+              confidence: Number(engConf.toFixed(2)),
+            },
+            editorialReadiness: {
+              choice: editChoice,
+              confidence: Number(editConf.toFixed(2)),
+            },
+          },
+          summary: `Jev System One: ${accLevel} technical accuracy, ${engLevel} prose, ${isAi > 0.6 ? "AI-drafted" : "Human-authored"}. Safety: ${verdict}.`,
+        };
+      }
+    } catch (err) {
+      console.warn("TypeSafe Jev API call failed, using deterministic heuristic fallback:", err.message);
+    }
+  }
+
+  return evaluateLocalHeuristic(text);
+}
+
+function evaluateLocalHeuristic(text) {
+  const content = String(text || "").toLowerCase();
+  const words = content.trim() ? content.trim().split(/\s+/) : [];
+  const wordCount = words.length;
+
+  const violenceTerms = ["kill", "murder", "bomb", "suicide", "stab", "assassinate", "massacre", "slaughter"];
+  const sexualTerms = ["nsfw", "porn", "erotic", "nude", "sexually", "xxx", "hentai"];
+  const hateTerms = ["hate speech", "harass", "slur", "terrorist", "nazi", "supremacist"];
+
+  let violenceHits = 0;
+  let sexualHits = 0;
+  let hateHits = 0;
+
+  for (const term of violenceTerms) {
+    if (content.includes(term)) violenceHits += 1;
+  }
+  for (const term of sexualTerms) {
+    if (content.includes(term)) sexualHits += 1;
+  }
+  for (const term of hateTerms) {
+    if (content.includes(term)) hateHits += 1;
+  }
+
+  const violenceProb = Math.min(0.98, violenceHits * 0.35 + 0.01);
+  const sexualProb = Math.min(0.98, sexualHits * 0.4 + 0.01);
+  const antisocialProb = Math.min(0.98, hateHits * 0.4 + 0.01);
+
+  const violations = [];
+  if (violenceProb > 0.65) violations.push("Violence or harm risk detected");
+  if (sexualProb > 0.65) violations.push("Sexually explicit or NSFW content detected");
+  if (antisocialProb > 0.65) violations.push("Anti-social or harassment risk detected");
+
+  const maxRisk = Math.max(violenceProb, sexualProb, antisocialProb);
+  const verdict = violations.length === 0 ? "safe" : maxRisk > 0.85 ? "rejected" : "flagged";
+
+  const aiPhrases = ["in summary", "delve into", "testament to", "it's important to remember", "furthermore", "moreover", "leverage", "paradigm shift"];
+  const technicalTerms = ["kernel", "gpu", "kv cache", "attention", "transformer", "latency", "throughput", "cuda", "rocm", "isolate", "wrangler", "sharding", "mixture-of-experts", "fp8", "vllm"];
+
+  let aiHits = 0;
+  for (const p of aiPhrases) {
+    if (content.includes(p)) aiHits += 1;
+  }
+
+  let techHits = 0;
+  for (const t of technicalTerms) {
+    if (content.includes(t)) techHits += 1;
+  }
+
+  const aiProb = Math.min(0.95, Math.max(0.08, (aiHits * 0.18) + (words.length > 200 && techHits === 0 ? 0.4 : 0.15)));
+  const techScore = Math.min(5.0, Math.max(2.0, 2.8 + (techHits * 0.35) + (wordCount > 300 ? 0.5 : 0)));
+  const engScore = Math.min(5.0, Math.max(2.5, 3.2 + (wordCount > 200 ? 0.6 : 0) + (techHits > 2 ? 0.5 : 0)));
+
+  const accLevel = techScore >= 4.5 ? "expert" : techScore >= 3.8 ? "rigorous" : techScore >= 3.0 ? "competent" : "elementary";
+  const engLevel = engScore >= 4.5 ? "captivating" : engScore >= 3.8 ? "engaging" : "clear";
+  const editChoice = verdict === "safe" && techScore >= 3.5 ? "ready_for_publication" : verdict !== "safe" ? "needs_major_revision" : "needs_minor_polish";
+
+  return {
+    ok: true,
+    source: "local-heuristic",
+    safety: {
+      violence: Number(violenceProb.toFixed(3)),
+      sexual: Number(sexualProb.toFixed(3)),
+      antisocial: Number(antisocialProb.toFixed(3)),
+      verdict,
+      violations,
+    },
+    metrics: {
+      isAiWritten: {
+        probability: Number(aiProb.toFixed(3)),
+        label: aiProb > 0.7 ? "AI-Synthesized" : aiProb > 0.35 ? "Hybrid / AI-Assisted" : "Human-Authored",
+      },
+      accuracy: {
+        score: Number(techScore.toFixed(2)),
+        level: accLevel,
+        confidence: 0.88,
+      },
+      engagement: {
+        score: Number(engScore.toFixed(2)),
+        level: engLevel,
+        confidence: 0.85,
+      },
+      editorialReadiness: {
+        choice: editChoice,
+        confidence: 0.9,
+      },
+    },
+    summary: `Heuristic Evaluation: ${accLevel} technical accuracy (${techScore.toFixed(1)}/5), ${engLevel} engagement (${engScore.toFixed(1)}/5). Safety: ${verdict}.`,
+  };
+}
+
 async function ensureSeed(bucket, env) {
   const indexPath = getIndexPath(env);
   try {
@@ -523,6 +755,41 @@ export default {
         return json(items, 200, origin);
       }
 
+      if (url.pathname === "/api/eval/quality" && request.method === "POST") {
+        let body = {};
+        try {
+          body = await request.json();
+        } catch {
+          return json({error: "Invalid JSON payload"}, 400, origin);
+        }
+
+        let text = "";
+        if (body.slug) {
+          const index = await ensureSeed(bucket, env);
+          const meta = index.find((item) => item.slug === body.slug || item.id === body.slug);
+          if (meta) {
+            let article = await readJson(bucket, getArticleObject(meta.id, env), null);
+            if (!article) {
+              article = seedArticles.find((item) => item.id === meta.id || item.slug === meta.slug) || null;
+            }
+            if (article) {
+              text = extractArticleText(article);
+            }
+          }
+        }
+
+        if (!text) {
+          text = extractArticleText(body);
+        }
+
+        if (!text) {
+          return json({error: "No text content provided for quality evaluation"}, 400, origin);
+        }
+
+        const evalResult = await runQualityEvaluation(text, body.apiKey, env);
+        return json(evalResult, 200, origin);
+      }
+
       if (url.pathname === "/api/admin/reset" && request.method === "POST") {
         const user = await getAuthUser(request, env);
         if (!user || user.role !== "admin") return json({error: "Unauthorized"}, 401, origin);
@@ -534,6 +801,23 @@ export default {
         const user = await getAuthUser(request, env);
         if (!user) return json({error: "Unauthorized"}, 401, origin);
         const body = await request.json();
+
+        // Safety verification guardrail
+        const payloadText = extractArticleText(body);
+        if (payloadText) {
+          const safetyCheck = await runQualityEvaluation(payloadText, null, env);
+          if (safetyCheck?.safety?.verdict === "rejected") {
+            return json(
+              {
+                error: "Safety Guardrail Blocked: Article failed safety screening.",
+                violations: safetyCheck.safety.violations,
+              },
+              400,
+              origin
+            );
+          }
+        }
+
         const index = await ensureSeed(bucket, env);
         const article = buildArticle(body, null, user);
         article.slug = uniqueSlug(index, slugify(body.slug || body.title));
@@ -589,6 +873,23 @@ export default {
           }
 
           const body = await request.json();
+
+          // Safety verification guardrail
+          const payloadText = extractArticleText(body);
+          if (payloadText) {
+            const safetyCheck = await runQualityEvaluation(payloadText, null, env);
+            if (safetyCheck?.safety?.verdict === "rejected") {
+              return json(
+                {
+                  error: "Safety Guardrail Blocked: Article failed safety screening.",
+                  violations: safetyCheck.safety.violations,
+                },
+                400,
+                origin
+              );
+            }
+          }
+
           const article = buildArticle(body, existing, user);
           article.authorEmail = existing.authorEmail || user.email; // Preserved immutably
           article.slug = uniqueSlug(

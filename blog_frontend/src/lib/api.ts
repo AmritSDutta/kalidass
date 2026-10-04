@@ -1,5 +1,12 @@
 import {apiUrl} from "./config";
-import type {Article, ArticleDraft, ArticleSummary, AuthUser} from "./types";
+import type {
+  Article,
+  ArticleDraft,
+  ArticleSummary,
+  AuthUser,
+  QualityEvalRequest,
+  QualityEvalResult,
+} from "./types";
 
 export type TokenProvider = () => Promise<string | null> | string | null;
 
@@ -129,4 +136,11 @@ export async function uploadObject(file: File): Promise<{url: string; name: stri
     throw new Error(message);
   }
   return response.json() as Promise<{url: string; name: string}>;
+}
+
+export function evaluateQuality(payload: QualityEvalRequest) {
+  return request<QualityEvalResult>("/api/eval/quality", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

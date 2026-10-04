@@ -4,6 +4,7 @@ import Link from "@docusaurus/Link";
 import {useLocation} from "@docusaurus/router";
 import {
   createArticle,
+  evaluateQuality,
   getArticle,
   listArticles,
   removeArticle,
@@ -12,7 +13,7 @@ import {
 } from "@site/src/lib/api";
 import {useAuth} from "@site/src/lib/auth";
 import {emptyDraft, formatDate} from "@site/src/lib/media";
-import type {ArticleDraft, ArticleSummary, Block} from "@site/src/lib/types";
+import type {ArticleDraft, ArticleSummary, Block, QualityEvalResult} from "@site/src/lib/types";
 import styles from "./admin.module.css";
 
 const ACCENTS = ["#6366f1", "#f97316", "#06b6d4", "#10b981", "#f43f5e", "#eab308"];
@@ -104,6 +105,9 @@ function AdminInner(): ReactNode {
   const [passwordInput, setPasswordInput] = useState("");
   const [authError, setAuthError] = useState("");
   const [showAdminTokenInput, setShowAdminTokenInput] = useState(false);
+  const [draftEval, setDraftEval] = useState<QualityEvalResult | null>(null);
+  const [evaluatingDraft, setEvaluatingDraft] = useState<boolean>(false);
+  const [safetyAlert, setSafetyAlert] = useState<string>("");
 
   const refresh = () => {
     const current = MODES.find((m) => m.key === mode);
@@ -114,6 +118,31 @@ function AdminInner(): ReactNode {
         setStatus((err as Error).message);
         setArticles([]);
       });
+  };
+
+  const runDraftAudit = async () => {
+    if (evaluatingDraft) return;
+    setEvaluatingDraft(true);
+    try {
+      const res = await evaluateQuality({
+        title: draft.title,
+        subtitle: draft.subtitle,
+        excerpt: draft.excerpt,
+        blocks: draft.blocks,
+      });
+      setDraftEval(res);
+      if (res.safety.verdict !== "safe") {
+        setSafetyAlert(
+          `Safety Warning: ${res.safety.violations.join(", ") || "Prohibited content detected"}`
+        );
+      } else {
+        setSafetyAlert("");
+      }
+    } catch (err: any) {
+      console.warn("Draft audit error:", err);
+    } finally {
+      setEvaluatingDraft(false);
+    }
   };
 
   useEffect(() => {
@@ -290,6 +319,29 @@ function AdminInner(): ReactNode {
   const save = async (publish: boolean) => {
     setBusy(true);
     setStatus("");
+    setSafetyAlert("");
+
+    // Pre-save Quality & Safety Guardrail Check
+    try {
+      const evalRes = await evaluateQuality({
+        title: draft.title,
+        subtitle: draft.subtitle,
+        excerpt: draft.excerpt,
+        blocks: draft.blocks,
+      });
+      setDraftEval(evalRes);
+
+      if (evalRes.safety.verdict !== "safe") {
+        const msg = `Save blocked by safety policy: ${evalRes.safety.violations.join(", ") || "Prohibited content detected"}`;
+        setSafetyAlert(msg);
+        setStatus(msg);
+        setBusy(false);
+        return;
+      }
+    } catch (evalErr: any) {
+      console.warn("Pre-save quality evaluation skipped:", evalErr);
+    }
+
     const cleanBlocks = draft.blocks.map(({_id, ...block}) => block as Block);
     const payload: ArticleDraft = {
       ...draft,
@@ -506,6 +558,13 @@ function AdminInner(): ReactNode {
             </button>
           ))}
         </nav>
+
+        {safetyAlert ? (
+          <div className={styles.safetyAlertBanner}>
+            <span className={styles.safetyAlertIcon}>⚠️</span>
+            <span>{safetyAlert}</span>
+          </div>
+        ) : null}
 
         {status ? <p className={styles.status}>{status}</p> : null}
 
@@ -818,6 +877,72 @@ function AdminInner(): ReactNode {
                       <span>{draftAnalysis.blockCounts.video} video</span>
                     ) : null}
                   </div>
+                </div>
+
+                <div className={styles.auditCard}>
+                  <div className={styles.auditHeader}>
+                    <span className={styles.analysisKicker}>TypeSafe Jev</span>
+                    <h4>Quality & Safety</h4>
+                  </div>
+                  <p className={styles.auditDesc}>
+                    Live AI detection, systems rigor scoring, and pre-submit safety gate.
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.auditBtn}
+                    onClick={runDraftAudit}
+                    disabled={evaluatingDraft}>
+                    {evaluatingDraft ? "Auditing Draft..." : "Run Quality Audit"}
+                  </button>
+
+                  {draftEval ? (
+                    <div className={styles.auditResults}>
+                      <div className={styles.auditBadgeRow}>
+                        <span className={`${styles.safetyBadge} ${styles[draftEval.safety.verdict]}`}>
+                          {draftEval.safety.verdict === "safe" ? "✓ Safety: Passed" : "✕ Safety: Violations"}
+                        </span>
+                        <span className={styles.readinessBadge}>
+                          {draftEval.metrics.editorialReadiness.choice}
+                        </span>
+                      </div>
+
+                      <div className={styles.auditGrid}>
+                        <div className={styles.auditItem}>
+                          <span className={styles.auditVal}>
+                            {Math.round(draftEval.metrics.isAiWritten.probability * 100)}%
+                          </span>
+                          <span className={styles.auditKey}>
+                            {draftEval.metrics.isAiWritten.label}
+                          </span>
+                        </div>
+                        <div className={styles.auditItem}>
+                          <span className={styles.auditVal}>
+                            {draftEval.metrics.accuracy.score.toFixed(1)}/5
+                          </span>
+                          <span className={styles.auditKey}>
+                            Rigor ({draftEval.metrics.accuracy.level})
+                          </span>
+                        </div>
+                        <div className={styles.auditItem}>
+                          <span className={styles.auditVal}>
+                            {draftEval.metrics.engagement.score.toFixed(1)}/5
+                          </span>
+                          <span className={styles.auditKey}>Engagement</span>
+                        </div>
+                      </div>
+
+                      {draftEval.safety.violations.length > 0 ? (
+                        <div className={styles.violationsBox}>
+                          <strong>Violations:</strong>
+                          <ul>
+                            {draftEval.safety.violations.map((v, i) => (
+                              <li key={i}>{v}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </aside>

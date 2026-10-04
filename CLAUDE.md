@@ -98,7 +98,7 @@ kalidass/
 
 ## 6. Data Contracts & Operational Flags
 
-- **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/auth/me` (user profile handshake), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
+- **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/auth/me` (user profile handshake), `/api/eval/quality` (TypeSafe Jev AI detection, accuracy, engagement, and safety check), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
 - **Testing**: No automated test suite. Verification gates: `npm.cmd run typecheck` (frontend) + Docs7 validation (hermetic).
 
 - **Data Models (`blog_frontend/src/lib/types.ts`)**:
@@ -107,6 +107,7 @@ kalidass/
   - `ArticleSummary`: Used in cards, index lists, and search queries (includes immutable `authorEmail`).
   - `Article`: Full article containing `blocks: Block[]` and server-stamped immutable `authorEmail`.
   - `AuthUser`: User profile `{ email, role: 'admin' | 'author', sub }`.
+  - `QualityEvalResult`: Output containing `safety` (verdict, risks, violations), `metrics` (`isAiWritten`, `accuracy`, `engagement`, `editorialReadiness`), and summary.
 - **Operational & Auth Flags**:
   - `published`: `false` = draft (requires Bearer token; unauthenticated requests receive `404`; non-admin authors only see their own drafts).
   - `private`: `true` = unlisted (hidden from public `/` and `/magazine`, accessible via direct link; authors only see their own private items in studio).
@@ -114,4 +115,5 @@ kalidass/
   - `authorEmail`: Immutable author email stamped server-side by worker from verified Auth0 JWT credentials.
   - `Role Isolation`: Authors can create, edit, and delete only their own articles; Super-Admin (`ADMIN_TOKEN` or `ADMIN_EMAILS`) has full global access. Mutation attempts on other users' articles return `403 Forbidden`.
   - `PRIVATE_APP`: `true` = single-operator mode (hides Auth0 UI; unlocks exclusively with `ADMIN_TOKEN`). Off by default.
+  - `Quality & Safety Guardrails`: Automatic pre-submit evaluation in Studio Compose and worker mutation routes (`POST`/`PUT`). Hard-blocks save/publish when safety risk > 0.65.
   - `WebMCP In-Browser Registry`: Defined in `blog_frontend/src/client-modules/webmcp.ts` (registered in `docusaurus.config.ts`). Exposes `searchArticles` and `readArticle` on `window.modelContext` and `navigator.modelContext` for browser AI agent interaction.

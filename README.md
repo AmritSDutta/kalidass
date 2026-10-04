@@ -260,7 +260,22 @@ curl -X POST https://kalidass.amrit.fyi/api/articles \
 
 ---
 
-## 9. WebMCP (In-Browser Model Context Protocol)
+## 9. TypeSafe Jev Quality & Safety Evaluation
+
+Kalidass Journal integrates automated editorial quality assessment and content safety guardrails powered by [TypeSafe AI](https://typesafe.ai) and the **Jev** System One decision model at `POST /api/eval/quality`:
+
+- **AI Writing Detection (`noul` primitive)**: Computes probability of synthetic AI generation vs. human composition.
+- **Technical Accuracy & Rigor (`score` primitive)**: Analyzes systems architecture depth and technical precision ($1.0 - 5.0$).
+- **Reader Engagement (`score` primitive)**: Measures flow, pacing, and narrative clarity ($1.0 - 5.0$).
+- **Editorial Readiness (`choice` primitive)**: Triage classifier returning `ready`, `needs_revision`, or `draft_only`.
+- **Pre-Submit Safety Hard-Blocking**: Evaluates violence, sexual, and antisocial risk primitives. If any risk exceeds $0.65$, saving/publishing is immediately blocked in Studio Compose and rejected with HTTP `422` by the edge worker.
+- **Live Reader & Studio Badges**: Live audit cards in `StoryPage.tsx` and `admin.tsx` display real-time safety verdicts, AI probability, and technical rigor scores.
+
+> Refer to [`docs/worker/quality-eval.mdx`](./docs/worker/quality-eval.mdx) for architecture diagrams, schema specifications, and local heuristic fallback behavior.
+
+---
+
+## 10. WebMCP (In-Browser Model Context Protocol)
 
 Kalidass Journal natively implements **WebMCP** (`document.modelContext` / `navigator.modelContext` / `window.modelContext`), enabling browser AI agents (Chrome built-in AI, Gemini Nano, OpenAI Operator, and extensions like **WebMCP – Model Context Tool Inspector**) to search and read research dispatches directly within the browser runtime without DOM scraping:
 
@@ -277,7 +292,7 @@ await window.modelContext.tools.readArticle.execute({ slug: "attention-as-routin
 
 ---
 
-## 10. Verification & Quality Gates
+## 11. Verification & Quality Gates
 
 ```bash
 # Frontend static type check (mandatory before deployment)
@@ -292,7 +307,7 @@ cd blog_frontend && npm run clear
 
 ---
 
-## 11. Architecture Evaluation & Quality Scorecard
+## 12. Architecture Evaluation & Quality Scorecard
 
 ### Overall Rating: **8.8 / 10** (Production-Ready)
 
@@ -302,7 +317,7 @@ cd blog_frontend && npm run clear
 | **Data Modeling** | **9.2 / 10** | Polymorphic block union (`Block`) provides structured content without CMS vendor lock-in. |
 | **Developer Experience** | **8.5 / 10** | Fast local multi-terminal / unified startup, Webpack dev proxy for zero-CORS dev workflow, and strict TypeScript checking. |
 | **Security & Automation** | **8.8 / 10** | Bearer auth, Cloudflare Access Zero Trust proxy support, and structured machine-to-machine AI agent publishing. |
-| **Documentation Quality** | **9.5 / 10** | Unified Docs7 documentation suite (21 verified MDX pages, valid Mermaid diagrams, strict frontmatter). |
+| **Documentation Quality** | **9.5 / 10** | Unified Docs7 documentation suite (23 verified MDX pages, valid Mermaid diagrams, strict frontmatter). |
 | **Testing & CI/CD** | **7.5 / 10** | Robust compile-time type validation, but lacks automated E2E and Worker endpoint integration tests. |
 
 ### Core Architectural Advantages

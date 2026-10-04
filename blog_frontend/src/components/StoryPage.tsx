@@ -4,10 +4,10 @@ import Link from "@docusaurus/Link";
 import {useLocation} from "@docusaurus/router";
 import StoryBody, {headingSlug} from "@site/src/components/StoryBody";
 import VideoEmbed from "@site/src/components/VideoEmbed";
-import {getArticle} from "@site/src/lib/api";
+import {evaluateQuality, getArticle} from "@site/src/lib/api";
 import {useAuth} from "@site/src/lib/auth";
 import {formatDate} from "@site/src/lib/media";
-import type {Article} from "@site/src/lib/types";
+import type {Article, QualityEvalResult} from "@site/src/lib/types";
 import styles from "./StoryPage.module.css";
 
 interface HeadingItem {
@@ -23,6 +23,9 @@ export default function StoryPage(): ReactNode {
   const [article, setArticle] = useState<Article | null>(null);
   const [error, setError] = useState("");
   const [activeHeadingId, setActiveHeadingId] = useState<string>("");
+  const [evalResult, setEvalResult] = useState<QualityEvalResult | null>(null);
+  const [evaluating, setEvaluating] = useState<boolean>(false);
+  const [evalError, setEvalError] = useState<string>("");
 
   useEffect(() => {
     if (!slug) return;
@@ -30,6 +33,26 @@ export default function StoryPage(): ReactNode {
       .then(setArticle)
       .catch((err: Error) => setError(err.message));
   }, [slug]);
+
+  const handleRunAudit = async () => {
+    if (!article || evaluating) return;
+    setEvaluating(true);
+    setEvalError("");
+    try {
+      const res = await evaluateQuality({
+        title: article.title,
+        subtitle: article.subtitle,
+        excerpt: article.excerpt,
+        blocks: article.blocks,
+        slug: article.slug,
+      });
+      setEvalResult(res);
+    } catch (err: any) {
+      setEvalError(err?.message || "Audit failed");
+    } finally {
+      setEvaluating(false);
+    }
+  };
 
   const headingsAnalysis = useMemo(() => {
     if (!article?.blocks) {
@@ -256,6 +279,68 @@ export default function StoryPage(): ReactNode {
                       <span>{headingsAnalysis.blockCounts.vid} video</span>
                     ) : null}
                   </div>
+                </div>
+
+                <div className={styles.auditCard}>
+                  <div className={styles.auditHeader}>
+                    <span className={styles.analysisKicker}>TypeSafe AI / Jev</span>
+                    <p className={styles.tocTitle}>Quality & Safety Audit</p>
+                  </div>
+
+                  {evalResult ? (
+                    <div className={styles.auditResults}>
+                      <div
+                        className={`${styles.safetyBadge} ${
+                          evalResult.safety.verdict === "safe"
+                            ? styles.safetySafe
+                            : styles.safetyFlagged
+                        }`}>
+                        <span>
+                          {evalResult.safety.verdict === "safe"
+                            ? "✓ Safety Verified"
+                            : "⚠ Content Flagged"}
+                        </span>
+                        {evalResult.safety.violations.length > 0 ? (
+                          <small className={styles.violationText}>
+                            {evalResult.safety.violations.join(", ")}
+                          </small>
+                        ) : null}
+                      </div>
+
+                      <div className={styles.auditGrid}>
+                        <div className={styles.auditItem}>
+                          <span className={styles.auditItemLabel}>AI Detection</span>
+                          <strong className={styles.auditItemVal}>
+                            {Math.round(evalResult.metrics.isAiWritten.probability * 100)}%
+                          </strong>
+                          <span className={styles.auditSub}>{evalResult.metrics.isAiWritten.label}</span>
+                        </div>
+                        <div className={styles.auditItem}>
+                          <span className={styles.auditItemLabel}>Technical Rigor</span>
+                          <strong className={styles.auditItemVal}>
+                            {evalResult.metrics.accuracy.score.toFixed(1)}/5
+                          </strong>
+                          <span className={styles.auditSub}>{evalResult.metrics.accuracy.level}</span>
+                        </div>
+                        <div className={styles.auditItem}>
+                          <span className={styles.auditItemLabel}>Engagement</span>
+                          <strong className={styles.auditItemVal}>
+                            {evalResult.metrics.engagement.score.toFixed(1)}/5
+                          </strong>
+                          <span className={styles.auditSub}>{evalResult.metrics.engagement.level}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.auditBtn}
+                      disabled={evaluating}
+                      onClick={handleRunAudit}>
+                      {evaluating ? "Evaluating with Jev..." : "⚡ Run Quality Audit"}
+                    </button>
+                  )}
+                  {evalError ? <p className={styles.evalError}>{evalError}</p> : null}
                 </div>
 
                 <button

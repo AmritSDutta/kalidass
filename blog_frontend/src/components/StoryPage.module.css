@@ -362,6 +362,124 @@
   color: var(--ink-soft);
 }
 
+.auditCard {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.auditHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.auditBtn {
+  background: color-mix(in srgb, var(--chroma-neel) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chroma-neel) 40%, transparent);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--chroma-neel);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.auditBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--chroma-neel) 28%, transparent);
+  border-color: var(--chroma-neel);
+  color: #ffffff;
+}
+
+.auditBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auditResults {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.safetyBadge {
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.safetySafe {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #22c55e;
+}
+
+.safetyFlagged {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.violationText {
+  font-size: 0.68rem;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.auditGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+
+.auditItem {
+  background: var(--paper-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.1rem;
+}
+
+.auditItemLabel {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+
+.auditItemVal {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+
+.auditSub {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--ink-soft);
+}
+
+.evalError {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: #ef4444;
+  margin: 0;
+}
+
 .scrollTopBtn {
   background: transparent;
   border: 1px solid var(--border-subtle);
