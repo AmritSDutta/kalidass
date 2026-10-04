@@ -268,7 +268,7 @@ Kalidass Journal integrates automated editorial quality assessment and content s
 - **Technical Accuracy & Rigor (`score` primitive)**: Analyzes systems architecture depth and technical precision ($1.0 - 5.0$).
 - **Reader Engagement (`score` primitive)**: Measures flow, pacing, and narrative clarity ($1.0 - 5.0$).
 - **Editorial Readiness (`choice` primitive)**: Triage classifier returning `ready`, `needs_revision`, or `draft_only`.
-- **Pre-Submit Safety Hard-Blocking**: Evaluates violence, sexual, and antisocial risk primitives. If any risk exceeds $0.65$, saving/publishing is immediately blocked in Studio Compose and rejected with HTTP `422` by the edge worker.
+- **Pre-Submit Safety Hard-Blocking**: Evaluates violence, sexual, and antisocial risk primitives. If any risk exceeds $0.55$, saving/publishing is immediately blocked in Studio Compose and rejected with HTTP `422` by the edge worker.
 - **Live Reader & Studio Badges**: Live audit cards in `StoryPage.tsx` and `admin.tsx` display real-time safety verdicts, AI probability, and technical rigor scores.
 
 > Refer to [`docs/worker/quality-eval.mdx`](./docs/worker/quality-eval.mdx) for architecture diagrams, schema specifications, and local heuristic fallback behavior.

@@ -115,5 +115,5 @@ kalidass/
   - `authorEmail`: Immutable author email stamped server-side by worker from verified Auth0 JWT credentials.
   - `Role Isolation`: Authors can create, edit, and delete only their own articles; Super-Admin (`ADMIN_TOKEN` or `ADMIN_EMAILS`) has full global access. Mutation attempts on other users' articles return `403 Forbidden`.
   - `PRIVATE_APP`: `true` = single-operator mode (hides Auth0 UI; unlocks exclusively with `ADMIN_TOKEN`). Off by default.
-  - `Quality & Safety Guardrails`: Automatic pre-submit evaluation in Studio Compose and worker mutation routes (`POST`/`PUT`). Hard-blocks save/publish when safety risk > 0.65.
+  - `Quality & Safety Guardrails`: Automatic pre-submit evaluation in Studio Compose and worker mutation routes (`POST`/`PUT`). Hard-blocks save/publish when safety risk > 0.55.
   - `WebMCP In-Browser Registry`: Defined in `blog_frontend/src/client-modules/webmcp.ts` (registered in `docusaurus.config.ts`). Exposes `searchArticles` and `readArticle` on `window.modelContext` and `navigator.modelContext` for browser AI agent interaction.

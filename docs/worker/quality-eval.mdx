@@ -18,7 +18,7 @@ flowchart TD
   CheckKey -->|"No / Fallback"| LocalEval["Local Heuristic Rule Engine"]
   JevAPI --> Aggregate["Aggregate Evaluation Metrics & Safety Verdict"]
   LocalEval --> Aggregate
-  Aggregate --> SafetyGate{"Safety Score > 0.65?"}
+  Aggregate --> SafetyGate{"Safety Score > 0.55?"}
   SafetyGate -->|"Yes"| Rejected["verdict: rejected (Hard-Block Save/Publish)"]
   SafetyGate -->|"No"| Safe["verdict: safe (Permit Save/Publish)"]
   Rejected --> JSONResp["Return JSON Response"]
@@ -38,9 +38,9 @@ The evaluation engine leverages three foundational Jev decision primitives:
 | **Technical Accuracy** | `score` | $1.0 - 5.0$ (Level: beginner, intermediate, advanced) | Scores systems architecture depth, engineering precision, and factual rigor |
 | **Reader Engagement** | `score` | $1.0 - 5.0$ (Level: low, moderate, high, viral) | Evaluates narrative flow, clarity, and pacing |
 | **Editorial Readiness** | `choice` | `ready`, `needs_revision`, `draft_only` | Editorial triage classification |
-| **Safety: Violence** | `noul` | Probability $0.0 - 1.0$ | Hard-blocks violent or harmful content when $> 0.65$ |
-| **Safety: Sexual** | `noul` | Probability $0.0 - 1.0$ | Hard-blocks sexually explicit content when $> 0.65$ |
-| **Safety: Antisocial** | `noul` | Probability $0.0 - 1.0$ | Hard-blocks harassment, hate speech, or unsocial content when $> 0.65$ |
+| **Safety: Violence** | `noul` | Probability $0.0 - 1.0$ | Hard-blocks violent or harmful content when $> 0.55$ |
+| **Safety: Sexual** | `noul` | Probability $0.0 - 1.0$ | Hard-blocks sexually explicit content when $> 0.55$ |
+| **Safety: Antisocial** | `noul` | Probability $0.0 - 1.0$ | Hard-blocks harassment, hate speech, or unsocial content when $> 0.55$ |
 
 ---
 
@@ -104,7 +104,7 @@ The evaluation engine leverages three foundational Jev decision primitives:
 
 ## Safety Enforcement & Guardrails
 
-1. **Pre-Submit Studio Gate**: In Studio Compose (`blog_frontend/src/pages/admin.tsx`), clicking **Save draft** or **Publish** triggers an automated quality & safety pre-check. If any safety risk exceeds $0.65$, saving is aborted and a high-visibility warning banner is rendered.
+1. **Pre-Submit Studio Gate**: In Studio Compose (`blog_frontend/src/pages/admin.tsx`), clicking **Save draft** or **Publish** triggers an automated quality & safety pre-check. If any safety risk exceeds $0.55$, saving is aborted and a high-visibility warning banner is rendered.
 2. **Server-Side Worker Gate**: On `POST /api/articles` and `PUT /api/articles/:id`, the Worker runs safety verification. If prohibited content is detected, the API rejects the request with HTTP `422 Unprocessable Entity`.
 3. **Reader Right Sidebar**: In `StoryPage.tsx`, readers and editors can trigger a live quality audit to inspect AI probability, technical rigor score, and safety verification badges in real time.
 4. **Local Fallback Engine**: If `TYPESAFE_API_KEY` is not present in the Worker environment (e.g. offline dev or unit testing), the Worker falls back seamlessly to a local deterministic heuristic analyzer without throwing 500 errors.
