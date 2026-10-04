@@ -1,13 +1,13 @@
 ---
 title: WebMCP (In-Browser AI Tools)
-description: Browser-native Model Context Protocol integration enabling AI agents to search and read Kalidass Journal articles via navigator.modelContext.
+description: Browser-native Model Context Protocol integration enabling AI agents and extensions to search and read Kalidass Journal articles via document.modelContext and navigator.modelContext.
 ---
 
 # WebMCP (In-Browser AI Tools)
 
 **WebMCP (Web Model Context Protocol)** is an emerging W3C Web ML Community Group proposal (draft) that allows web applications to expose structured, typed JavaScript functions as callable tools directly within the browser runtime.
 
-Kalidass Journal integrates WebMCP across all pages via a dedicated client module (`navigator.modelContext` / `window.modelContext` polyfill pattern), allowing browser AI agents (Chrome built-in AI, Gemini, OpenAI Operator, browser extensions, and web crawlers) to query and read publication content without fragile visual DOM scraping.
+Kalidass Journal integrates WebMCP across all pages via a dedicated client module (`document.modelContext` / `navigator.modelContext` / `window.modelContext`), allowing browser AI agents (Chrome built-in AI, Gemini Nano, OpenAI Operator, and Chrome extensions like **WebMCP - Model Context Tool Inspector**) to query and read publication content without fragile visual DOM scraping.
 
 ---
 
@@ -17,7 +17,7 @@ Kalidass Journal integrates WebMCP across all pages via a dedicated client modul
 flowchart LR
     subgraph Browser["User Browser Runtime (kalidass.amrit.fyi)"]
         Docusaurus["Docusaurus Reader SPA"]
-        Registry["WebMCP Registry (navigator.modelContext / window.modelContext)"]
+        Registry["WebMCP Registry (document / navigator / window .modelContext)"]
         SearchTool["searchArticles({ query, tag })"]
         ReadTool["readArticle({ slug })"]
         Docusaurus -->|Mounts on Page Load| Registry
@@ -25,14 +25,14 @@ flowchart LR
         Registry --> ReadTool
     end
     subgraph Agent["Browser AI Agent / Extension"]
-        Discover["1. Discovers tools in navigator.modelContext"]
+        Discover["1. Discovers tools in modelContext"]
         Call["2. Invokes tool with JSON arguments"]
         Result["3. Receives structured JSON response"]
     end
     Agent <==>|In-Memory Execution| Registry
 ```
 
-When a user or AI agent visits any page on Kalidass Journal, the frontend automatically registers the available tools into `navigator.modelContext` (with a universal fallback to `window.modelContext`).
+When a user or AI agent visits any page on Kalidass Journal, the frontend automatically registers the available tools into `document.modelContext`, `navigator.modelContext`, and `window.modelContext`.
 
 ---
 
@@ -42,7 +42,7 @@ When a user or AI agent visits any page on Kalidass Journal, the frontend automa
 Searches publication articles and research briefs by text keyword or category tag, strictly bounded to a maximum of 5 items.
 
 * **Description**: `"Search Kalidass Journal research articles by text query or tag (returns up to 5 articles)."`
-* **Parameters**:
+* **Input Schema / Parameters**:
   * `query` *(string, optional)*: Keyword to match in title, subtitle, excerpt, or tags.
   * `tag` *(string, optional)*: Category filter (e.g. `'Agents'`, `'Evals'`, `'Systems'`).
 * **Returns**: Array of at most 5 article summaries:
@@ -70,7 +70,7 @@ Searches publication articles and research briefs by text keyword or category ta
 Gets the direct canonical reading URL, path, and summary metadata for a specific article.
 
 * **Description**: `"Get the direct reading URL and summary metadata for a specific article by slug."`
-* **Parameters**:
+* **Input Schema / Parameters**:
   * `slug` *(string, required)*: The URL slug of the article (e.g. `'attention-as-routing'`).
 * **Returns**: Lightweight navigation and metadata object:
   ```json
@@ -91,15 +91,32 @@ Gets the direct canonical reading URL, path, and summary metadata for a specific
 
 ---
 
-## 3. Testing in Browser DevTools Console
+## 3. Testing with WebMCP Inspector Extension
 
-Open DevTools Console (`F12` or `Ctrl + Shift + I`) on `https://kalidass.amrit.fyi` or `http://localhost:3000`:
+Kalidass Journal is validated with the **WebMCP – Model Context Tool Inspector** extension (by Google Chrome Labs / W3C Web ML CG):
+
+1. **Enable Browser Flags** (Chrome Dev / Canary):
+   - Set `chrome://flags/#enable-webmcp-testing` (or `#enable-experimental-web-platform-features`) to **Enabled**.
+2. **Open Extension Panel**:
+   - Open the **WebMCP Inspector** side panel.
+3. **Hard-Refresh Page**:
+   - Press `Ctrl + Shift + R` (or `F5`) on `https://kalidass.amrit.fyi` or `http://localhost:3000`.
+   - The inspector will automatically list `searchArticles` and `readArticle` along with their interactive schema forms.
+4. **Execute & Test with Gemini**:
+   - Test manual JSON inputs directly in the inspector or attach a Gemini API key to run autonomous multi-step agent queries.
+
+---
+
+## 4. Testing in Browser DevTools Console
+
+Open DevTools Console (`F12` or `Ctrl + Shift + I`):
 
 ```javascript
-// 1. Inspect registered tools
+// 1. Inspect registered tools (or call listTools / getTools)
 console.log(window.modelContext.tools);
+console.log(await window.modelContext.listTools());
 
-// 2. Search articles
+// 2. Search articles (returns up to 5 items)
 const results = await window.modelContext.tools.searchArticles.execute({ query: "evals" });
 console.log("Search Results:", results);
 
@@ -110,8 +127,10 @@ console.log("Article Metadata & URL:", article);
 
 ---
 
-## 4. Implementation Details
+## 5. Implementation Details
 
 - **Source Code**: `blog_frontend/src/client-modules/webmcp.ts`
 - **Registration**: Registered in `blog_frontend/docusaurus.config.ts` via `clientModules: ["./src/client-modules/api-base.ts", "./src/client-modules/webmcp.ts"]`.
-- **SSR Safety**: All browser global access is wrapped with `ExecutionEnvironment.canUseDOM` to ensure hermetic static site pre-rendering.
+- **Triple Global Sync**: Exposes tools via `document.modelContext`, `navigator.modelContext`, and `window.modelContext`.
+- **Dual Schema Specification**: Provides standard `inputSchema` (JSON Schema) and `parameters` for universal parser compatibility.
+- **SSR Safety**: All browser global access is guarded with `ExecutionEnvironment.canUseDOM` to ensure hermetic static site pre-rendering.

@@ -262,7 +262,7 @@ curl -X POST https://kalidass.amrit.fyi/api/articles \
 
 ## 9. WebMCP (In-Browser Model Context Protocol)
 
-Kalidass Journal natively implements **WebMCP** (`navigator.modelContext` / `window.modelContext`), enabling browser AI agents (Chrome built-in AI, Gemini, OpenAI Operator, browser extensions) to search and read research dispatches directly within the browser runtime without DOM scraping:
+Kalidass Journal natively implements **WebMCP** (`document.modelContext` / `navigator.modelContext` / `window.modelContext`), enabling browser AI agents (Chrome built-in AI, Gemini Nano, OpenAI Operator, and extensions like **WebMCP – Model Context Tool Inspector**) to search and read research dispatches directly within the browser runtime without DOM scraping:
 
 - **`searchArticles({ query, tag })`**: Filter and search publication briefs by keyword or category tag (strictly bounded to at most 5 results).
 - **`readArticle({ slug })`**: Fetch the canonical reading URL, path, and summary metadata for any story.
@@ -273,7 +273,7 @@ await window.modelContext.tools.searchArticles.execute({ query: "evals" });
 await window.modelContext.tools.readArticle.execute({ slug: "attention-as-routing" });
 ```
 
-> Refer to [`docs/webmcp.mdx`](./docs/webmcp.mdx) for architecture, schema declarations, and integration details.
+> Validated with Chrome's **WebMCP – Model Context Tool Inspector** extension (`chrome://flags/#enable-webmcp-testing`). Refer to [`docs/webmcp.mdx`](./docs/webmcp.mdx) for architecture, schema declarations, and extension setup.
 
 ---
 

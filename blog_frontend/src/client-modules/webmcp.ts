@@ -6,7 +6,12 @@ import type {Article, ArticleSummary} from "../lib/types";
 export interface WebMcpTool {
   name: string;
   description: string;
-  parameters: {
+  inputSchema?: {
+    type: "object";
+    properties: Record<string, {type: string; description: string}>;
+    required?: string[];
+  };
+  parameters?: {
     type: "object";
     properties: Record<string, {type: string; description: string}>;
     required?: string[];
@@ -18,9 +23,14 @@ export interface ModelContextRegistry {
   tools: Record<string, WebMcpTool>;
   registerTool: (tool: WebMcpTool) => void;
   unregisterTool: (name: string) => void;
+  listTools: () => Promise<WebMcpTool[]>;
+  getTools: () => WebMcpTool[];
 }
 
 declare global {
+  interface Document {
+    modelContext?: ModelContextRegistry;
+  }
   interface Navigator {
     modelContext?: ModelContextRegistry;
   }
@@ -30,8 +40,19 @@ declare global {
 }
 
 function ensureModelContext(): ModelContextRegistry {
-  const existing = navigator.modelContext || window.modelContext;
+  const existing =
+    (typeof document !== "undefined" && document.modelContext) ||
+    navigator.modelContext ||
+    window.modelContext;
+
   if (existing && typeof existing.registerTool === "function") {
+    // If an existing registry was provided by the extension, synchronize globals
+    if (typeof document !== "undefined" && !document.modelContext) {
+      try { (document as any).modelContext = existing; } catch {}
+    }
+    if (!window.modelContext) {
+      window.modelContext = existing;
+    }
     return existing;
   }
 
@@ -40,23 +61,38 @@ function ensureModelContext(): ModelContextRegistry {
   const registry: ModelContextRegistry = {
     tools: toolsMap,
     registerTool(tool: WebMcpTool) {
+      if (!tool.inputSchema && tool.parameters) {
+        tool.inputSchema = tool.parameters;
+      }
+      if (!tool.parameters && tool.inputSchema) {
+        tool.parameters = tool.inputSchema;
+      }
       toolsMap[tool.name] = tool;
     },
     unregisterTool(name: string) {
       delete toolsMap[name];
     },
+    async listTools() {
+      return Object.values(toolsMap);
+    },
+    getTools() {
+      return Object.values(toolsMap);
+    },
   };
 
-  // Attach to both navigator and window for maximum browser-agent compatibility
+  // Attach to document, navigator, and window for full WebMCP Inspector & agent compatibility
+  if (typeof document !== "undefined") {
+    try {
+      (document as any).modelContext = registry;
+    } catch {}
+  }
   try {
     Object.defineProperty(navigator, "modelContext", {
       value: registry,
       writable: true,
       configurable: true,
     });
-  } catch {
-    // navigator might be read-only in some environments
-  }
+  } catch {}
   window.modelContext = registry;
 
   return registry;
@@ -68,24 +104,27 @@ export function initWebMcp(): void {
   try {
     const context = ensureModelContext();
 
+    const searchSchema = {
+      type: "object" as const,
+      properties: {
+        query: {
+          type: "string",
+          description: "Search keyword to find in title, subtitle, excerpt, or tags",
+        },
+        tag: {
+          type: "string",
+          description: "Optional tag filter (e.g. 'Agents', 'Evals', 'Systems')",
+        },
+      },
+    };
+
     // Tool 1: searchArticles (Bounded to fixed 5 articles)
     try {
       context.registerTool({
         name: "searchArticles",
         description: "Search Kalidass Journal research articles by text query or tag (returns up to 5 articles).",
-        parameters: {
-          type: "object",
-          properties: {
-            query: {
-              type: "string",
-              description: "Search keyword to find in title, subtitle, excerpt, or tags",
-            },
-            tag: {
-              type: "string",
-              description: "Optional tag filter (e.g. 'Agents', 'Evals', 'Systems')",
-            },
-          },
-        },
+        inputSchema: searchSchema,
+        parameters: searchSchema,
         execute: async (args: {query?: string; tag?: string}) => {
           const q = (args?.query || "").toLowerCase().trim();
           const targetTag = (args?.tag || "").toLowerCase().trim();
@@ -121,21 +160,24 @@ export function initWebMcp(): void {
       console.warn("[WebMCP] Could not register 'searchArticles':", err);
     }
 
+    const readSchema = {
+      type: "object" as const,
+      properties: {
+        slug: {
+          type: "string",
+          description: "The unique URL slug of the article (e.g. 'attention-as-routing')",
+        },
+      },
+      required: ["slug"],
+    };
+
     // Tool 2: readArticle (Returns Direct URL & Summary Metadata)
     try {
       context.registerTool({
         name: "readArticle",
         description: "Get the direct reading URL and summary metadata for a specific article by slug.",
-        parameters: {
-          type: "object",
-          properties: {
-            slug: {
-              type: "string",
-              description: "The unique URL slug of the article (e.g. 'attention-as-routing')",
-            },
-          },
-          required: ["slug"],
-        },
+        inputSchema: readSchema,
+        parameters: readSchema,
         execute: async (args: {slug: string}) => {
           const slug = (args?.slug || "").trim().replace(/^\/story\//, "").replace(/\/$/, "");
           if (!slug) throw new Error("Argument 'slug' is required.");
