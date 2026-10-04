@@ -1,66 +1,94 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,500;0,8..60,700;1,8..60,500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,600&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
-  --ifm-color-primary: #22d3ee;
-  --ifm-color-primary-dark: #06b6d4;
-  --ifm-color-primary-darker: #0891b2;
-  --ifm-color-primary-darkest: #155e75;
-  --ifm-color-primary-light: #67e8f9;
-  --ifm-color-primary-lighter: #a5f3fc;
-  --ifm-color-primary-lightest: #cffafe;
-  --ifm-code-font-size: 95%;
-  --ifm-font-family-base: "Space Grotesk", "Segoe UI", sans-serif;
+  /* Docusaurus Primary: Neel (Royal Indigo / Meghadūta) */
+  --ifm-color-primary: #6366f1;
+  --ifm-color-primary-dark: #4f46e5;
+  --ifm-color-primary-darker: #4338ca;
+  --ifm-color-primary-darkest: #3730a3;
+  --ifm-color-primary-light: #818cf8;
+  --ifm-color-primary-lighter: #a5b4fc;
+  --ifm-color-primary-lightest: #c7d2fe;
+  
+  --ifm-code-font-size: 92%;
+  --ifm-font-family-base: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ifm-heading-font-family: "Source Serif 4", Georgia, serif;
-  --ifm-background-color: #1d1d21;
-  --ifm-navbar-background-color: rgba(29, 29, 33, 0.86);
-  --ifm-footer-background-color: #17171a;
-  --ifm-global-radius: 14px;
-  --ifm-font-color-base: #d7e4ef;
-  --docusaurus-highlighted-code-line-bg: rgba(34, 211, 238, 0.12);
+  --ifm-background-color: #080a10;
+  --ifm-navbar-background-color: rgba(8, 10, 16, 0.75);
+  --ifm-footer-background-color: #06070b;
+  --ifm-global-radius: 12px;
+  --ifm-font-color-base: #f8fafc;
+  --docusaurus-highlighted-code-line-bg: rgba(99, 102, 241, 0.15);
+
+  /* Typography */
   --font-display: "Source Serif 4", Georgia, serif;
-  --font-sans: "Space Grotesk", "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --paper: rgba(38, 33, 30, 0.86);
-  --ink: #e8f4ff;
-  --ink-soft: #9fb4c9;
-  --ink-mute: #6d8298;
-  --chroma-coral: #22d3ee;
-  --chroma-gold: #c4f542;
-  --chroma-teal: #67e8f9;
-  --chroma-indigo: #a78bfa;
-  --grid: rgba(103, 232, 249, 0.07);
-  --layer-accent: var(--chroma-gold);
-  --page-gradient: linear-gradient(160deg, #2b1a13 0%, #232023 55%, #1d1d21 100%);
+  --font-sans: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Surfaces & Ink (Kajjala / Midnight Slate) */
+  --paper: rgba(15, 20, 32, 0.75);
+  --paper-solid: #101522;
+  --paper-hover: rgba(22, 29, 46, 0.85);
+  --ink: #f8fafc;
+  --ink-soft: #94a3b8;
+  --ink-mute: #64748b;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(99, 102, 241, 0.4);
+
+  /* Classical Pigment System (षड्रस वर्ण) */
+  --chroma-neel: #6366f1;       /* Neel (Indigo / Cloud Messenger) — Primary */
+  --chroma-kesari: #f97316;     /* Kesari (Saffron / Agni) */
+  --chroma-mayura: #06b6d4;     /* Mayura (Peacock Teal) */
+  --chroma-marakata: #10b981;   /* Marakata (Emerald / Tulsi) */
+  --chroma-sindoor: #f43f5e;    /* Sindoor (Vermilion / Red) */
+  --chroma-champak: #eab308;    /* Champak (Amber Gold) */
+
+  /* Legacy Variable Aliases */
+  --chroma-coral: var(--chroma-neel);
+  --chroma-gold: var(--chroma-champak);
+  --chroma-teal: var(--chroma-mayura);
+  --chroma-indigo: var(--chroma-neel);
+  --layer-accent: var(--chroma-neel);
+
+  /* Page Ambient Aura */
+  --page-gradient: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(99, 102, 241, 0.18), rgba(6, 182, 212, 0.05) 50%, transparent 85%);
+  --shadow-card: 0 10px 30px -8px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme="light"] {
-  --ifm-background-color: #ffffff;
-  --ifm-navbar-background-color: rgba(250, 244, 231, 0.9);
-  --ifm-font-color-base: #102033;
-  --paper: #fffdf8;
-  --ink: #102033;
-  --ink-soft: #3d5368;
-  --ink-mute: #6a7f93;
-  --grid: rgba(15, 40, 70, 0.06);
-  --layer-accent: #4e9b47;
-  --page-gradient: linear-gradient(160deg, #efe3c8 0%, #fbf6ea 45%, #ffffff 100%);
+  --ifm-background-color: #fbf8f3;
+  --ifm-navbar-background-color: rgba(251, 248, 243, 0.88);
+  --ifm-footer-background-color: #f3efe6;
+  --ifm-font-color-base: #0f172a;
+  
+  --paper: rgba(255, 255, 255, 0.9);
+  --paper-solid: #ffffff;
+  --paper-hover: #ffffff;
+  --ink: #0f172a;
+  --ink-soft: #475569;
+  --ink-mute: #64748b;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(79, 70, 229, 0.4);
+
+  --page-gradient: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(99, 102, 241, 0.1), rgba(6, 182, 212, 0.04) 50%, transparent 85%);
+  --shadow-card: 0 8px 24px -6px rgba(0, 0, 0, 0.06), 0 2px 6px -2px rgba(0, 0, 0, 0.03);
 }
 
 html,
 body {
   background-color: var(--ifm-background-color);
-  background-image:
-    var(--page-gradient),
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: auto, 42px 42px, 42px 42px;
+  background-image: var(--page-gradient);
   background-attachment: fixed;
   color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 .navbar {
-  backdrop-filter: blur(18px);
-  border-bottom: 1px solid rgba(103, 232, 249, 0.14);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: var(--ifm-navbar-background-color);
+  border-bottom: 1px solid var(--border-subtle);
   box-shadow: none;
 }
 
@@ -72,19 +100,32 @@ body {
   font-size: 0.86rem;
 }
 
+.navbar__link {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.88rem;
+  transition: color 0.2s;
+}
+
+.navbar__link:hover,
+.navbar__link--active {
+  color: var(--chroma-neel) !important;
+}
+
 .footer {
   background: var(--ifm-footer-background-color) !important;
-  border-top: 1px solid rgba(103, 232, 249, 0.12);
+  border-top: 1px solid var(--border-subtle);
+  padding: 2.5rem 0 2rem;
 }
 
 .footer__copyright {
-  color: #7f93a8;
+  color: var(--ink-mute);
   font-family: var(--font-mono);
   font-size: 0.78rem;
 }
 
 .main-wrapper {
-  min-height: 70vh;
+  min-height: 75vh;
 }
 
 button,

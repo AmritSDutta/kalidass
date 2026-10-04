@@ -37,17 +37,21 @@ export default function StoryPage(): ReactNode {
     return (
       <Layout title="Loading">
         <main className={styles.page}>
-          <p>Setting type...</p>
+          <div className={styles.loadingContainer}>
+            <p>Setting type...</p>
+          </div>
         </main>
       </Layout>
     );
   }
 
+  const storyAccent = article.accent || "var(--chroma-neel)";
+
   return (
     <Layout title={article.title} description={article.excerpt}>
       <main
         className={styles.page}
-        style={{"--story-accent": article.accent} as CSSProperties}>
+        style={{"--story-accent": storyAccent} as CSSProperties}>
         <div className={styles.hero}>
           {article.coverImage ? (
             <img className={styles.cover} src={article.coverImage} alt="" />
@@ -55,18 +59,22 @@ export default function StoryPage(): ReactNode {
           <div className={styles.veil} />
           <div className={styles.heroCopy}>
             <p className={styles.kicker}>
-              {(article.tags || []).join(" / ") || "Essay"}
+              {(article.tags || []).join(" · ") || "Essay"}
             </p>
             <h1>{article.title}</h1>
-            <p className={styles.sub}>{article.subtitle}</p>
+            {article.subtitle ? <p className={styles.sub}>{article.subtitle}</p> : null}
             <div className={styles.byline}>
               {article.author?.avatar ? (
                 <img src={article.author.avatar} alt="" />
-              ) : null}
+              ) : (
+                <span className={styles.initial}>
+                  {(article.author?.name || "K").slice(0, 1)}
+                </span>
+              )}
               <div>
-                <strong>{article.author?.name}</strong>
+                <strong>{article.author?.name || "Kalidass Author"}</strong>
                 <span>
-                  {article.author?.role} · {formatDate(article.publishedAt)} ·{" "}
+                  {article.author?.role || "Research Note"} · {formatDate(article.publishedAt)} ·{" "}
                   {article.readTime} min
                   {article.aiGenerated ? (
                     <>
@@ -86,8 +94,12 @@ export default function StoryPage(): ReactNode {
           ) : null}
           <StoryBody article={article} />
           <div className={styles.footer}>
-            <Link to="/magazine">All briefs</Link>
-            <Link to={`/admin?edit=${article.slug}`}>Edit in studio</Link>
+            <Link to="/magazine" className={styles.footerLink}>
+              ← All briefs
+            </Link>
+            <Link to={`/admin?edit=${article.slug}`} className={styles.footerLink}>
+              Edit in studio →
+            </Link>
           </div>
         </article>
       </main>

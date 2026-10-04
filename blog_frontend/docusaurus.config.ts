@@ -4,7 +4,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
   title: "Kalidass Journal",
-  tagline: "Field notes from the model layer.",
+  tagline: "Field notes from the neural heart.",
   favicon: "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png",
   headTags: [
     {
@@ -59,13 +59,6 @@ const config: Config = {
             },
           };
         },
-        async contentLoaded({actions}) {
-          actions.addRoute({
-            path: "/story/:slug",
-            component: "@site/src/components/StoryPage",
-            exact: true,
-          });
-        },
       };
     },
   ],
@@ -94,21 +87,13 @@ const config: Config = {
         src: "img/logo.svg",
       },
       items: [
-        {to: "/magazine", label: "Issue", position: "left"},
+        {to: "/magazine", label: "Issue", position: "right"},
         {to: "/admin", label: "Studio", position: "right"},
       ],
     },
     footer: {
       style: "dark",
-      links: [
-        {
-          title: "Read",
-          items: [
-            {label: "Issue", to: "/magazine"},
-            {label: "Studio", to: "/admin"},
-          ],
-        },
-      ],
+      links: [],
       copyright: `Copyright © ${new Date().getFullYear()} Kalidass Journal. Stored as objects.`,
     },
     prism: {

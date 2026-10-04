@@ -1,14 +1,22 @@
 .page {
-  padding-bottom: 4rem;
+  padding-bottom: 5rem;
+}
+
+.loadingContainer {
+  min-height: 50vh;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  color: var(--ink-mute);
 }
 
 .hero {
   position: relative;
-  min-height: 62vh;
+  min-height: 55vh;
   display: grid;
   place-items: end start;
-  background: #05070d;
-  color: #e8f4ff;
+  background: #080a10;
+  color: #f8fafc;
   overflow: hidden;
 }
 
@@ -24,36 +32,41 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(12, 8, 18, 0.15), rgba(12, 8, 18, 0.78)),
-    linear-gradient(90deg, color-mix(in srgb, var(--story-accent, #22d3ee) 35%, transparent), transparent 45%);
+    linear-gradient(180deg, rgba(8, 10, 16, 0.25) 0%, rgba(8, 10, 16, 0.85) 100%),
+    linear-gradient(90deg, color-mix(in srgb, var(--story-accent, #6366f1) 25%, transparent), transparent 60%);
 }
 
 .heroCopy {
   position: relative;
-  max-width: 920px;
-  padding: 4rem 1.5rem 3rem;
+  max-width: 960px;
+  padding: 4.5rem 1.5rem 2.8rem;
+  z-index: 2;
 }
 
 .kicker {
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   font-size: 0.78rem;
   margin: 0 0 0.8rem;
   font-family: var(--font-mono);
+  color: var(--story-accent, var(--chroma-neel));
+  font-weight: 600;
 }
 
 .heroCopy h1 {
   font-family: var(--font-display);
-  font-size: clamp(2.6rem, 7vw, 5.4rem);
-  letter-spacing: -0.055em;
-  line-height: 0.95;
+  font-size: clamp(2.4rem, 6vw, 4.6rem);
+  letter-spacing: -0.035em;
+  line-height: 1.05;
   margin: 0 0 0.8rem;
+  color: #ffffff;
 }
 
 .sub {
-  font-size: 1.2rem;
-  max-width: 40rem;
-  opacity: 0.92;
+  font-size: 1.15rem;
+  max-width: 44rem;
+  color: #cbd5e1;
+  line-height: 1.6;
 }
 
 .byline {
@@ -63,63 +76,97 @@
   margin-top: 1.4rem;
 }
 
-.byline img {
-  width: 46px;
-  height: 46px;
+.byline img,
+.initial {
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   object-fit: cover;
 }
 
-.byline span,
+.initial {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--story-accent, var(--chroma-neel)), #38bdf8);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
 .byline strong {
   display: block;
+  font-size: 0.92rem;
+  color: #ffffff;
 }
 
 .byline span {
-  opacity: 0.8;
-  font-size: 0.9rem;
+  display: block;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
 }
 
 .aiTag {
   display: inline-block;
-  border: 1px solid var(--story-accent, #22d3ee);
-  color: var(--story-accent, #22d3ee);
+  border: 1px solid var(--chroma-sindoor);
+  color: var(--chroma-sindoor);
   border-radius: 999px;
   padding: 0.05rem 0.45rem;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1.4;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
 }
 
 .article {
   max-width: 760px;
-  margin: -2.5rem auto 0;
-  background: var(--paper);
-  border-radius: 28px;
-  padding: 2.4rem 1.6rem 3rem;
+  margin: -1.5rem auto 0;
+  background: var(--paper-solid);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px;
+  padding: 2.5rem 2rem 3rem;
   position: relative;
-  box-shadow: 0 30px 70px rgba(16, 10, 24, 0.12);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  z-index: 3;
 }
 
 .deck {
-  font-size: 1.28rem;
+  font-family: var(--font-display);
+  font-size: 1.22rem;
   line-height: 1.7;
   color: var(--ink-soft);
-  margin-bottom: 1.8rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .footer {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  margin-top: 2.5rem;
-  padding-top: 1.2rem;
-  border-top: 1px solid rgba(24, 16, 36, 0.08);
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.footerLink {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footerLink:hover {
+  color: var(--chroma-neel);
+  text-decoration: none;
 }
 
 @media (min-width: 860px) {
   .article {
-    padding: 3rem 3.2rem 3.4rem;
+    padding: 3.2rem 3.5rem 3.8rem;
   }
 }

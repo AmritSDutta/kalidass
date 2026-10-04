@@ -14,7 +14,7 @@ import {emptyDraft, formatDate} from "@site/src/lib/media";
 import type {ArticleDraft, ArticleSummary, Block} from "@site/src/lib/types";
 import styles from "./admin.module.css";
 
-const ACCENTS = ["#22d3ee", "#a78bfa", "#c4f542", "#fb7185", "#38bdf8", "#f472b6"];
+const ACCENTS = ["#6366f1", "#f97316", "#06b6d4", "#10b981", "#f43f5e", "#eab308"];
 
 type BlockType = Block["type"];
 
@@ -358,7 +358,7 @@ export default function Admin(): ReactNode {
       <main className={styles.page}>
         <header className={styles.top}>
           <div>
-            <p>Worker studio / Upstash Blob</p>
+            <p className={styles.topKicker}>Studio // Upstash Blob</p>
             <h1>{editingId ? "Revise a brief" : "Compose a brief"}</h1>
           </div>
           <div className={styles.topActions}>

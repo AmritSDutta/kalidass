@@ -34,7 +34,7 @@ export function emptyDraft(): import("./types").ArticleDraft {
     videoUrl: "",
     author: {name: "", role: "Writer", avatar: ""},
     tags: [],
-    accent: "#22d3ee",
+    accent: "#6366f1",
     featured: false,
     private: true,
     aiGenerated: false,

@@ -29,19 +29,23 @@ export default function Home(): ReactNode {
         <section className={styles.hero}>
           <div className={styles.orb} />
           <div className={styles.orbAlt} />
-          <p className={styles.kicker}>Vol. 01 // latent issue</p>
+          <div className={styles.kicker}>
+            <span className={styles.kickerDot} />
+            Vol. 01 // Meghaduta Edition
+          </div>
           <h1>
             Field notes from
-            <em> the model layer.</em>
+            <em> the neural heart.</em>
           </h1>
           <p className={styles.lede}>
-            Kalidass Journal is a colorful research magazine for AI systems:
-            attention, agents, evals, and multimodal plumbing. Essays live in
-            Upstash Blob. The API is a Cloudflare Worker. The site is static.
+            Kalidass Journal is a high-signal research publication at the intersection of
+            agentic cognition, latent representation, and distributed edge architectures—inspired
+            by Kalidasa&apos;s cloud messenger archetype.
           </p>
           <div className={styles.actions}>
             <Link className={styles.primary} to="/magazine">
-              Open the issue
+              <span>Open the issue</span>
+              <span>→</span>
             </Link>
             <Link className={styles.ghost} to="/admin">
               Launch studio
@@ -58,14 +62,14 @@ export default function Home(): ReactNode {
         ) : null}
 
         {lead.length > 0 ? (
-          <section>
+          <section className={styles.cycleSection}>
             <div className={styles.sectionHead}>
               <h2>In this cycle</h2>
-              <p>Systems writing with stills, clips, and durable object URLs.</p>
+              <p>Compact field notes, empirical evals, and architectural benchmarks.</p>
             </div>
             <div className={styles.grid}>
               {lead.map((article) => (
-                <ArticleCard key={article.id} article={article} />
+                <ArticleCard key={article.id} article={article} compact />
               ))}
             </div>
           </section>
@@ -74,7 +78,8 @@ export default function Home(): ReactNode {
         {more.length > 0 ? (
           <section className={styles.listSection}>
             <div className={styles.sectionHead}>
-              <h2>Index</h2>
+              <h2>Index & Commentary</h2>
+              <p>Chronological index of field notes.</p>
             </div>
             <div className={styles.list}>
               {more.map((article) => (
@@ -82,7 +87,7 @@ export default function Home(): ReactNode {
                   key={article.id}
                   className={styles.row}
                   to={`/story/${article.slug}`}>
-                  <span style={{background: article.accent}} />
+                  <span style={{background: article.accent || "var(--chroma-neel)"}} />
                   <strong>{article.title}</strong>
                   <em>{article.tags?.[0] || "Brief"}</em>
                 </Link>

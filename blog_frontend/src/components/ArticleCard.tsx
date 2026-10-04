@@ -7,14 +7,25 @@ import styles from "./ArticleCard.module.css";
 type Props = {
   article: ArticleSummary;
   featured?: boolean;
+  compact?: boolean;
 };
 
-export default function ArticleCard({article, featured}: Props): ReactNode {
+export default function ArticleCard({article, featured, compact}: Props): ReactNode {
+  const cardClasses = [
+    styles.card,
+    featured ? styles.featured : "",
+    compact ? styles.compact : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const accentColor = article.accent || "var(--chroma-neel)";
+
   return (
     <Link
-      className={`${styles.card} ${featured ? styles.featured : ""}`}
+      className={cardClasses}
       to={`/story/${article.slug}`}
-      style={{"--card-accent": article.accent} as CSSProperties}>
+      style={{"--card-accent": accentColor} as CSSProperties}>
       <div className={styles.media}>
         {article.coverImage ? (
           <img src={article.coverImage} alt="" />
@@ -27,7 +38,8 @@ export default function ArticleCard({article, featured}: Props): ReactNode {
       <div className={styles.body}>
         <p className={styles.meta}>
           <span>{formatDate(article.publishedAt)}</span>
-          <span>{article.readTime} min read</span>
+          <span>·</span>
+          <span>{article.readTime} min</span>
           {article.aiGenerated ? <span className={styles.aiTag}>AI</span> : null}
         </p>
         <h3>{article.title}</h3>
@@ -37,12 +49,12 @@ export default function ArticleCard({article, featured}: Props): ReactNode {
             <img src={article.author.avatar} alt="" />
           ) : (
             <span className={styles.initial}>
-              {(article.author?.name || "C").slice(0, 1)}
+              {(article.author?.name || "K").slice(0, 1)}
             </span>
           )}
           <div>
-            <strong>{article.author?.name}</strong>
-            <span>{article.author?.role}</span>
+            <strong>{article.author?.name || "Kalidass Author"}</strong>
+            <span>{article.author?.role || "Research Note"}</span>
           </div>
         </div>
       </div>

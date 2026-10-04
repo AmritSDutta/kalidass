@@ -31,19 +31,23 @@ export default function Magazine(): ReactNode {
     <Layout title="Issue" description="The full Kalidass Journal issue.">
       <main className={styles.page}>
         <header className={styles.header}>
-          <p>Issue 01 / Upstash Blob</p>
-          <h1>The index</h1>
+          <div className={styles.kicker}>
+            <span className={styles.kickerDot} />
+            Issue 01 // Meghaduta Edition
+          </div>
+          <h1>The Index</h1>
           <div className={styles.controls}>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search agents, evals, systems..."
+              placeholder="Search essays, agents, evals, systems..."
+              className={styles.search}
             />
             <div className={styles.tags}>
               {tags.map((item) => (
                 <button
                   key={item}
-                  className={tag === item ? styles.active : ""}
+                  className={tag === item ? styles.active : styles.tagBtn}
                   onClick={() => setTag(item)}
                   type="button">
                   {item}
