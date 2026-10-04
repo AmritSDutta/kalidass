@@ -154,7 +154,7 @@ npm run start
 
 ---
 
-### 5. Running & Validating Docs7 Documentation
+## 5. Running & Validating Docs7 Documentation
 
 The unified Docs7 documentation suite is hosted at the repository root in `docs/`:
 
@@ -260,7 +260,24 @@ curl -X POST https://kalidass.amrit.fyi/api/articles \
 
 ---
 
-## 9. Verification & Quality Gates
+## 9. WebMCP (In-Browser Model Context Protocol)
+
+Kalidass Journal natively implements **WebMCP** (`navigator.modelContext` / `window.modelContext`), enabling browser AI agents (Chrome built-in AI, Gemini, OpenAI Operator, browser extensions) to search and read research dispatches directly within the browser runtime without DOM scraping:
+
+- **`searchArticles({ query, tag })`**: Filter and search publication briefs by keyword or category tag (strictly bounded to at most 5 results).
+- **`readArticle({ slug })`**: Fetch the canonical reading URL, path, and summary metadata for any story.
+
+```javascript
+// Test directly in DevTools Console (F12):
+await window.modelContext.tools.searchArticles.execute({ query: "evals" });
+await window.modelContext.tools.readArticle.execute({ slug: "attention-as-routing" });
+```
+
+> Refer to [`docs/webmcp.mdx`](./docs/webmcp.mdx) for architecture, schema declarations, and integration details.
+
+---
+
+## 10. Verification & Quality Gates
 
 ```bash
 # Frontend static type check (mandatory before deployment)
@@ -275,7 +292,7 @@ cd blog_frontend && npm run clear
 
 ---
 
-## 10. Architecture Evaluation & Quality Scorecard
+## 11. Architecture Evaluation & Quality Scorecard
 
 ### Overall Rating: **8.8 / 10** (Production-Ready)
 

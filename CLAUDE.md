@@ -114,3 +114,4 @@ kalidass/
   - `authorEmail`: Immutable author email stamped server-side by worker from verified Auth0 JWT credentials.
   - `Role Isolation`: Authors can create, edit, and delete only their own articles; Super-Admin (`ADMIN_TOKEN` or `ADMIN_EMAILS`) has full global access. Mutation attempts on other users' articles return `403 Forbidden`.
   - `PRIVATE_APP`: `true` = single-operator mode (hides Auth0 UI; unlocks exclusively with `ADMIN_TOKEN`). Off by default.
+  - `WebMCP In-Browser Registry`: Defined in `blog_frontend/src/client-modules/webmcp.ts` (registered in `docusaurus.config.ts`). Exposes `searchArticles` and `readArticle` on `window.modelContext` and `navigator.modelContext` for browser AI agent interaction.

@@ -44,7 +44,7 @@ const config: Config = {
     // PRIVATE_APP=true hides Auth0 login entirely — admin-token unlock only
     privateApp: process.env.PRIVATE_APP === "true",
   },
-  clientModules: ["./src/client-modules/api-base.ts"],
+  clientModules: ["./src/client-modules/api-base.ts", "./src/client-modules/webmcp.ts"],
   plugins: [
     function kalidassPlugin() {
       return {
