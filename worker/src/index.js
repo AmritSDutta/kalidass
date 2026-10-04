@@ -2,6 +2,17 @@ import {Bucket, uniquePath, uploadHandler} from "@upstash/blob";
 import {getMemoryObject, memoryBucket} from "./memory.js";
 import {seedArticles} from "./seed.js";
 
+// Cloudflare Workers fetch guard: ensures @upstash/blob requests carry Content-Length
+const nativeFetch = globalThis.fetch;
+globalThis.fetch = async function (input, init) {
+  if (init?.body && typeof init.body.getReader === "function") {
+    const bytes = new Uint8Array(await new Response(init.body).arrayBuffer());
+    const {duplex, ...rest} = init;
+    return nativeFetch(input, {...rest, body: bytes});
+  }
+  return nativeFetch(input, init);
+};
+
 function getRootPrefix(env) {
   const root = env?.ROOT_BUCKET || env?.ROOT_FOLDER || "kalidass";
   return String(root).replace(/^\/+|\/+$/g, "");
@@ -364,6 +375,7 @@ export default {
 
       return json({error: "Not found"}, 404, origin);
     } catch (error) {
+      console.error("Worker error:", error);
       const message = error instanceof Error ? error.message : "Worker error";
       return json({error: message}, 500, origin);
     }

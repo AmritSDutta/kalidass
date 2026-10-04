@@ -59,6 +59,8 @@
 .claude
 .gemini
 .opencode
+.agents/
+skills-lock.json
 
 # -----------------------------------------------------------------------------
 # Operating System Artifacts

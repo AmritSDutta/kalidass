@@ -43,6 +43,13 @@ const config: Config = {
     function kalidassPlugin() {
       return {
         name: "kalidass-journal",
+        async contentLoaded({actions}: any) {
+          actions.addRoute({
+            path: "/story/:slug*",
+            component: "@site/src/components/StoryPage.tsx",
+            exact: false,
+          });
+        },
         configureWebpack() {
           return {
             mergeStrategy: {"devServer.proxy": "replace"},
