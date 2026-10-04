@@ -1,22 +1,40 @@
 import {apiUrl} from "./config";
-import type {Article, ArticleDraft, ArticleSummary} from "./types";
+import type {Article, ArticleDraft, ArticleSummary, AuthUser} from "./types";
 
-function authHeaders(): HeadersInit {
-  const token =
-    typeof window !== "undefined"
-      ? window.localStorage.getItem("kalidass-admin-token") || ""
-      : "";
+export type TokenProvider = () => Promise<string | null> | string | null;
+
+let customTokenProvider: TokenProvider | null = null;
+
+export function setAuthTokenProvider(provider: TokenProvider | null) {
+  customTokenProvider = provider;
+}
+
+export async function authHeaders(): Promise<HeadersInit> {
+  if (typeof window === "undefined") return {};
+  const adminToken = localStorage.getItem("kalidass-admin-token");
+  if (adminToken) {
+    return {Authorization: `Bearer ${adminToken}`};
+  }
+  let token: string | null = null;
+  if (customTokenProvider) {
+    try {
+      token = await customTokenProvider();
+    } catch {
+      token = null;
+    }
+  }
   return token ? {Authorization: `Bearer ${token}`} : {};
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const auth = await authHeaders();
   const response = await fetch(apiUrl(path), {
     ...init,
     headers: {
       ...(init?.body instanceof FormData
         ? {}
         : {"Content-Type": "application/json"}),
-      ...authHeaders(),
+      ...auth,
       ...(init?.headers || {}),
     },
   });
@@ -31,6 +49,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(message);
   }
   return response.json() as Promise<T>;
+}
+
+export function getAuthMe(tokenOverride?: string) {
+  return request<{ok: boolean; user: AuthUser}>("/api/auth/me", {
+    headers: tokenOverride ? {Authorization: `Bearer ${tokenOverride}`} : {},
+  });
 }
 
 export function listArticles(status?: "draft" | "published" | "all") {
@@ -65,9 +89,10 @@ export function removeArticle(idOrSlug: string) {
 export async function uploadObject(file: File): Promise<{url: string; name: string}> {
   const body = new FormData();
   body.append("file", file);
+  const auth = await authHeaders();
   const response = await fetch(apiUrl("/api/objects"), {
     method: "POST",
-    headers: authHeaders(),
+    headers: auth,
     body,
   });
   if (!response.ok) {

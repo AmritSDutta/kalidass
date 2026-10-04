@@ -9,7 +9,8 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
-    "@upstash/blob": "0.0.6-canary.20260914173111"
+    "@upstash/blob": "0.0.6-canary.20260914173111",
+    "jose": "^6.2.12"
   },
   "devDependencies": {
     "wrangler": "^4.37.0"

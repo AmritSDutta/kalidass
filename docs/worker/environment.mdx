@@ -12,9 +12,21 @@ The worker reads configuration from two sources: **Cloudflare secrets** (set via
 | Variable | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `UPSTASH_BLOB_TOKEN` | Secret | For persistence | *(absent)* | Upstash Blob read/write token. When absent, the worker falls back to in-memory storage and articles do not persist across restarts. |
-| `ADMIN_TOKEN` | Secret | Optional | *(absent)* | Bearer token for Studio write operations. When absent, write endpoints fail closed for security. |
+| `ADMIN_TOKEN` | Secret | Optional | *(absent)* | Legacy/M2M Bearer token for Super-Admin and AI Agent automated publishing. Write endpoints require valid Auth0 JWT or `ADMIN_TOKEN`. |
+| `AUTH0_DOMAIN` | Var / Secret | Optional | `""` | Auth0 tenant domain (e.g. `dev-xxx.us.auth0.com`) used for JWKS remote signature verification. |
+| `AUTH0_AUDIENCE` | Var (`wrangler.toml`) | Optional | `"https://api.kalidass.amrit.fyi"` | Auth0 API identifier (audience) for validating JWT claims. |
+| `ADMIN_EMAILS` | Var / Secret | Optional | `""` | Comma-separated list of email addresses granted Super-Admin permissions (`role: "admin"`). |
 | `ROOT_BUCKET` | Var (`wrangler.toml`) | Optional | `"kalidass"` | Root folder prefix inside Upstash Blob (e.g. `kalidass/index.json`, `kalidass/articles/`). |
 | `CORS_ORIGIN` | Var (`wrangler.toml`) | Yes | `"https://kalidass.amrit.fyi"` | Value of the `Access-Control-Allow-Origin` response header matching the Cloudflare Pages domain. |
+
+## Frontend Build Environment Variables
+
+| Variable | Scope | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `PRIVATE_APP` | Cloudflare Pages / Build | Optional | `"false"` | When `"true"`, disables Auth0 login UI and operates Studio exclusively with `ADMIN_TOKEN`. |
+| `AUTH0_DOMAIN` | Cloudflare Pages / Build | Optional | `""` | Auth0 tenant domain passed into frontend build (`customFields.auth0Domain`). |
+| `AUTH0_CLIENT_ID` | Cloudflare Pages / Build | Optional | `""` | Auth0 SPA Client ID passed into frontend build (`customFields.auth0ClientId`). |
+| `AUTH0_AUDIENCE` | Cloudflare Pages / Build | Optional | `"https://api.kalidass.amrit.fyi"` | Auth0 API Audience identifier (`customFields.auth0Audience`). |
 
 ## Effect on Storage Mode
 

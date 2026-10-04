@@ -13,4 +13,5 @@ routes = [
 [vars]
 CORS_ORIGIN = "https://kalidass.amrit.fyi"
 ROOT_BUCKET = "kalidass"
+# AUTH0_DOMAIN, AUTH0_AUDIENCE, and ADMIN_EMAILS are configured via wrangler secret / .dev.vars
 

@@ -5,11 +5,19 @@ export type Author = {
 };
 
 export type Block =
-  | {type: "paragraph"; text: string}
-  | {type: "heading"; text: string}
-  | {type: "quote"; text: string; cite?: string}
-  | {type: "image"; url: string; caption?: string}
-  | {type: "video"; url: string; caption?: string};
+  | {type: "paragraph"; text: string; _id?: string}
+  | {type: "heading"; text: string; _id?: string}
+  | {type: "quote"; text: string; cite?: string; _id?: string}
+  | {type: "image"; url: string; caption?: string; _id?: string}
+  | {type: "video"; url: string; caption?: string; _id?: string};
+
+export type AuthUser = {
+  sub: string;
+  email: string;
+  name?: string;
+  avatar?: string;
+  role: "admin" | "author";
+};
 
 export type ArticleSummary = {
   id: string;
@@ -20,6 +28,7 @@ export type ArticleSummary = {
   coverImage: string;
   videoUrl: string;
   author: Author;
+  authorEmail: string;
   tags: string[];
   accent: string;
   publishedAt: string;
@@ -28,6 +37,7 @@ export type ArticleSummary = {
   published: boolean;
   private: boolean;
   aiGenerated: boolean;
+  userId?: string;
   updatedAt?: string;
 };
 
@@ -43,6 +53,7 @@ export type ArticleDraft = {
   coverImage: string;
   videoUrl: string;
   author: Author;
+  authorEmail?: string;
   tags: string[];
   accent: string;
   featured: boolean;
@@ -51,4 +62,5 @@ export type ArticleDraft = {
   published?: boolean;
   private?: boolean;
   aiGenerated?: boolean;
+  userId?: string;
 };

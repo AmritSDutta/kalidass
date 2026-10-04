@@ -74,6 +74,7 @@ Used in index feeds, search results, and Studio summary listings:
 - `coverImage?: string` — URL to hero image asset.
 - `videoUrl?: string` — URL to lead video player asset.
 - `author: Author` — Author metadata.
+- `authorEmail: string` — Non-editable creator email stamped by backend from login credentials.
 - `tags: string[]` — List of topic tags.
 - `accent: string` — Hex color string applied to CSS custom properties.
 - `publishedAt: string` — ISO publication timestamp (empty for drafts).
@@ -82,6 +83,7 @@ Used in index feeds, search results, and Studio summary listings:
 - `published?: boolean` — `false` for drafts, `true` for live articles.
 - `private?: boolean` — `true` for unlisted articles (accessible only via direct link).
 - `aiGenerated?: boolean` — Displays the `AI` badge across cards and headers.
+- `userId?: string` — Auth0 subject identifier or system user ID.
 - `updatedAt?: string` — ISO timestamp of last modification.
 
 ### `Article`
@@ -95,8 +97,22 @@ The complete article payload returned by `getArticle()` and consumed by `StoryPa
 
 The payload sent during article creation (`POST /api/articles`) and editing (`PUT /api/articles/:slug`):
 - Contains all content fields: `title`, `subtitle`, `excerpt`, `coverImage`, `videoUrl`, `author`, `tags`, `accent`, `featured`, `blocks`, `published`, `private`, `aiGenerated`, and optional `slug`.
-- **Excludes server-managed fields**: `id`, `publishedAt`, `readTime`, `createdAt`, `updatedAt`.
+- **Excludes server-managed fields**: `id`, `authorEmail`, `publishedAt`, `readTime`, `createdAt`, `updatedAt` (the server stamps `authorEmail` automatically from credentials).
 - The helper `fromArticle()` in `admin.tsx` converts an existing `Article` into an `ArticleDraft` by stripping server-owned fields.
+
+### `AuthUser`
+
+The user identity contract resolved by `getAuthUser()` and `/api/auth/me`:
+
+```typescript
+export type AuthUser = {
+  sub: string;
+  email: string;
+  name?: string;
+  avatar?: string;
+  role: "admin" | "author";
+};
+```
 
 ## Core Operational Flags
 

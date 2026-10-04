@@ -181,7 +181,10 @@ npm install
 
 # Configure secret tokens (do not commit secrets)
 npx wrangler secret put UPSTASH_BLOB_TOKEN
-npx wrangler secret put ADMIN_TOKEN  # Password for Studio writes and M2M agent publishing
+npx wrangler secret put ADMIN_TOKEN  # Legacy/M2M password for Studio writes and AI agent publishing
+npx wrangler secret put AUTH0_DOMAIN # e.g. dev-xxx.us.auth0.com (or in wrangler.toml)
+npx wrangler secret put AUTH0_AUDIENCE # e.g. https://api.kalidass.amrit.fyi (or in wrangler.toml)
+npx wrangler secret put ADMIN_EMAILS # Comma-separated Super-Admin email addresses
 
 # Deploy private worker to Cloudflare (workers_dev = false, zero public exposure)
 npx wrangler deploy
@@ -196,6 +199,10 @@ npx wrangler deploy
    - **Build output directory**: `build`
    - **Environment variables**:
      - `NODE_VERSION`: `20`
+     - `AUTH0_DOMAIN`: `your-tenant.us.auth0.com`
+     - `AUTH0_CLIENT_ID`: `your-spa-client-id`
+     - `AUTH0_AUDIENCE`: `https://api.kalidass.amrit.fyi`
+     - `PRIVATE_APP`: `false` (optional; set to `true` to disable Auth0 UI and run admin-token-only single-operator mode)
 3. Configure the **Service Binding**:
    - Under Pages **Settings** → **Bindings** (or **Functions** → **Service bindings**), add:
      - **Type**: `Service binding`
@@ -212,15 +219,18 @@ npx wrangler deploy
 ## 7. Studio CMS & Authentication
 
 1. Navigate to `/admin` to open the Studio CMS.
-2. If `ADMIN_TOKEN` is configured on the Worker, enter your token in the Studio prompt or set it via browser console:
+2. Sign in with **Auth0** using the login prompt in the top navigation bar. Alternatively, enter an `ADMIN_TOKEN` via the manual token prompt or browser console:
    ```javascript
    localStorage.setItem("kalidass-admin-token", "<your-admin-token>");
    ```
-3. Use the tabs to:
-   - **Compose**: Write text, add pull quotes, insert images, and embed videos.
-   - **Drafts**: Edit and preview unlisted drafts.
+3. **Operating Modes**:
+   - **Multi-User Auth0 Mode (Default)**: Authors authenticate via Auth0. Regular authors only see and edit their own drafts and private articles (`GET /api/articles?status=draft`). Super-Admins (`ADMIN_TOKEN` or `ADMIN_EMAILS`) have full global access across all articles.
+   - **Private App Mode (`PRIVATE_APP=true`)**: Disables the Auth0 login UI entirely. The Studio runs as a single-operator CMS unlocking exclusively with `ADMIN_TOKEN`.
+4. Use the tabs to:
+   - **Compose**: Write text, add pull quotes, insert images, and embed videos with automatic `authorEmail` stamping.
+   - **Drafts**: Edit and preview your unlisted drafts.
    - **Published**: Manage live articles and toggles.
-   - **Delete**: Soft/hard purge articles.
+   - **Delete**: Purge authorized articles.
 
 ---
 

@@ -43,9 +43,14 @@ Before initiating deployment, gather and configure the following credentials:
 | --- | --- | --- |
 | **Public Blob Bucket** | Upstash | Stores article JSON schemas and uploaded media objects |
 | **`UPSTASH_BLOB_TOKEN`** | Upstash Console | Authenticates Worker and browser client uploads |
+| **`AUTH0_DOMAIN`** | Auth0 Tenant | Signs and verifies user JWTs (e.g. `dev-xxx.us.auth0.com`) |
+| **`AUTH0_AUDIENCE`** | Auth0 API | API audience identifier (`https://api.kalidass.amrit.fyi`) |
+| **`AUTH0_CLIENT_ID`** | Auth0 SPA App | Client ID for Docusaurus frontend authentication |
+| **`ADMIN_EMAILS`** | Cloudflare Secret | *(Optional)* Comma-separated list of Super-Admin emails |
 | **`ADMIN_TOKEN`** | Cloudflare Secret | *(Optional)* Protects Studio CMS write and delete endpoints |
 | **`JOURNAL_WORKER`** | Cloudflare Pages Binding | Direct edge RPC binding to `kalidass-journal-worker` |
 | **`NODE_VERSION`** | Cloudflare Pages Env | Specifies Node.js `20` or `22` for build runtime |
+| **`PRIVATE_APP`** | Cloudflare Pages Env | *(Optional)* Set to `true` to disable Auth0 and require admin token |
 
 ---
 
@@ -64,11 +69,62 @@ Kalidass Journal requires a **Public** Upstash Blob bucket so that article cover
 
 ---
 
-## 2. Cloudflare Worker Deployment
+## 2. Auth0 API & Application Setup
+
+Auth0 manages user authentication and scopes access tokens for the Cloudflare Worker API.
+
+### Step 2.1: Register the Auth0 API (Resource Server)
+
+1. Navigate to [Auth0 Dashboard](https://manage.auth0.com/) -> **Applications** -> **APIs**.
+2. Click **+ Create API**:
+   - **Name**: `Kalidass Worker API`
+   - **Identifier**: `https://api.kalidass.amrit.fyi` *(Must match `AUTH0_AUDIENCE`)*
+   - **Signing Algorithm**: `RS256`
+3. Click **Create**.
+4. In API **Settings**:
+   - **Token Expiration (Seconds)**: `86400`
+   - **Allow Skipping User Consent**: **ON**
+   - Click **Save**.
+
+### Step 2.2: Register the SPA Application
+
+1. Navigate to **Applications** -> **Applications** -> **+ Create Application**:
+   - **Name**: `Kalidass Journal UI`
+   - **Application Type**: **Single Page Web Applications**
+2. In **Settings**, configure the Application URIs:
+   - **Allowed Callback URLs**: `https://kalidass.amrit.fyi/, http://localhost:3000/, https://kalidass.amrit.fyi/admin, http://localhost:3000/admin`
+   - **Allowed Logout URLs**: `https://kalidass.amrit.fyi/, http://localhost:3000/, https://kalidass.amrit.fyi/admin, http://localhost:3000/admin`
+   - **Allowed Web Origins**: `https://kalidass.amrit.fyi, http://localhost:3000`
+   - **Allow Cross-Origin Authentication**: Checked
+3. Copy **Domain** (`AUTH0_DOMAIN`) and **Client ID** (`AUTH0_CLIENT_ID`). Click **Save Changes**.
+
+### Step 2.3: Add Custom Claim Action (Recommended)
+
+1. Navigate to **Actions** -> **Library** -> **Build Custom**:
+   - **Name**: `Add Email and Roles to Access Token`
+   - **Trigger**: `Login / Post Login`
+2. In the Action editor:
+```javascript
+exports.onExecutePostLogin = async (event, api) => {
+  const namespace = 'https://kalidass.amrit.fyi';
+  if (event.user.email) {
+    api.accessToken.setCustomClaim(`${namespace}/email`, event.user.email);
+    api.idToken.setCustomClaim(`${namespace}/email`, event.user.email);
+  }
+  if (event.authorization && event.authorization.roles) {
+    api.accessToken.setCustomClaim(`${namespace}/roles`, event.authorization.roles);
+  }
+};
+```
+3. Click **Deploy**, then go to **Actions** -> **Flows** -> **Login**, drag the Action into the flow, and click **Apply**.
+
+---
+
+## 3. Cloudflare Worker Deployment
 
 The Cloudflare Worker serves as the edge REST gateway. It handles article querying, slug deduplication, CORS negotiation, and signed upload delegations.
 
-### Step 2.1: Install Dependencies & Secrets
+### Step 3.1: Install Dependencies & Secrets
 
 Navigate to the `worker/` directory:
 
@@ -84,14 +140,23 @@ npx wrangler secret put UPSTASH_BLOB_TOKEN
 # Paste your Upstash Blob token when prompted
 ```
 
-*(Optional)* Set an administrative token to protect `/admin` operations:
+Set Auth0 and Super-Admin secrets:
 
 ```bash
+# Set Auth0 Domain (without https://)
+npx wrangler secret put AUTH0_DOMAIN
+# Enter: dev-amrit.us.auth0.com
+
+# (Optional) Comma-separated list of Super-Admin emails
+npx wrangler secret put ADMIN_EMAILS
+# Enter: your-email@example.com,admin@kalidass.local
+
+# (Optional) Fallback Administrative Token for offline/token bypass
 npx wrangler secret put ADMIN_TOKEN
 # Enter a secure passphrase or secret
 ```
 
-### Step 2.2: Deploy Private Worker to Cloudflare
+### Step 3.2: Deploy Private Worker to Cloudflare
 
 Run the Wrangler deployment command:
 
@@ -101,7 +166,7 @@ npx wrangler deploy
 
 *Note: In `worker/wrangler.toml`, `workers_dev = false` ensures the worker has no public `*.workers.dev` routing and remains strictly private.*
 
-### Step 2.3: Verify Live Gateway Health via Pages
+### Step 3.3: Verify Live Gateway Health via Pages
 
 Once the Cloudflare Pages Service Binding (`JOURNAL_WORKER`) is attached, test the health endpoint through the Pages domain:
 
@@ -117,11 +182,11 @@ Expected response:
 
 ---
 
-## 3. Cloudflare Pages Deployment
+## 4. Cloudflare Pages Deployment
 
 The frontend is a static Docusaurus site that hydrates dynamically in the client.
 
-### Step 3.1: Build Configuration in Cloudflare Dashboard
+### Step 4.1: Build Configuration in Cloudflare Dashboard
 
 1. In the [Cloudflare Dashboard](https://dash.cloudflare.com/), go to **Workers & Pages** -> **Create application** -> **Pages** -> **Connect to Git**.
 2. Select your repository and configure the build settings:
@@ -133,18 +198,22 @@ The frontend is a static Docusaurus site that hydrates dynamically in the client
 | **Build command** | `npm install && npm run build` |
 | **Build output directory** | `build` |
 
-### Step 3.2: Configure Service Binding & Environment
+### Step 4.2: Configure Service Binding & Environment
 
 1. Under **Settings** -> **Bindings** (or **Functions** -> **Service bindings**), add:
    - **Type**: `Service binding`
    - **Name**: `JOURNAL_WORKER`
    - **Value**: `kalidass-journal-worker`
 2. Under **Environment variables (Advanced)**, add:
+   - `AUTH0_DOMAIN`: `dev-amrit.us.auth0.com`
+   - `AUTH0_CLIENT_ID`: `<your-spa-client-id>`
+   - `AUTH0_AUDIENCE`: `https://api.kalidass.amrit.fyi`
    - `NODE_VERSION`: `20`
+   - `PRIVATE_APP`: `false` *(or `true` if operating in solo token mode)*
 
 Click **Save and Deploy**.
 
-### Step 3.3: Direct CLI Deployment (Alternative)
+### Step 4.3: Direct CLI Deployment (Alternative)
 
 To deploy without connecting to a Git provider, use Wrangler Pages:
 
@@ -156,7 +225,7 @@ npx wrangler pages deploy build --project-name=kalidass
 
 ---
 
-## 4. SPA Route Handling & Security Headers
+## 5. SPA Route Handling & Security Headers
 
 ### SPA Route Handling (`_redirects`)
 
@@ -179,7 +248,7 @@ Cloudflare Pages enforces enterprise-grade Trust & Safety headers via `static/_h
 
 ---
 
-## 5. Worker CORS Lockdown
+## 6. Worker CORS Lockdown
 
 Once your Pages deployment URL is live (e.g., `https://kalidass-journal.pages.dev`):
 
@@ -204,7 +273,7 @@ npx wrangler deploy
 
 ---
 
-## 6. Post-Deployment Verification
+## 7. Post-Deployment Verification
 
 Verify the end-to-end pipeline across the live site:
 

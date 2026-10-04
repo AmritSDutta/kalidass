@@ -25,8 +25,9 @@ kalidass/
 │   │   ├── client-modules/    # window.KALIDASS_API_BASE client initialization
 │   │   ├── components/        # ArticleCard, StoryBody, StoryPage, VideoEmbed
 │   │   ├── css/               # Neel theme, pigment tokens, and rainbow gradients
-│   │   ├── lib/               # api.ts (CRUD & uploads), media.ts, types.ts
+│   │   ├── lib/               # api.ts (CRUD & uploads), config.ts, media.ts, types.ts
 │   │   └── pages/             # /, /magazine, /admin (dynamic /story/:slug* via plugin)
+│   ├── functions/api/         # [[route]].ts Pages Function gateway (/api/* proxy)
 │   ├── static/                # Static assets, _redirects, .nojekyll
 │   ├── docusaurus.config.ts   # Central config, addRoute, and dev proxy to :8787
 │   ├── package.json           # Dependencies and scripts
@@ -52,7 +53,15 @@ kalidass/
 
 ---
 
-## 3. Toolchain & Essential Commands
+## 3. Production Request Path
+
+- Browser → Cloudflare Pages → `blog_frontend/functions/api/[[route]].ts` intercepts `/api/*` and forwards via `env.JOURNAL_WORKER.fetch(request)` (Service Binding RPC, adds security headers).
+- Worker is private (`workers_dev = false`, route `api.kalidass.amrit.fyi/*`; vars `CORS_ORIGIN`, `ROOT_BUCKET`) → Upstash Blob.
+- Local dev path instead: Webpack dev server proxies `/api/*` → `127.0.0.1:8787`.
+
+---
+
+## 4. Toolchain & Essential Commands
 
 ### Frontend (`blog_frontend/`)
 - **Package Manager**: Use `npm` (`package-lock.json` committed, Node `>=20.0`).
@@ -61,7 +70,7 @@ kalidass/
 - **Cache Clean**: `npm run clear`
 
 ### Worker (`worker/`)
-- **Dev Server**: `npm run start` (serves `127.0.0.1:8787` with memory/Upstash store).
+- **Dev Server**: `npm run start` (binds `0.0.0.0:8787` with memory/Upstash store).
 - **Deploy**: `npm run deploy` (`npx wrangler deploy`).
 
 ### Unified Documentation (`docs/`)
@@ -70,7 +79,7 @@ kalidass/
 
 ---
 
-## 4. Critical Gotchas & Invariants
+## 5. Critical Gotchas & Invariants
 
 1. **No Sibling `.js` Source Files**:
    - `blog_frontend/src/` is strictly TypeScript (`.ts/.tsx`). Sibling `.js` files shadow `.tsx` files in Webpack resolution and cause runtime `exports is not defined` crashes.
@@ -87,14 +96,21 @@ kalidass/
 
 ---
 
-## 5. Data Contracts & Operational Flags
+## 6. Data Contracts & Operational Flags
+
+- **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/auth/me` (user profile handshake), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
+- **Testing**: No automated test suite. Verification gates: `npm.cmd run typecheck` (frontend) + Docs7 validation (hermetic).
 
 - **Data Models (`blog_frontend/src/lib/types.ts`)**:
   - `Block`: 5-variant union (`paragraph`, `heading`, `quote`, `image`, `video`).
-  - `ArticleDraft`: Payload for `createArticle` / `updateArticle` (omits server-generated fields: `id`, `publishedAt`, `readTime`, `createdAt`, `updatedAt`).
-  - `ArticleSummary`: Used in cards, index lists, and search queries.
-  - `Article`: Full article containing `blocks: Block[]`.
-- **Operational Flags**:
-  - `published`: `false` = draft (requires Bearer token; unauthenticated requests receive `404`).
-  - `private`: `true` = unlisted (hidden from `/` and `/magazine`, accessible via `/story/:slug`).
+  - `ArticleDraft`: Payload for `createArticle` / `updateArticle` (omits server-generated fields: `id`, `authorEmail`, `publishedAt`, `readTime`, `createdAt`, `updatedAt`).
+  - `ArticleSummary`: Used in cards, index lists, and search queries (includes immutable `authorEmail`).
+  - `Article`: Full article containing `blocks: Block[]` and server-stamped immutable `authorEmail`.
+  - `AuthUser`: User profile `{ email, role: 'admin' | 'author', sub }`.
+- **Operational & Auth Flags**:
+  - `published`: `false` = draft (requires Bearer token; unauthenticated requests receive `404`; non-admin authors only see their own drafts).
+  - `private`: `true` = unlisted (hidden from public `/` and `/magazine`, accessible via direct link; authors only see their own private items in studio).
   - `aiGenerated`: `true` = renders `AI` badge on cards and reader headers.
+  - `authorEmail`: Immutable author email stamped server-side by worker from verified Auth0 JWT credentials.
+  - `Role Isolation`: Authors can create, edit, and delete only their own articles; Super-Admin (`ADMIN_TOKEN` or `ADMIN_EMAILS`) has full global access. Mutation attempts on other users' articles return `403 Forbidden`.
+  - `PRIVATE_APP`: `true` = single-operator mode (hides Auth0 UI; unlocks exclusively with `ADMIN_TOKEN`). Off by default.

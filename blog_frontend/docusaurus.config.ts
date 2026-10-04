@@ -37,6 +37,11 @@ const config: Config = {
   },
   customFields: {
     apiBase: "",
+    auth0Domain: process.env.AUTH0_DOMAIN || "",
+    auth0ClientId: process.env.AUTH0_CLIENT_ID || "",
+    auth0Audience: process.env.AUTH0_AUDIENCE || "",
+    // PRIVATE_APP=true hides Auth0 login entirely — admin-token unlock only
+    privateApp: process.env.PRIVATE_APP === "true",
   },
   clientModules: ["./src/client-modules/api-base.ts"],
   plugins: [

@@ -7,6 +7,25 @@ description: Web-based content management system for composing, drafting, editin
 
 The Studio interface is located at `/admin` (`src/pages/admin.tsx`). It provides an integrated CMS for writing, editing, organizing, and publishing articles directly into Upstash Blob storage via the Cloudflare Worker API.
 
+## Authentication & User Roles
+
+Access to Studio requires authentication via **Auth0** (or developer unlock with `ADMIN_TOKEN`):
+
+- **Auth0 Login (`@auth0/auth0-spa-js`)**: Authors log in with their email and credentials via Auth0 Universal Login.
+- **Role Detection**:
+  - **Super-Admin**: Granted via `ADMIN_TOKEN` or when the user's email matches `ADMIN_EMAILS` (or contains the `admin` role claim). Super-Admins have unrestricted global access to all articles.
+  - **Author**: Standard logged-in users who can compose, draft, edit, and delete **their own articles**.
+- **User Profile Bar**: Displays the logged-in user's avatar, name, email address, and active role badge (`Super Admin` in Royal Indigo or `Author` in Emerald), along with a one-click **Log out** action.
+
+## Private App Mode (`PRIVATE_APP=true`)
+
+When building the frontend with `PRIVATE_APP=true` (set in Cloudflare Pages build environment or `.env`):
+
+- **Auth0 UI Disabled**: The *"Sign in with Auth0"* button is completely hidden from the Studio lock screen, and the prompt reverts to *"enter admin token"*.
+- **No Auth0 Client**: The Auth0 SPA client is never instantiated, and no dynamic token provider is registered with `api.ts`.
+- **Admin-Only Unlock**: The Studio operates strictly through `kalidass-admin-token` from `localStorage` as a single-operator publication.
+- **Worker Invariants Unchanged**: The Cloudflare Worker edge API remains the authoritative security boundary. Public reader pages (`/`, `/magazine`, `/story/:slug`) remain accessible to everyone without authentication.
+
 ## Tab Modes
 
 The Studio features four operational modes accessible via top tab navigation or deep linked via the `?mode=` URL query parameter:
@@ -14,13 +33,14 @@ The Studio features four operational modes accessible via top tab navigation or 
 ### 1. Compose Mode (`?mode=compose`)
 
 The primary writing environment:
-- **New Articles**: Displays action buttons for **Save draft** (`published: false`) and **Publish** (`published: true`).
-- **Existing Articles**: Loaded via `?edit=<slug>`, displaying an **Update** action that maintains the existing publication state and ID while allowing slug changes.
+- **New Articles**: Displays action buttons for **Save draft** (`published: false`) and **Publish** (`published: true`). Pre-fills author name and avatar from the user's profile.
+- **Existing Articles**: Loaded via `?edit=<slug>`, displaying an **Update** action that maintains the existing publication state and ID while allowing slug and content changes.
 - **Form Controls**:
   - **Title**: Story headline. Auto-generates the URL slug as you type until manually edited.
   - **URL Slug**: Editable path slug displayed with `/story/` prefix. Auto-slugified with hyphenation, lowercase conversion, and punctuation removal.
+  - **Author Email (Read-Only)**: Inferred automatically from the user's login credentials. Cannot be forged or edited by the client.
   - **Subtitle & Excerpt**: Subheadings and summary deck text.
-  - **Author**: Name, role, and avatar URL.
+  - **Author Name & Role**: Display byline credentials.
   - **Tags**: Comma-separated categorization tags.
   - **Accent Swatch**: 6-color swatch picker matching the publication pigment tokens (`ACCENTS`).
   - **Featured Flag**: Highlights the story in the dedicated homepage Featured section.
@@ -31,20 +51,23 @@ The primary writing environment:
 
 ### 2. Drafts Mode (`?mode=drafts`)
 
-- Calls `listArticles("draft")` (requires admin Bearer token).
-- Features client-side search across title, subtitle, excerpt, and tags.
+- Calls `listArticles("draft")` (requires Bearer token).
+- **Edge-Enforced Isolation**: The Cloudflare Worker returns only drafts authored by the current user (`authorEmail === user.email`). Super-Admins see all drafts across all authors.
+- Features client-side search across title, subtitle, author email, and tags.
 - Table rows provide one-click **Edit** (loads in Compose), **Publish** (sets `published: true`), and **Delete** actions.
 
 ### 3. Published Mode (`?mode=published`)
 
-- Calls `listArticles("published")` (includes both public and unlisted articles, with unlisted marked with a `Private` badge).
-- Allows searching and filtering across all live publications.
-- Provides direct **Edit** and **View** links for each article.
+- Calls `listArticles("published")`.
+- **Edge-Enforced Isolation**: Authors see all public published articles plus their own private articles. Other authors' private articles are completely filtered out at the edge.
+- Highlights user's own articles with a `My Story` badge.
+- Edit and Delete buttons are enabled only for articles owned by the logged-in author (or for Super-Admins).
 
 ### 4. Delete Mode (`?mode=delete`)
 
-- Calls `listArticles("all")` to display all stored articles regardless of status.
-- Provides immediate article deletion guarded by a browser confirmation dialog.
+- Calls `listArticles("all")` to display removable articles.
+- Authors can only delete their own articles; Super-Admins can delete any article.
+- Protected by a browser confirmation dialog and worker-enforced 403 ownership check.
 
 ## Media Upload Integration
 

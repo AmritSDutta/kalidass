@@ -11,20 +11,23 @@ The frontend interacts with the Cloudflare Worker API via the client library in 
 
 | Method | Path | Client Function | Auth Required | Description / Payload |
 | --- | --- | --- | --- | --- |
+| `GET` | `/api/health` | `getHealth()` | No | Health check — returns `{ ok: true }`. |
+| `GET` | `/api/auth/me` | `getAuthMe()` | **Yes** | Returns authenticated user profile `{ user: { email, role, sub } }`. |
 | `GET` | `/api/articles` | `listArticles()` | No | Public feed: returns published, non-private articles only. |
-| `GET` | `/api/articles?status=draft` | `listArticles("draft")` | **Yes** | Returns draft articles (`published: false`). |
-| `GET` | `/api/articles?status=published` | `listArticles("published")` | **Yes** | Returns all published articles (including unlisted `private: true`). |
-| `GET` | `/api/articles?status=all` | `listArticles("all")` | **Yes** | Returns all stored articles. |
-| `GET` | `/api/articles/:idOrSlug` | `getArticle(slug)` | Conditional | Returns full article. If article is a draft, requires Bearer token. Unlisted articles do not require auth. |
-| `POST` | `/api/articles` | `createArticle(draft)` | **Yes** | Creates a new article. Auto-slugifies title and dedupes. Body: JSON `ArticleDraft`. Returns created `Article`. |
-| `PUT` | `/api/articles/:idOrSlug` | `updateArticle(id, draft)` | **Yes** | Updates an existing article. Preserves or updates slug (deduped). Body: JSON `ArticleDraft`. |
-| `DELETE` | `/api/articles/:idOrSlug` | `removeArticle(id)` | **Yes** | Deletes article object from Upstash storage. |
-| `POST` | `/api/upload` | Direct Upstash SDK | Conditional | Upstash Blob direct browser upload route. |
+| `GET` | `/api/articles?status=draft` | `listArticles("draft")` | **Yes** | Returns draft articles belonging to current author (or all for Super-Admin). |
+| `GET` | `/api/articles?status=published` | `listArticles("published")` | **Yes** | Returns published articles (excluding other users' private unlisted articles unless admin). |
+| `GET` | `/api/articles?status=all` | `listArticles("all")` | **Yes** | Returns all stored articles accessible to the user. |
+| `GET` | `/api/articles/:idOrSlug` | `getArticle(slug)` | Conditional | Returns full article. Drafts require auth and owner/admin check. |
+| `POST` | `/api/articles` | `createArticle(draft)` | **Yes** | Creates a new article stamped with verified `authorEmail`. Body: JSON `ArticleDraft`. Returns created `Article`. |
+| `PUT` | `/api/articles/:idOrSlug` | `updateArticle(id, draft)` | **Yes** | Updates an existing article. Enforces ownership (`403 Forbidden` for non-owners). Body: JSON `ArticleDraft`. |
+| `DELETE` | `/api/articles/:idOrSlug` | `removeArticle(id)` | **Yes** | Deletes article object from Upstash storage. Enforces ownership (`403 Forbidden` for non-owners). |
+| `POST` | `/api/upload` | Direct Upstash SDK | **Yes** | Upstash Blob direct browser upload route. Requires authenticated author or admin. |
 | `POST` | `/api/objects` | `uploadObject(file)` | **Yes** | Direct binary upload (`FormData` with `file` field) persisted to Upstash Blob. Returns `{ url, name }`. |
 
 ## Authentication
 
-- **Admin Token**: Configured on the client via `localStorage.getItem("kalidass-admin-token")`.
+- **Auth0 Bearer Token**: When logged in via the Auth0 SPA SDK, incoming API requests include an Auth0 Access Token header: `Authorization: Bearer <auth0-jwt>`.
+- **Admin Token**: Configured on the client via `localStorage.getItem("kalidass-admin-token")` as fallback or for automated M2M publishing.
 - **Header**: Included on all mutating requests and privileged list queries as `Authorization: Bearer <token>`.
 - **Content Type**: All JSON API requests send `Content-Type: application/json`. File uploads send raw `FormData` without manually overriding the browser-managed multipart boundary.
 

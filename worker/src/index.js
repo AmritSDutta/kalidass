@@ -1,4 +1,5 @@
 import {Bucket, uniquePath, uploadHandler} from "@upstash/blob";
+import {createRemoteJWKSet, jwtVerify} from "jose";
 import {getMemoryObject, memoryBucket} from "./memory.js";
 import {seedArticles} from "./seed.js";
 
@@ -12,6 +13,89 @@ globalThis.fetch = async function (input, init) {
   }
   return nativeFetch(input, init);
 };
+
+let _jwks = null;
+let _jwksDomain = "";
+function getJWKS(domain) {
+  if (!_jwks || _jwksDomain !== domain) {
+    _jwksDomain = domain;
+    _jwks = createRemoteJWKSet(new URL(`https://${domain}/.well-known/jwks.json`));
+  }
+  return _jwks;
+}
+
+async function getAuthUser(request, env) {
+  const auth = request.headers.get("authorization") || "";
+  let token = "";
+  if (auth.startsWith("Bearer ")) {
+    token = auth.slice(7).trim();
+  }
+  if (!token) return null;
+
+  // 1. Super-Admin secret token match (M2M scripts and admin token mode)
+  if (env.ADMIN_TOKEN && token === env.ADMIN_TOKEN) {
+    return {
+      sub: "admin",
+      email: "admin@kalidass.local",
+      name: "Super Admin",
+      avatar: "",
+      role: "admin",
+    };
+  }
+
+  // 2. Auth0 JWT verification
+  if (env.AUTH0_DOMAIN) {
+    try {
+      const jwks = getJWKS(env.AUTH0_DOMAIN);
+      const options = {
+        issuer: `https://${env.AUTH0_DOMAIN}/`,
+      };
+      if (env.AUTH0_AUDIENCE) {
+        options.audience = env.AUTH0_AUDIENCE;
+      }
+      const {payload} = await jwtVerify(token, jwks, options);
+      let rawEmail = typeof payload.email === "string" ? payload.email : "";
+      if (!rawEmail) {
+        const emailClaimKey = Object.keys(payload).find((k) => k.endsWith("/email"));
+        if (emailClaimKey && typeof payload[emailClaimKey] === "string") {
+          rawEmail = payload[emailClaimKey];
+        }
+      }
+      const email = rawEmail.trim().toLowerCase();
+
+      const adminEmails = (env.ADMIN_EMAILS || "")
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+      let customRoles = [];
+      if (Array.isArray(payload.roles)) {
+        customRoles = payload.roles;
+      } else {
+        const rolesClaimKey = Object.keys(payload).find((k) => k.endsWith("/roles"));
+        if (rolesClaimKey && Array.isArray(payload[rolesClaimKey])) {
+          customRoles = payload[rolesClaimKey];
+        }
+      }
+      const isAdmin =
+        (email && adminEmails.includes(email)) ||
+        customRoles.includes("admin") ||
+        payload.role === "admin";
+
+      return {
+        sub: payload.sub,
+        email,
+        name: payload.name || payload.nickname || email || "Author",
+        avatar: payload.picture || "",
+        role: isAdmin ? "admin" : "author",
+      };
+    } catch (err) {
+      console.warn("Auth0 JWT verification error:", err.message);
+      return null;
+    }
+  }
+
+  return null;
+}
 
 function getRootPrefix(env) {
   const root = env?.ROOT_BUCKET || env?.ROOT_FOLDER || "kalidass";
@@ -91,14 +175,16 @@ function summarize(article) {
     coverImage: article.coverImage,
     videoUrl: article.videoUrl || "",
     author: article.author,
+    authorEmail: article.authorEmail || "",
     tags: article.tags || [],
-    accent: article.accent || "#22d3ee",
+    accent: article.accent || "#6366f1",
     publishedAt: article.publishedAt,
     readTime: article.readTime || 5,
     featured: Boolean(article.featured),
     published: article.published ?? true,
     private: article.private ?? true,
     aiGenerated: article.aiGenerated ?? false,
+    userId: article.userId || "system",
     updatedAt: article.updatedAt || article.publishedAt,
   };
 }
@@ -133,12 +219,6 @@ function estimateReadTime(blocks) {
   return Math.max(3, Math.round(words / 180) || 3);
 }
 
-function adminOk(request, env) {
-  if (!env.ADMIN_TOKEN) return false;
-  const auth = request.headers.get("authorization") || "";
-  return auth === `Bearer ${env.ADMIN_TOKEN}`;
-}
-
 async function ensureSeed(bucket, env) {
   const indexPath = getIndexPath(env);
   try {
@@ -148,6 +228,8 @@ async function ensureSeed(bucket, env) {
     for (const article of seedArticles) {
       const record = {
         ...article,
+        authorEmail: article.authorEmail || "",
+        userId: article.userId || "system",
         createdAt: article.publishedAt,
         updatedAt: article.publishedAt,
       };
@@ -162,9 +244,22 @@ async function ensureSeed(bucket, env) {
   }
 }
 
-function buildArticle(body, existing) {
+function buildArticle(body, existing, user) {
   const now = new Date().toISOString();
   const published = body.published ?? existing?.published ?? true;
+
+  // Enforce server-stamped immutable authorEmail
+  let authorEmail = existing?.authorEmail;
+  if (!authorEmail) {
+    if (user?.role === "admin" && body.authorEmail) {
+      authorEmail = String(body.authorEmail).trim().toLowerCase();
+    } else {
+      authorEmail = user?.email || "";
+    }
+  }
+
+  const userId = existing?.userId || user?.sub || "system";
+
   return {
     ...(existing || {}),
     id: existing?.id || crypto.randomUUID(),
@@ -175,12 +270,14 @@ function buildArticle(body, existing) {
     coverImage: String(body.coverImage ?? existing?.coverImage ?? "").trim(),
     videoUrl: String(body.videoUrl ?? existing?.videoUrl ?? "").trim(),
     author: {
-      name: body.author?.name ?? existing?.author?.name ?? "Guest editor",
-      role: body.author?.role ?? existing?.author?.role ?? "Writer",
-      avatar: body.author?.avatar ?? existing?.author?.avatar ?? "",
+      name: (body.author?.name ?? existing?.author?.name ?? user?.name ?? "Guest editor") || "Guest editor",
+      role: (body.author?.role ?? existing?.author?.role ?? "Writer") || "Writer",
+      avatar: body.author?.avatar ?? existing?.author?.avatar ?? user?.avatar ?? "",
     },
+    authorEmail,
+    userId,
     tags: Array.isArray(body.tags) ? body.tags.filter(Boolean) : existing?.tags || [],
-    accent: body.accent || existing?.accent || "#22d3ee",
+    accent: body.accent || existing?.accent || "#6366f1",
     published,
     private: body.private ?? existing?.private ?? true,
     aiGenerated: body.aiGenerated ?? existing?.aiGenerated ?? false,
@@ -227,6 +324,8 @@ export default {
 
     try {
       if (url.pathname.startsWith("/api/blob/")) {
+        const user = await getAuthUser(request, env);
+        if (!user) return json({error: "Unauthorized"}, 401, origin);
         const path = decodeURIComponent(url.pathname.replace(/^\/api\/blob\//, ""));
         const item = getMemoryObject(path);
         if (!item) return json({error: "Object not found"}, 404, origin);
@@ -236,6 +335,8 @@ export default {
       }
 
       if (url.pathname === "/api/upload") {
+        const user = await getAuthUser(request, env);
+        if (!user) return json({error: "Unauthorized"}, 401, origin);
         if (!env.UPSTASH_BLOB_TOKEN) {
           return json(
             {error: "Set UPSTASH_BLOB_TOKEN for direct browser uploads to Upstash Blob."},
@@ -255,8 +356,15 @@ export default {
         return json({ok: true}, 200, origin);
       }
 
+      if (url.pathname === "/api/auth/me" && request.method === "GET") {
+        const user = await getAuthUser(request, env);
+        if (!user) return json({error: "Unauthorized"}, 401, origin);
+        return json({ok: true, user}, 200, origin);
+      }
+
       if (url.pathname === "/api/objects" && request.method === "POST") {
-        if (!adminOk(request, env)) return json({error: "Unauthorized"}, 401, origin);
+        const user = await getAuthUser(request, env);
+        if (!user) return json({error: "Unauthorized"}, 401, origin);
         const form = await request.formData();
         const file = form.get("file");
         if (!(file instanceof File)) return json({error: "file field required"}, 400, origin);
@@ -278,15 +386,48 @@ export default {
       if (url.pathname === "/api/articles" && request.method === "GET") {
         const index = await ensureSeed(bucket, env);
         const rawStatus = url.searchParams.get("status");
-        if (rawStatus && !adminOk(request, env)) {
+
+        // Public feed: only public published articles
+        if (!rawStatus) {
+          const items = index
+            .filter((item) => item.published !== false && item.private !== true)
+            .sort(
+              (a, b) =>
+                new Date(b.publishedAt || b.updatedAt) - new Date(a.publishedAt || a.updatedAt)
+            );
+          return json(items, 200, origin);
+        }
+
+        // Privileged status queries require authentication
+        const user = await getAuthUser(request, env);
+        if (!user) {
           return json({error: "Unauthorized"}, 401, origin);
         }
+
         const items = index
           .filter((item) => {
-            if (!rawStatus) return item.published !== false && item.private !== true;
-            if (rawStatus === "all") return true;
-            if (rawStatus === "draft") return item.published === false;
-            return item.published !== false;
+            // Super-Admin sees everything according to requested status
+            if (user.role === "admin") {
+              if (rawStatus === "all") return true;
+              if (rawStatus === "draft") return item.published === false;
+              return item.published !== false;
+            }
+
+            // Regular author: email-isolated visibility
+            const isOwner =
+              Boolean(item.authorEmail) &&
+              item.authorEmail.toLowerCase() === user.email.toLowerCase();
+
+            if (rawStatus === "draft") {
+              return item.published === false && isOwner;
+            }
+            if (rawStatus === "published") {
+              return item.published !== false && (item.private !== true || isOwner);
+            }
+            if (rawStatus === "all") {
+              return (item.published !== false && item.private !== true) || isOwner;
+            }
+            return false;
           })
           .sort(
             (a, b) =>
@@ -296,16 +437,18 @@ export default {
       }
 
       if (url.pathname === "/api/admin/reset" && request.method === "POST") {
-        if (!adminOk(request, env)) return json({error: "Unauthorized"}, 401, origin);
+        const user = await getAuthUser(request, env);
+        if (!user || user.role !== "admin") return json({error: "Unauthorized"}, 401, origin);
         await putJson(bucket, getIndexPath(env), []);
         return json({ok: true, message: "Article repository reset to empty"}, 200, origin);
       }
 
       if (url.pathname === "/api/articles" && request.method === "POST") {
-        if (!adminOk(request, env)) return json({error: "Unauthorized"}, 401, origin);
+        const user = await getAuthUser(request, env);
+        if (!user) return json({error: "Unauthorized"}, 401, origin);
         const body = await request.json();
         const index = await ensureSeed(bucket, env);
-        const article = buildArticle(body);
+        const article = buildArticle(body, null, user);
         article.slug = uniqueSlug(index, slugify(body.slug || body.title));
         article.readTime = estimateReadTime(article.blocks);
         await putJson(bucket, getArticleObject(article.id, env), article);
@@ -322,8 +465,15 @@ export default {
         if (!meta) return json({error: "Article not found"}, 404, origin);
 
         if (request.method === "GET") {
-          if (meta.published === false && !adminOk(request, env)) {
-            return json({error: "Article not found"}, 404, origin);
+          if (meta.published === false) {
+            const user = await getAuthUser(request, env);
+            if (!user) return json({error: "Article not found"}, 404, origin);
+            const isOwner =
+              Boolean(meta.authorEmail) &&
+              meta.authorEmail.toLowerCase() === user.email.toLowerCase();
+            if (user.role !== "admin" && !isOwner) {
+              return json({error: "Article not found"}, 404, origin);
+            }
           }
           let article = await readJson(bucket, getArticleObject(meta.id, env), null);
           if (!article) {
@@ -334,14 +484,26 @@ export default {
         }
 
         if (request.method === "PUT") {
-          if (!adminOk(request, env)) return json({error: "Unauthorized"}, 401, origin);
+          const user = await getAuthUser(request, env);
+          if (!user) return json({error: "Unauthorized"}, 401, origin);
+
           let existing = await readJson(bucket, getArticleObject(meta.id, env), null);
           if (!existing) {
             existing = seedArticles.find((item) => item.id === meta.id || item.slug === meta.slug) || null;
           }
           if (!existing) return json({error: "Article not found"}, 404, origin);
+
+          // Enforce ownership check for non-admin authors
+          if (user.role !== "admin") {
+            const existingEmail = (existing.authorEmail || "").toLowerCase();
+            if (!existingEmail || existingEmail !== user.email.toLowerCase()) {
+              return json({error: "Forbidden: You can only edit your own articles"}, 403, origin);
+            }
+          }
+
           const body = await request.json();
-          const article = buildArticle(body, existing);
+          const article = buildArticle(body, existing, user);
+          article.authorEmail = existing.authorEmail || user.email; // Preserved immutably
           article.slug = uniqueSlug(
             index,
             slugify(body.slug || body.title || existing.slug),
@@ -358,7 +520,22 @@ export default {
         }
 
         if (request.method === "DELETE") {
-          if (!adminOk(request, env)) return json({error: "Unauthorized"}, 401, origin);
+          const user = await getAuthUser(request, env);
+          if (!user) return json({error: "Unauthorized"}, 401, origin);
+
+          let existing = await readJson(bucket, getArticleObject(meta.id, env), null);
+          if (!existing) {
+            existing = seedArticles.find((item) => item.id === meta.id || item.slug === meta.slug) || null;
+          }
+
+          // Enforce ownership check for non-admin authors
+          if (user.role !== "admin") {
+            const existingEmail = (existing?.authorEmail || meta.authorEmail || "").toLowerCase();
+            if (!existingEmail || existingEmail !== user.email.toLowerCase()) {
+              return json({error: "Forbidden: You can only delete your own articles"}, 403, origin);
+            }
+          }
+
           try {
             await bucket.del(getArticleObject(meta.id, env));
           } catch {
@@ -381,3 +558,4 @@ export default {
     }
   },
 };
+
