@@ -11,10 +11,8 @@ export function setAuthTokenProvider(provider: TokenProvider | null) {
 
 export async function authHeaders(): Promise<HeadersInit> {
   if (typeof window === "undefined") return {};
-  const adminToken = localStorage.getItem("kalidass-admin-token");
-  if (adminToken) {
-    return {Authorization: `Bearer ${adminToken}`};
-  }
+  const headers: Record<string, string> = {};
+
   let token: string | null = null;
   if (customTokenProvider) {
     try {
@@ -23,7 +21,21 @@ export async function authHeaders(): Promise<HeadersInit> {
       token = null;
     }
   }
-  return token ? {Authorization: `Bearer ${token}`} : {};
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+    const elevationToken = sessionStorage.getItem("kalidass-elevation-token");
+    if (elevationToken) {
+      headers["X-Admin-Token"] = elevationToken;
+    }
+  } else {
+    const adminToken = localStorage.getItem("kalidass-admin-token");
+    if (adminToken) {
+      headers["Authorization"] = `Bearer ${adminToken}`;
+    }
+  }
+
+  return headers;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -51,9 +63,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function getAuthMe(tokenOverride?: string) {
-  return request<{ok: boolean; user: AuthUser}>("/api/auth/me", {
-    headers: tokenOverride ? {Authorization: `Bearer ${tokenOverride}`} : {},
+export function getAuthMe(tokenOverride?: string, elevationOverride?: string) {
+  const headers: Record<string, string> = {};
+  if (tokenOverride) headers["Authorization"] = `Bearer ${tokenOverride}`;
+  if (elevationOverride) headers["X-Admin-Token"] = elevationOverride;
+  return request<{ok: boolean; user: AuthUser}>("/api/auth/me", {headers});
+}
+
+export function elevateAuth(adminToken: string) {
+  return request<{ok: boolean; elevated: boolean}>("/api/auth/elevate", {
+    method: "POST",
+    body: JSON.stringify({adminToken}),
   });
 }
 

@@ -431,7 +431,7 @@ function AdminInner(): ReactNode {
             )}
             <div className={styles.userMeta}>
               <span className={styles.userName}>{user?.name || "Author"}</span>
-              <span className={styles.userEmail}>{user?.email || "admin@kalidass.local"}</span>
+              <span className={styles.userEmail}>{user?.email || ""}</span>
             </div>
             <span className={isAdmin ? styles.roleBadgeAdmin : styles.roleBadgeAuthor}>
               {isAdmin ? "Super Admin" : "Author"}
@@ -518,7 +518,7 @@ function AdminInner(): ReactNode {
               </label>
 
               <div className={styles.readOnlyEmailBadge}>
-                Author Email: <strong>{draft.authorEmail || user?.email || "admin@kalidass.local"}</strong> (inferred automatically from login)
+                Author Email: <strong>{draft.authorEmail || user?.email || "author"}</strong> (inferred automatically from login)
               </div>
 
               <label>

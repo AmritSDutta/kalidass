@@ -147,9 +147,9 @@ Set Auth0 and Super-Admin secrets:
 npx wrangler secret put AUTH0_DOMAIN
 # Enter: dev-amrit.us.auth0.com
 
-# (Optional) Comma-separated list of Super-Admin emails
+# (Optional) Comma-separated list of Super-Admin emails eligible for step-up elevation
 npx wrangler secret put ADMIN_EMAILS
-# Enter: your-email@example.com,admin@kalidass.local
+# Enter: your-email@example.com,editor@example.com
 
 # (Optional) Fallback Administrative Token for offline/token bypass
 npx wrangler secret put ADMIN_TOKEN

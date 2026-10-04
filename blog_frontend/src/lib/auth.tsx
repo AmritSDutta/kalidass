@@ -3,7 +3,7 @@ import ExecutionEnvironment from "@docusaurus/ExecutionEnvironment";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import {createAuth0Client, type Auth0Client} from "@auth0/auth0-spa-js";
 import type {AuthUser} from "./types";
-import {getAuthMe, setAuthTokenProvider} from "./api";
+import {elevateAuth, getAuthMe, setAuthTokenProvider} from "./api";
 
 interface KalidassWindow extends Window {
   AUTH0_DOMAIN?: string;
@@ -16,10 +16,13 @@ interface AuthContextValue {
   token: string | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isSuperuserEligible: boolean;
   isLoading: boolean;
   isAuth0Configured: boolean;
   loginWithAuth0: () => Promise<void>;
   logout: () => Promise<void>;
+  elevateToSuperuser: (candidateToken: string) => Promise<boolean>;
+  dropSuperuser: () => Promise<void>;
   unlockWithAdminToken: (candidateToken: string) => Promise<boolean>;
   clearAuth: () => void;
 }
@@ -80,31 +83,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
 
     async function init() {
       try {
-        // 1. Check for stored Admin Token first
-        const storedAdminToken = localStorage.getItem("kalidass-admin-token");
-        if (storedAdminToken) {
-          try {
-            const data = await getAuthMe(storedAdminToken);
-            if (isMounted) {
-              setToken(storedAdminToken);
-              setUser(data.user || {
-                sub: "admin",
-                email: "admin@kalidass.local",
-                name: "Super Admin",
-                role: "admin",
-              });
-              setIsLoading(false);
-              return;
-            }
-          } catch (err: unknown) {
-            const msg = String((err as Error)?.message || "").toLowerCase();
-            if (msg.includes("unauthorized") || msg.includes("401") || msg.includes("forbidden") || msg.includes("403")) {
-              localStorage.removeItem("kalidass-admin-token");
-            }
-          }
-        }
-
-        // 2. If Auth0 is configured, initialize Auth0 Client with in-memory cache
+        // 1. Primary path: Auth0 Client authentication
         if (isAuth0Configured) {
           if (!auth0ClientInstance) {
             auth0ClientInstance = await createAuth0Client({
@@ -146,9 +125,12 @@ export function AuthProvider({children}: {children: ReactNode}) {
             }
 
             if (rawToken && auth0User) {
-              // Handshake with Worker /api/auth/me
+              // Clear stale legacy admin tokens
+              localStorage.removeItem("kalidass-admin-token");
+              const elevationToken = sessionStorage.getItem("kalidass-elevation-token");
+
               try {
-                const data = await getAuthMe(rawToken);
+                const data = await getAuthMe(rawToken, elevationToken || undefined);
                 if (isMounted) {
                   setToken(rawToken);
                   setUser(data.user);
@@ -156,7 +138,6 @@ export function AuthProvider({children}: {children: ReactNode}) {
                   return;
                 }
               } catch {
-                // local fallback user profile
                 if (isMounted) {
                   const email = (auth0User.email || "").toLowerCase().trim();
                   setToken(rawToken);
@@ -166,11 +147,31 @@ export function AuthProvider({children}: {children: ReactNode}) {
                     name: auth0User.name || auth0User.nickname || email || "Author",
                     avatar: auth0User.picture || "",
                     role: "author",
+                    isSuperuserEligible: false,
                   });
                   setIsLoading(false);
                   return;
                 }
               }
+            }
+          }
+        }
+
+        // 2. Secondary fallback path: Standalone Admin Token (solo / offline mode)
+        const storedAdminToken = localStorage.getItem("kalidass-admin-token");
+        if (storedAdminToken) {
+          try {
+            const data = await getAuthMe(storedAdminToken);
+            if (isMounted) {
+              setToken(storedAdminToken);
+              setUser(data.user);
+              setIsLoading(false);
+              return;
+            }
+          } catch (err: unknown) {
+            const msg = String((err as Error)?.message || "").toLowerCase();
+            if (msg.includes("unauthorized") || msg.includes("401") || msg.includes("forbidden") || msg.includes("403")) {
+              localStorage.removeItem("kalidass-admin-token");
             }
           }
         }
@@ -210,6 +211,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
   };
 
   const logout = async () => {
+    sessionStorage.removeItem("kalidass-elevation-token");
     localStorage.removeItem("kalidass-admin-token");
     setUser(null);
     setToken(null);
@@ -223,6 +225,37 @@ export function AuthProvider({children}: {children: ReactNode}) {
     }
   };
 
+  const elevateToSuperuser = async (candidateToken: string): Promise<boolean> => {
+    const trimmed = candidateToken.trim();
+    if (!trimmed) return false;
+    try {
+      const res = await elevateAuth(trimmed);
+      if (res.ok) {
+        sessionStorage.setItem("kalidass-elevation-token", trimmed);
+        const rawToken = token || (auth0ClientInstance ? await auth0ClientInstance.getTokenSilently() : "");
+        const me = await getAuthMe(rawToken || undefined, trimmed);
+        setUser(me.user);
+        return true;
+      }
+      return false;
+    } catch {
+      sessionStorage.removeItem("kalidass-elevation-token");
+      return false;
+    }
+  };
+
+  const dropSuperuser = async () => {
+    sessionStorage.removeItem("kalidass-elevation-token");
+    if (token) {
+      try {
+        const me = await getAuthMe(token);
+        setUser(me.user);
+      } catch {
+        setUser((prev) => (prev ? {...prev, role: "author"} : null));
+      }
+    }
+  };
+
   const unlockWithAdminToken = async (candidateToken: string): Promise<boolean> => {
     const trimmed = candidateToken.trim();
     if (!trimmed) return false;
@@ -230,14 +263,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
       const data = await getAuthMe(trimmed);
       localStorage.setItem("kalidass-admin-token", trimmed);
       setToken(trimmed);
-      setUser(
-        data.user || {
-          sub: "admin",
-          email: "admin@kalidass.local",
-          name: "Super Admin",
-          role: "admin",
-        }
-      );
+      setUser(data.user);
       return true;
     } catch {
       localStorage.removeItem("kalidass-admin-token");
@@ -246,6 +272,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
   };
 
   const clearAuth = () => {
+    sessionStorage.removeItem("kalidass-elevation-token");
     localStorage.removeItem("kalidass-admin-token");
     setUser(null);
     setToken(null);
@@ -256,10 +283,13 @@ export function AuthProvider({children}: {children: ReactNode}) {
     token,
     isAuthenticated: Boolean(user && token),
     isAdmin: user?.role === "admin",
+    isSuperuserEligible: Boolean(user?.isSuperuserEligible),
     isLoading,
     isAuth0Configured,
     loginWithAuth0,
     logout,
+    elevateToSuperuser,
+    dropSuperuser,
     unlockWithAdminToken,
     clearAuth,
   };

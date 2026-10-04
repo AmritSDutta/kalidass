@@ -32,14 +32,21 @@ async function getAuthUser(request, env) {
   }
   if (!token) return null;
 
-  // 1. Super-Admin secret token match (M2M scripts and admin token mode)
+  const adminEmails = (env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const primaryAdminEmail = adminEmails[0] || "admin";
+
+  // 1. Super-Admin secret token match (M2M scripts and standalone admin token mode)
   if (env.ADMIN_TOKEN && token === env.ADMIN_TOKEN) {
     return {
       sub: "admin",
-      email: "admin@kalidass.local",
+      email: primaryAdminEmail,
       name: "Super Admin",
       avatar: "",
       role: "admin",
+      isSuperuserEligible: true,
     };
   }
 
@@ -63,10 +70,6 @@ async function getAuthUser(request, env) {
       }
       const email = rawEmail.trim().toLowerCase();
 
-      const adminEmails = (env.ADMIN_EMAILS || "")
-        .split(",")
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean);
       let customRoles = [];
       if (Array.isArray(payload.roles)) {
         customRoles = payload.roles;
@@ -76,17 +79,25 @@ async function getAuthUser(request, env) {
           customRoles = payload[rolesClaimKey];
         }
       }
-      const isAdmin =
-        (email && adminEmails.includes(email)) ||
+
+      const isSuperuserEligible =
+        Boolean(email && adminEmails.includes(email)) ||
         customRoles.includes("admin") ||
         payload.role === "admin";
+
+      // Step-up elevation check via x-admin-token header
+      const elevationToken = (request.headers.get("x-admin-token") || "").trim();
+      const isElevated =
+        isSuperuserEligible &&
+        Boolean(env.ADMIN_TOKEN && elevationToken && elevationToken === env.ADMIN_TOKEN);
 
       return {
         sub: payload.sub,
         email,
         name: payload.name || payload.nickname || email || "Author",
         avatar: payload.picture || "",
-        role: isAdmin ? "admin" : "author",
+        role: isElevated ? "admin" : "author",
+        isSuperuserEligible,
       };
     } catch (err) {
       console.warn("Auth0 JWT verification error:", err.message);
@@ -121,7 +132,7 @@ function corsHeaders(origin, extra = {}) {
   return {
     "access-control-allow-origin": origin,
     "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS",
-    "access-control-allow-headers": "content-type,authorization",
+    "access-control-allow-headers": "content-type,authorization,x-admin-token",
     "access-control-max-age": "86400",
     ...extra,
   };
@@ -360,6 +371,25 @@ export default {
         const user = await getAuthUser(request, env);
         if (!user) return json({error: "Unauthorized"}, 401, origin);
         return json({ok: true, user}, 200, origin);
+      }
+
+      if (url.pathname === "/api/auth/elevate" && request.method === "POST") {
+        const user = await getAuthUser(request, env);
+        if (!user) return json({error: "Unauthorized"}, 401, origin);
+        if (!user.isSuperuserEligible) {
+          return json({error: "User is not eligible for superuser elevation"}, 403, origin);
+        }
+        let body = {};
+        try {
+          body = await request.json();
+        } catch {
+          return json({error: "Invalid JSON payload"}, 400, origin);
+        }
+        const candidateToken = String(body.adminToken || "").trim();
+        if (!env.ADMIN_TOKEN || candidateToken !== env.ADMIN_TOKEN) {
+          return json({error: "Invalid superuser credentials"}, 401, origin);
+        }
+        return json({ok: true, elevated: true}, 200, origin);
       }
 
       if (url.pathname === "/api/objects" && request.method === "POST") {

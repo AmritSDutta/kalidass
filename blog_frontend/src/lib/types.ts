@@ -17,6 +17,7 @@ export type AuthUser = {
   name?: string;
   avatar?: string;
   role: "admin" | "author";
+  isSuperuserEligible?: boolean;
 };
 
 export type ArticleSummary = {
