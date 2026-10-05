@@ -260,18 +260,18 @@ curl -X POST https://kalidass.amrit.fyi/api/articles \
 
 ---
 
-## 9. TypeSafe Jev Quality & Safety Evaluation
+## 9. Article Heuristics (Quality & Safety Evaluation)
 
-Kalidass Journal integrates automated editorial quality assessment and content safety guardrails powered by [TypeSafe AI](https://typesafe.ai) and the **Jev** System One decision model at `POST /api/eval/quality`:
+Kalidass Journal integrates automated editorial quality assessment and content safety guardrails powered by pluggable providers (TypeSafe Jev, Cloudflare Clef, and local deterministic heuristics) at `POST /api/eval/quality`:
 
 - **AI Writing Detection (`noul` primitive)**: Computes probability of synthetic AI generation vs. human composition.
 - **Technical Accuracy & Rigor (`score` primitive)**: Analyzes systems architecture depth and technical precision ($1.0 - 5.0$).
 - **Reader Engagement (`score` primitive)**: Measures flow, pacing, and narrative clarity ($1.0 - 5.0$).
-- **Editorial Readiness (`choice` primitive)**: Triage classifier returning `ready`, `needs_revision`, or `draft_only`.
+- **Editorial Readiness (`choice` primitive)**: Triage classifier returning `ready_for_publication`, `needs_minor_polish`, or `needs_major_revision`.
 - **Pre-Submit Safety Hard-Blocking**: Evaluates violence, sexual, and antisocial risk primitives. If any risk exceeds $0.55$, saving/publishing is immediately blocked in Studio Compose and rejected with HTTP `422` by the edge worker.
-- **Live Reader & Studio Badges**: Live audit cards in `StoryPage.tsx` and `admin.tsx` display real-time safety verdicts, AI probability, and technical rigor scores.
+- **Live Reader & Studio Badges**: Live audit cards in `StoryPage.tsx` and `admin.tsx` display real-time safety verdicts, AI probability, and technical rigor scores under the "Article Heuristics" banner.
 
-> Refer to [`docs/worker/quality-eval.mdx`](./docs/worker/quality-eval.mdx) for architecture diagrams, schema specifications, and local heuristic fallback behavior.
+> Refer to [`docs/worker/quality-eval.mdx`](./docs/worker/quality-eval.mdx) for architecture diagrams, schema specifications, provider cascade details, and local heuristic fallback behavior.
 
 ---
 

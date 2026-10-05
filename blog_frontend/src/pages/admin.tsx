@@ -881,7 +881,7 @@ function AdminInner(): ReactNode {
 
                 <div className={styles.auditCard}>
                   <div className={styles.auditHeader}>
-                    <span className={styles.analysisKicker}>TypeSafe Jev</span>
+                    <span className={styles.analysisKicker}>Article Heuristics</span>
                     <h4>Quality & Safety</h4>
                   </div>
                   <p className={styles.auditDesc}>

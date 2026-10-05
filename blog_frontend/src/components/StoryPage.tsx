@@ -283,7 +283,7 @@ export default function StoryPage(): ReactNode {
 
                 <div className={styles.auditCard}>
                   <div className={styles.auditHeader}>
-                    <span className={styles.analysisKicker}>TypeSafe AI / Jev</span>
+                    <span className={styles.analysisKicker}>Article Heuristics</span>
                     <p className={styles.tocTitle}>Quality & Safety Audit</p>
                   </div>
 
@@ -337,7 +337,7 @@ export default function StoryPage(): ReactNode {
                       className={styles.auditBtn}
                       disabled={evaluating}
                       onClick={handleRunAudit}>
-                      {evaluating ? "Evaluating with Jev..." : "⚡ Run Quality Audit"}
+                      {evaluating ? "Evaluating heuristics..." : "⚡ Run Quality Audit"}
                     </button>
                   )}
                   {evalError ? <p className={styles.evalError}>{evalError}</p> : null}

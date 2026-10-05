@@ -21,6 +21,7 @@
 # Stray tsc output guards: sources are .ts/.tsx only, never commit sibling .js
 **/src/**/*.js
 **/src/**/*.js.map
+!worker/src/**/*.js
 **/docusaurus.config.js
 **/sidebars.js
 

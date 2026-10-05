@@ -97,7 +97,7 @@ export interface QualityEditorialMetrics {
 
 export interface QualityEvalResult {
   ok: boolean;
-  source: "typesafe-jev" | "local-heuristic";
+  source: "typesafe-jev" | "cloudflare-clef" | "local-heuristic";
   safety: QualitySafetyRisks;
   metrics: QualityEditorialMetrics;
   summary: string;
@@ -111,4 +111,7 @@ export interface QualityEvalRequest {
   blocks?: Block[];
   slug?: string;
   apiKey?: string;
+  jevApiKey?: string;
+  clefApiKey?: string;
+  provider?: "jev" | "clef" | "heuristic";
 }

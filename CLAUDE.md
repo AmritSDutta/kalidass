@@ -98,7 +98,7 @@ kalidass/
 
 ## 6. Data Contracts & Operational Flags
 
-- **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/auth/me` (user profile handshake), `/api/eval/quality` (TypeSafe Jev AI detection, accuracy, engagement, and safety check), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
+- **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/auth/me` (user profile handshake), `/api/eval/quality` (Article Heuristics: AI detection, accuracy, engagement, and safety check with pluggable Jev/Clef/heuristic providers), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
 - **Testing**: No automated test suite. Verification gates: `npm.cmd run typecheck` (frontend) + Docs7 validation (hermetic).
 
 - **Data Models (`blog_frontend/src/lib/types.ts`)**:

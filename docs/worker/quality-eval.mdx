@@ -1,36 +1,63 @@
 ---
 title: Quality & Safety Evaluation
-description: TypeSafe AI and Jev decision model integration for automated AI detection, technical rigor scoring, engagement evaluation, and pre-submit safety guardrails.
+description: Modular evaluation pipeline for AI detection, technical rigor scoring, engagement evaluation, and pre-submit safety guardrails with cascading provider support.
 ---
 
 # Quality & Safety Evaluation
 
-Kalidass Journal incorporates automated editorial evaluation and safety guardrails powered by [TypeSafe AI](https://typesafe.ai) and the **Jev** System One decision model. The evaluation pipeline runs at the edge inside the private Cloudflare Worker (`worker/src/index.js`) under `POST /api/eval/quality`.
+Kalidass Journal incorporates automated editorial evaluation and safety guardrails exposed in the UI as **Article Heuristics**. The evaluation pipeline runs at the edge inside the private Cloudflare Worker (`worker/src/index.js`) under `POST /api/eval/quality`.
 
 ## Architecture & Data Flow
 
 ```mermaid
 flowchart TD
-  Client["Frontend Reader or Studio"] -->|"POST /api/eval/quality"| Worker["Cloudflare Worker (worker/src/index.js)"]
-  Worker --> Extract["Extract Clean Plaintext from Blocks"]
-  Extract --> CheckKey{"TYPESAFE_API_KEY Configured?"}
-  CheckKey -->|"Yes"| JevAPI["TypeSafe Jev API (POST /v1/chat/completions)"]
-  CheckKey -->|"No / Fallback"| LocalEval["Local Heuristic Rule Engine"]
-  JevAPI --> Aggregate["Aggregate Evaluation Metrics & Safety Verdict"]
-  LocalEval --> Aggregate
-  Aggregate --> SafetyGate{"Safety Score > 0.55?"}
-  SafetyGate -->|"Yes"| Rejected["verdict: rejected (Hard-Block Save/Publish)"]
-  SafetyGate -->|"No"| Safe["verdict: safe (Permit Save/Publish)"]
-  Rejected --> JSONResp["Return JSON Response"]
-  Safe --> JSONResp
-  JSONResp --> Client
+  Client["Frontend UI (Article Heuristics Panel)"] -->|"POST /api/eval/quality"| Worker["worker/src/index.js"]
+  Worker --> Router["eval/index.js (Evaluator Factory)"]
+  Router -->|"EVAL_PROVIDER === 'jev' (default)"| JevProvider["eval/jev.js (TypeSafe AI Jev)"]
+  Router -->|"EVAL_PROVIDER === 'clef'"| ClefProvider["eval/clef.js (Cloudflare Clef)"]
+  JevProvider -->|"Outage / No Key"| CascadeClef{"Clef Configured?"}
+  CascadeClef -->|"Yes"| ClefProvider
+  CascadeClef -->|"No / Failure"| HeuristicProvider["eval/heuristic.js (Deterministic Heuristic)"]
+  ClefProvider -->|"Outage / Failure"| HeuristicProvider
+  JevProvider --> Normalizer["eval/types.js (createEvalResult)"]
+  ClefProvider --> Normalizer
+  HeuristicProvider --> Normalizer
+  Normalizer --> Response["Unified QualityEvalResult JSON (Threshold: 0.55)"]
+  Response --> Client
 ```
 
 ---
 
-## Evaluation Dimensions & Jev Primitives
+## Modular Provider Architecture
 
-The evaluation engine leverages three foundational Jev decision primitives:
+The evaluator is structured into provider-specific modules behind a unified interface:
+
+<Tree>
+  <Tree.Folder name="worker" defaultOpen>
+    <Tree.Folder name="src" defaultOpen>
+      <Tree.Folder name="eval" defaultOpen>
+        <Tree.File name="types.js" highlight />
+        <Tree.File name="jev.js" highlight />
+        <Tree.File name="clef.js" highlight />
+        <Tree.File name="heuristic.js" highlight />
+        <Tree.File name="index.js" highlight />
+      </Tree.Folder>
+      <Tree.File name="index.js" />
+    </Tree.Folder>
+  </Tree.Folder>
+</Tree>
+
+### Provider Selection & Cascading
+The active evaluator is determined by `env.EVAL_PROVIDER` (or per-request override via `options.provider` / `x-eval-provider` header):
+- **`jev` (default)**: Evaluates via TypeSafe AI Jev System One decision API.
+- **`clef`**: Evaluates via Cloudflare Clef / Workers AI (placeholder stub — cascades to heuristic until activated).
+- **`heuristic`**: Evaluates via deterministic offline rule engine.
+
+If the primary provider encounters missing credentials or a network outage, the dispatcher automatically cascades to the next available provider, ensuring publishing workflows and reader audits are never blocked.
+
+---
+
+## Evaluation Dimensions & Decision Primitives
 
 | Dimension | Primitive | Range / Values | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -69,34 +96,32 @@ The evaluation engine leverages three foundational Jev decision primitives:
   "source": "typesafe-jev",
   "safety": {
     "verdict": "safe",
-    "risks": {
-      "violence": { "detected": false, "probability": 0.02 },
-      "sexual": { "detected": false, "probability": 0.01 },
-      "antisocial": { "detected": false, "probability": 0.03 }
-    },
+    "violence": 0.02,
+    "sexual": 0.01,
+    "antisocial": 0.03,
     "violations": []
   },
   "metrics": {
     "isAiWritten": {
       "probability": 0.18,
-      "label": "Human-written"
+      "label": "Human-Authored"
     },
     "accuracy": {
       "score": 4.8,
-      "level": "advanced",
+      "level": "expert",
       "confidence": 0.94
     },
     "engagement": {
       "score": 4.5,
-      "level": "high",
+      "level": "engaging",
       "confidence": 0.91
     },
     "editorialReadiness": {
-      "choice": "ready",
+      "choice": "ready_for_publication",
       "confidence": 0.95
     }
   },
-  "summary": "Article evaluated with high technical depth and zero safety violations."
+  "summary": "Article heuristics: expert accuracy, engaging prose. Safety: safe."
 }
 ```
 
@@ -106,5 +131,5 @@ The evaluation engine leverages three foundational Jev decision primitives:
 
 1. **Pre-Submit Studio Gate**: In Studio Compose (`blog_frontend/src/pages/admin.tsx`), clicking **Save draft** or **Publish** triggers an automated quality & safety pre-check. If any safety risk exceeds $0.55$, saving is aborted and a high-visibility warning banner is rendered.
 2. **Server-Side Worker Gate**: On `POST /api/articles` and `PUT /api/articles/:id`, the Worker runs safety verification. If prohibited content is detected, the API rejects the request with HTTP `422 Unprocessable Entity`.
-3. **Reader Right Sidebar**: In `StoryPage.tsx`, readers and editors can trigger a live quality audit to inspect AI probability, technical rigor score, and safety verification badges in real time.
-4. **Local Fallback Engine**: If `TYPESAFE_API_KEY` is not present in the Worker environment (e.g. offline dev or unit testing), the Worker falls back seamlessly to a local deterministic heuristic analyzer without throwing 500 errors.
+3. **Reader Right Sidebar**: In `StoryPage.tsx`, readers and editors can trigger a live quality audit to inspect AI probability, technical rigor score, and safety verification badges in real time in the **Article Heuristics** card.
+4. **Resilient Cascading Engine**: If API keys are missing or a third-party service fails, the Worker cascades to the local heuristic engine without throwing 500 errors.
