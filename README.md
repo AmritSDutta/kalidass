@@ -56,7 +56,7 @@ kalidass/
 │   │   ├── components/        # ArticleCard, StoryBody, StoryPage, VideoEmbed
 │   │   ├── css/               # Neel theme, pigment tokens, and rainbow gradients
 │   │   ├── lib/               # api.ts (CRUD/uploads), media.ts, types.ts
-│   │   └── pages/             # /, /magazine, /admin (dynamic /story/:slug* via plugin)
+│   │   └── pages/             # /, /magazine, /admin, /generate_article (dynamic /story/:slug* via plugin)
 │   ├── static/                # Static assets, _redirects, .nojekyll
 │   ├── docusaurus.config.ts   # Docusaurus config, addRoute, and dev proxy
 │   ├── package.json           # Frontend dependencies and scripts
@@ -64,6 +64,8 @@ kalidass/
 ├── worker/                    # Cloudflare Worker REST API
 │   ├── src/
 │   │   ├── index.js           # Main fetch handler, router, CORS, auth
+│   │   ├── eval/              # Quality & safety evaluation pipeline (heuristic, Jev, Clef)
+│   │   ├── generator/         # Upstash Box AI article generator (Python & Node harnesses)
 │   │   ├── memory.js          # In-memory storage adapter fallback
 │   │   └── seed.js            # Sample articles for local preview
 │   ├── package.json           # Worker dependencies
@@ -269,13 +271,29 @@ Kalidass Journal integrates automated editorial quality assessment and content s
 - **Reader Engagement (`score` primitive)**: Measures flow, pacing, and narrative clarity ($1.0 - 5.0$).
 - **Editorial Readiness (`choice` primitive)**: Triage classifier returning `ready_for_publication`, `needs_minor_polish`, or `needs_major_revision`.
 - **Pre-Submit Safety Hard-Blocking**: Evaluates violence, sexual, and antisocial risk primitives. If any risk exceeds $0.55$, saving/publishing is immediately blocked in Studio Compose and rejected with HTTP `422` by the edge worker.
+- **Exact Word Boundary Scunthorpe Defense**: Local heuristic evaluator (`worker/src/eval/heuristic.js`) enforces regex whole-word boundaries (`\b${escapedTerm}\b`), ensuring technical terminology (such as `"analysis"`, `"analytics"`, and `"analyzer"`) never false-matches substrings like `"anal"`.
 - **Live Reader & Studio Badges**: Live audit cards in `StoryPage.tsx` and `admin.tsx` display real-time safety verdicts, AI probability, and technical rigor scores under the "Article Heuristics" banner.
 
 > Refer to [`docs/worker/quality-eval.mdx`](./docs/worker/quality-eval.mdx) for architecture diagrams, schema specifications, provider cascade details, and local heuristic fallback behavior.
 
 ---
 
-## 10. WebMCP (In-Browser Model Context Protocol)
+## 10. Autonomous Upstash Box AI Article Generator
+
+Kalidass Journal provides containerized research article synthesis powered by isolated cloud sandboxes via `@upstash/box` (`POST /api/generate` and `/generate_article` UI):
+
+- **Ephemeral Cloud Sandbox**: Spins up isolated Linux containers on-demand via the `@upstash/box` SDK to execute custom Python (`agent.py`) and Node.js research agents.
+- **Hypervisor Secret Injection via `attachHeaders`**: API keys (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `BRAVE_SEARCH_API_KEY`) reside in Worker environment secrets and are injected into outbound network calls at the hypervisor level. Secrets never touch the container disk or shell variables.
+- **Resilient JSON Output**: Features `parse_json_safely()` to strip markdown fences and automatically normalize bare lists or array wrappers into standard article schemas.
+- **Single Cover Image Invariant**: Strictly generates exactly ONE image per article (`coverImage` via `gpt-image-1` typography-free 16:9 infographics). No inline images are emitted.
+- **Direct Draft Persistence**: Generated articles undergo immediate safety evaluation and are persisted into Upstash Blob as unlisted drafts (`published: false, private: true, aiGenerated: true`).
+- **Single Admin Token**: Authenticated seamlessly with `kalidass-admin-token` in `localStorage`.
+
+> Refer to [`docs/worker/upstash-box-generator.mdx`](./docs/worker/upstash-box-generator.mdx) for architecture, prompt schemas, and runner specifications.
+
+---
+
+## 11. WebMCP (In-Browser Model Context Protocol)
 
 Kalidass Journal natively implements **WebMCP** (`document.modelContext` / `navigator.modelContext` / `window.modelContext`), enabling browser AI agents (Chrome built-in AI, Gemini Nano, OpenAI Operator, and extensions like **WebMCP – Model Context Tool Inspector**) to search and read research dispatches directly within the browser runtime without DOM scraping:
 
@@ -292,7 +310,7 @@ await window.modelContext.tools.readArticle.execute({ slug: "attention-as-routin
 
 ---
 
-## 11. Verification & Quality Gates
+## 12. Verification & Quality Gates
 
 ```bash
 # Frontend static type check (mandatory before deployment)
@@ -307,7 +325,7 @@ cd blog_frontend && npm run clear
 
 ---
 
-## 12. Architecture Evaluation & Quality Scorecard
+## 13. Architecture Evaluation & Quality Scorecard
 
 ### Overall Rating: **8.8 / 10** (Production-Ready)
 
@@ -317,7 +335,7 @@ cd blog_frontend && npm run clear
 | **Data Modeling** | **9.2 / 10** | Polymorphic block union (`Block`) provides structured content without CMS vendor lock-in. |
 | **Developer Experience** | **8.5 / 10** | Fast local multi-terminal / unified startup, Webpack dev proxy for zero-CORS dev workflow, and strict TypeScript checking. |
 | **Security & Automation** | **8.8 / 10** | Bearer auth, Cloudflare Access Zero Trust proxy support, and structured machine-to-machine AI agent publishing. |
-| **Documentation Quality** | **9.5 / 10** | Unified Docs7 documentation suite (23 verified MDX pages, valid Mermaid diagrams, strict frontmatter). |
+| **Documentation Quality** | **9.5 / 10** | Unified Docs7 documentation suite (24 verified MDX pages, valid Mermaid diagrams, strict frontmatter). |
 | **Testing & CI/CD** | **7.5 / 10** | Robust compile-time type validation, but lacks automated E2E and Worker endpoint integration tests. |
 
 ### Core Architectural Advantages

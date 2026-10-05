@@ -61,6 +61,7 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
         <Tree.File name="index.tsx" highlight />
         <Tree.File name="magazine.tsx" highlight />
         <Tree.File name="admin.tsx" highlight />
+        <Tree.File name="generate_article.tsx" highlight />
       </Tree.Folder>
     </Tree.Folder>
     <Tree.File name="docusaurus.config.ts" highlight />
@@ -69,6 +70,17 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
   <Tree.Folder name="worker" defaultOpen>
     <Tree.Folder name="src" defaultOpen>
       <Tree.File name="index.js" highlight />
+      <Tree.Folder name="eval" defaultOpen>
+        <Tree.File name="heuristic.js" highlight />
+        <Tree.File name="jev.js" />
+        <Tree.File name="types.js" />
+      </Tree.Folder>
+      <Tree.Folder name="generator" defaultOpen>
+        <Tree.File name="box_based_generator.js" highlight />
+        <Tree.File name="agent_python.js" highlight />
+        <Tree.File name="agent_node.js" />
+        <Tree.File name="prompts.js" />
+      </Tree.Folder>
       <Tree.File name="memory.js" />
       <Tree.File name="seed.js" />
     </Tree.Folder>
@@ -82,6 +94,8 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
       <Tree.File name="index.mdx" />
       <Tree.File name="routing.mdx" />
       <Tree.File name="storage.mdx" />
+      <Tree.File name="quality-eval.mdx" highlight />
+      <Tree.File name="upstash-box-generator.mdx" highlight />
     </Tree.Folder>
   </Tree.Folder>
   <Tree.File name="README.md" highlight />

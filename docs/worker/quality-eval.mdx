@@ -133,3 +133,14 @@ If the primary provider encounters missing credentials or a network outage, the 
 2. **Server-Side Worker Gate**: On `POST /api/articles` and `PUT /api/articles/:id`, the Worker runs safety verification. If prohibited content is detected, the API rejects the request with HTTP `422 Unprocessable Entity`.
 3. **Reader Right Sidebar**: In `StoryPage.tsx`, readers and editors can trigger a live quality audit to inspect AI probability, technical rigor score, and safety verification badges in real time in the **Article Heuristics** card.
 4. **Resilient Cascading Engine**: If API keys are missing or a third-party service fails, the Worker cascades to the local heuristic engine without throwing 500 errors.
+
+---
+
+## Heuristic Safety Engine & Scunthorpe Defense
+
+The fallback heuristic evaluator (`worker/src/eval/heuristic.js`) enforces strict regex word boundaries (`\b${escapedTerm}\b`) rather than naive substring matching:
+
+- **Exact Word Boundaries**: Matches standalone words only (`/\bkill\b/i`, `/\bsex\b/i`). Prevents benign substrings inside technical vocabulary from triggering violations (e.g. `"analysis"`, `"analytics"`, and `"analyzer"` will never match `"anal"`; `"skills"` will never match `"kill"`).
+- **Disambiguated Terms**: Uses explicit multi-word forms such as `"anal sex"` and distinct anatomical terms like `"anus"` rather than ambiguous short roots.
+- **Word Inflections**: Expands stems into complete word forms (`"masturbate"`, `"masturbation"`, `"masturbating"`, `"mutilate"`, `"mutilation"`).
+- **Technical Rigor Word Boundaries**: Technical metrics also apply word boundaries (`/\bgpu\b/i`, `/\bcuda\b/i`) to ensure accurate metric scoring.

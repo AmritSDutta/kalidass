@@ -26,14 +26,19 @@ kalidass/
 │   │   ├── components/        # ArticleCard, StoryBody, StoryPage, VideoEmbed
 │   │   ├── css/               # Neel theme, pigment tokens, and rainbow gradients
 │   │   ├── lib/               # api.ts (CRUD & uploads), config.ts, media.ts, types.ts
-│   │   └── pages/             # /, /magazine, /admin (dynamic /story/:slug* via plugin)
+│   │   └── pages/             # /, /magazine, /admin, /generate_article (dynamic /story/:slug* via plugin)
 │   ├── functions/api/         # [[route]].ts Pages Function gateway (/api/* proxy)
 │   ├── static/                # Static assets, _redirects, .nojekyll
 │   ├── docusaurus.config.ts   # Central config, addRoute, and dev proxy to :8787
 │   ├── package.json           # Dependencies and scripts
 │   └── tsconfig.json          # TypeScript strict config (noEmit: true)
 ├── worker/                    # Cloudflare Worker REST API
-│   ├── src/                   # index.js, memory.js, seed.js
+│   ├── src/
+│   │   ├── index.js           # Main routing, auth, and request handlers
+│   │   ├── eval/              # Heuristic, Jev, and Clef quality & safety evaluators
+│   │   ├── generator/         # Upstash Box sandbox article generator & agent runners
+│   │   ├── memory.js          # In-memory dev fallback store
+│   │   └── seed.js            # Default article seeds
 │   ├── package.json           # Worker dependencies
 │   ├── wrangler.toml          # Worker routing and environment bindings
 │   └── .dev.vars.example      # Example local environment secrets
@@ -93,12 +98,19 @@ kalidass/
    - In-memory fallback seeds 4 default articles when `UPSTASH_BLOB_TOKEN` is unset.
    - Upstash Blob storage activates automatically when `UPSTASH_BLOB_TOKEN` is configured.
    - Cloudflare Workers buffer stream bodies to `Uint8Array` in `globalThis.fetch` to ensure `Content-Length` preservation on `@upstash/blob` S3 calls.
+5. **Admin Auth Token Invariant**:
+   - Single token key `kalidass-admin-token` in `localStorage` represents administrator credentials for Bearer token and `x-admin-key`. Never introduce secondary elevation tokens (`kalidass-elevation-token`).
+6. **Safety Evaluator Regex Boundary Invariant**:
+   - In `worker/src/eval/heuristic.js`, always enforce exact regex whole-word boundaries (`\b${escapedTerm}\b`). Never use `content.includes(term)` for short stems, preventing Scunthorpe false positives (e.g. `"analysis"` or `"analytics"` falsely matching `"anal"`).
+7. **Upstash Box Generator Invariants**:
+   - Enforce strictly ONE image per article (`coverImage` via `gpt-image-1` 16:9 typography-free landscape infographics). No inline images.
+   - Agents must use `parse_json_safely()` to strip markdown fences and auto-normalize bare block arrays to `{title, blocks}` dictionaries before property access.
 
 ---
 
 ## 6. Data Contracts & Operational Flags
 
-- **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/auth/me` (user profile handshake), `/api/eval/quality` (Article Heuristics: AI detection, accuracy, engagement, and safety check with pluggable Jev/Clef/heuristic providers), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
+- **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/generate` (autonomous Upstash Box article synthesis), `/api/auth/me` (user profile handshake), `/api/eval/quality` (Article Heuristics: AI detection, accuracy, engagement, and safety check with pluggable Jev/Clef/heuristic providers), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
 - **Testing**: No automated test suite. Verification gates: `npm.cmd run typecheck` (frontend) + Docs7 validation (hermetic).
 
 - **Data Models (`blog_frontend/src/lib/types.ts`)**:

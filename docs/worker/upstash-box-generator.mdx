@@ -63,25 +63,36 @@ Articles are immediately evaluated by the quality/safety pipeline and saved dire
 - `aiGenerated: true` (AI Attribution Badge)
 - `authorEmail`: Stamped with the administrator's identity.
 
-### D. OpenAI gpt-image-1 Technical Infographics
+### D. OpenAI gpt-image-1 Technical Infographics (Single Cover Image Invariant)
 Generates modern, typography-free 16:9 landscape infographics (`1536x1024`, WebP 80% compression, low quality) with a subtle `"Kalidass"` watermark:
 - Strictly visual-only pictorial architecture diagrams, node topologies, and data conduits.
 - Eliminates AI hallucinated text and typographical artifact clutter.
-- Outputs compact WebP base64 data URIs or image URLs saved directly to `coverImage`.
+- **Strict Single-Image Invariant**: Exactly ONE image is generated per article, saved directly to `coverImage`. No inline image blocks are emitted.
+
+### E. Resilient JSON Parsing & Array Normalization
+To handle LLM output variations and markdown code block wrappers:
+- **`parse_json_safely()`**: Strips markdown code fences (` ```json `), unwraps stringified JSON, and falls back to regex object/array boundary extraction.
+- **Auto-Normalization**: Bare block arrays (`[ {"type": "heading", ...}, ... ]`) or single-element array wrappers are automatically normalized into standard `{ "title": ..., "blocks": [...] }` dictionaries.
+- **Guarded Property Lookups**: Safely checks dict keys before generating the cover image, preventing runtime `AttributeError: 'list' object has no attribute 'get'`.
+
+### F. Secret Management: Worker Environment vs. Upstash Board
+API keys (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `BRAVE_SEARCH_API_KEY`) are managed as Worker environment variables rather than static Upstash Board configurations:
+- **Ephemeral Container Creation**: The Worker dynamically boots, runs, and terminates boxes on-demand via the `@upstash/box` SDK.
+- **Zero Disk Exposure**: Secrets are passed strictly as `attachHeaders` parameters at runtime, which Upstash Box injects at the hypervisor network level. Secrets never touch disk or shell environment variables.
 
 ---
 
 ## 3. Worker API Endpoint
 
 ### `POST /api/generate`
-Generates a new systems research article draft. Requires super-admin privileges.
+Generates a new systems research article draft. Requires administrator privileges.
 
 #### Request Headers
 ```http
-Authorization: Bearer <ADMIN_TOKEN or AUTH0_JWT>
-X-Admin-Token: <ELEVATION_TOKEN>
+Authorization: Bearer <ADMIN_TOKEN>
 Content-Type: application/json
 ```
+*(Authenticated via `kalidass-admin-token` in `localStorage`; no secondary elevation token required).*
 
 #### Request Body
 ```json
