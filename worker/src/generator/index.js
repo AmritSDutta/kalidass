@@ -65,6 +65,7 @@ export async function generateArticle(request, env, user, storageHelpers) {
     summarize,
     getIndexPath,
     getArticleObject,
+    withIndexLock,
   } = storageHelpers;
 
   const providerName = request.provider || GENERATOR_PROVIDERS.UPSTASH_BOX;
@@ -77,40 +78,45 @@ export async function generateArticle(request, env, user, storageHelpers) {
   const text = extractArticleText(draft);
   const evaluation = await runQualityEvaluation(text, {}, env);
 
-  // 3. Assemble full article object with server-stamped invariants
+  // 3. Assemble full article object with server-stamped invariants under lock
   const now = new Date().toISOString();
   const articleId = crypto.randomUUID();
-  const index = await ensureSeed(bucket, env);
-  const baseSlug = slugify(draft.slug || draft.title || request.topic || "ai-article");
-  const slug = uniqueSlug(index, baseSlug);
-  const readTime = estimateReadTime(draft.blocks);
+  const runner = typeof withIndexLock === "function" ? withIndexLock : (fn) => fn();
 
-  const isSafe = evaluation?.safety?.verdict === "safe";
-  const shouldPublish = Boolean(request.publishImmediately) && isSafe;
+  const article = await runner(async () => {
+    const index = await ensureSeed(bucket, env);
+    const baseSlug = slugify(draft.slug || draft.title || request.topic || "ai-article");
+    const slug = uniqueSlug(index, baseSlug);
+    const readTime = estimateReadTime(draft.blocks);
 
-  const article = {
-    ...draft,
-    id: articleId,
-    slug,
-    authorEmail: user?.email || "admin",
-    userId: user?.sub || "admin",
-    accent: draft.accent || request.accent || "#6366f1",
-    readTime,
-    published: shouldPublish,
-    private: shouldPublish ? false : (request.private ?? true),
-    aiGenerated: true,
-    publishedAt: shouldPublish ? now : "",
-    createdAt: now,
-    updatedAt: now,
-    evaluation,
-    isFallback: Boolean(draft.isFallback),
-    fallbackNotice: draft.fallbackNotice || undefined,
-  };
+    const isSafe = evaluation?.safety?.verdict === "safe";
+    const shouldPublish = Boolean(request.publishImmediately) && isSafe;
 
-  // 4. Automatically persist unlisted draft in Upstash Blob
-  await putJson(bucket, getArticleObject(article.id, env), article);
-  index.unshift(summarize(article));
-  await putJson(bucket, getIndexPath(env), index);
+    const record = {
+      ...draft,
+      id: articleId,
+      slug,
+      authorEmail: user?.email || "admin",
+      userId: user?.sub || "admin",
+      accent: draft.accent || request.accent || "#6366f1",
+      readTime,
+      published: shouldPublish,
+      private: shouldPublish ? false : (request.private ?? true),
+      aiGenerated: true,
+      publishedAt: shouldPublish ? now : "",
+      createdAt: now,
+      updatedAt: now,
+      evaluation,
+      isFallback: Boolean(draft.isFallback),
+      fallbackNotice: draft.fallbackNotice || undefined,
+    };
+
+    // 4. Automatically persist unlisted draft in Upstash Blob
+    await putJson(bucket, getArticleObject(record.id, env), record);
+    index.unshift(summarize(record));
+    await putJson(bucket, getIndexPath(env), index);
+    return record;
+  });
 
   return {
     ok: true,

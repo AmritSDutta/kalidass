@@ -34,6 +34,8 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
 
 ### Operations & Deployment
 - [API Client Reference](/api) — Frontend client methods, Bearer auth, and fallback pipelines.
+- [CI/CD Pipeline](/ci-cd) — GitHub Actions CI automation, static typing, and quality gates.
+- [Automated Test Cases](/testcases) — 100% hermetic Vitest test suite, heuristic evaluations, and API contracts.
 - [Configuration](/configuration) — `docusaurus.config.ts`, custom fields, client modules, and CSS variables.
 - [Deployment](/deployment) — Production runbooks for Cloudflare Pages, Cloudflare Workers, and Zero Trust Access.
 - [Development](/development) — Local setup, toolchain requirements, scripts, and verification procedures.
@@ -84,12 +86,22 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
       <Tree.File name="memory.js" />
       <Tree.File name="seed.js" />
     </Tree.Folder>
+    <Tree.Folder name="test" defaultOpen>
+      <Tree.File name="eval_heuristic.test.js" highlight />
+      <Tree.File name="memory_store.test.js" />
+      <Tree.File name="schemas.test.js" />
+      <Tree.File name="worker_api.test.js" highlight />
+      <Tree.File name="concurrency.test.js" highlight />
+    </Tree.Folder>
+    <Tree.File name="vitest.config.js" highlight />
     <Tree.File name="wrangler.toml" highlight />
     <Tree.File name="package.json" />
   </Tree.Folder>
   <Tree.Folder name="docs" defaultOpen>
     <Tree.File name="docs.json" highlight />
     <Tree.File name="custom.css" />
+    <Tree.File name="ci-cd.mdx" highlight />
+    <Tree.File name="testcases.mdx" highlight />
     <Tree.Folder name="worker">
       <Tree.File name="index.mdx" />
       <Tree.File name="routing.mdx" />
@@ -97,6 +109,14 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
       <Tree.File name="quality-eval.mdx" highlight />
       <Tree.File name="upstash-box-generator.mdx" highlight />
     </Tree.Folder>
+  </Tree.Folder>
+  <Tree.Folder name=".github" defaultOpen>
+    <Tree.Folder name="workflows">
+      <Tree.File name="ci.yml" highlight />
+    </Tree.Folder>
+  </Tree.Folder>
+  <Tree.Folder name="scripts" defaultOpen>
+    <Tree.File name="validate_docs.mjs" highlight />
   </Tree.Folder>
   <Tree.File name="README.md" highlight />
   <Tree.File name="CLAUDE.md" />

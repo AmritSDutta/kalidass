@@ -76,11 +76,12 @@ kalidass/
 
 ### Worker (`worker/`)
 - **Dev Server**: `npm run start` (binds `0.0.0.0:8787` with memory/Upstash store).
+- **Test**: `npm run test` (in Windows PowerShell: `npm.cmd test` — runs 100% hermetic Vitest suite).
 - **Deploy**: `npm run deploy` (`npx wrangler deploy`).
 
 ### Unified Documentation (`docs/`)
 - **Docs7 Preview**: `npx docs7 dev docs --port 3333`
-- **Docs7 Validation**: `node C:/Users/amrit/.gemini/config/skills/docs7/scripts/validate_docs7.mjs docs`
+- **Docs7 Validation**: `node scripts/validate_docs.mjs docs`
 
 ---
 
@@ -111,7 +112,7 @@ kalidass/
 ## 6. Data Contracts & Operational Flags
 
 - **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/generate` (autonomous Upstash Box article synthesis), `/api/auth/me` (user profile handshake), `/api/eval/quality` (Article Heuristics: AI detection, accuracy, engagement, and safety check with pluggable Jev/Clef/heuristic providers), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
-- **Testing**: No automated test suite. Verification gates: `npm.cmd run typecheck` (frontend) + Docs7 validation (hermetic).
+- **Testing**: Hermetic Vitest suite (`worker/test/*.test.js`) + `npm.cmd run typecheck` (frontend) + `node scripts/validate_docs.mjs docs` (Docs7), automated via `.github/workflows/ci.yml`.
 
 - **Data Models (`blog_frontend/src/lib/types.ts`)**:
   - `Block`: 5-variant union (`paragraph`, `heading`, `quote`, `image`, `video`).

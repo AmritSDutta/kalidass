@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "wrangler dev --port 8787 --ip 0.0.0.0",
     "start": "wrangler dev --port 8787 --ip 0.0.0.0",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@upstash/blob": "0.0.6-canary.20260914173111",
@@ -15,6 +17,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "vitest": "^5.0.3",
     "wrangler": "^4.37.0"
   }
 }

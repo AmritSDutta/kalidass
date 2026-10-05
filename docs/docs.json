@@ -49,6 +49,8 @@
         "group": "Operations & Deployment",
         "pages": [
           "api",
+          "ci-cd",
+          "testcases",
           "configuration",
           "deployment",
           "development",

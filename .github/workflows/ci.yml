@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Verify & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Worker Dependencies
+        run: npm --prefix worker install
+
+      - name: Install Frontend Dependencies
+        run: npm --prefix blog_frontend install
+
+      - name: Frontend Static Typecheck
+        run: npm --prefix blog_frontend run typecheck
+
+      - name: Worker Hermetic Vitest Test Suite
+        run: npm --prefix worker test
+
+      - name: Docs7 Documentation Validation
+        run: node scripts/validate_docs.mjs docs

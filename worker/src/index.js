@@ -241,6 +241,21 @@ function putJson(bucket, path, value) {
   });
 }
 
+let _indexLock = Promise.resolve();
+
+/**
+ * Serializes asynchronous index mutations within the isolate.
+ * Guarantees that only one read-modify-write cycle executes at a time.
+ * @template T
+ * @param {() => Promise<T>} task
+ * @returns {Promise<T>}
+ */
+export function withIndexLock(task) {
+  const result = _indexLock.then(() => task(), () => task());
+  _indexLock = result.then(() => {}, () => {});
+  return result;
+}
+
 function summarize(article) {
   return {
     id: article.id,
@@ -703,6 +718,7 @@ export default {
           summarize,
           getIndexPath,
           getArticleObject,
+          withIndexLock,
         };
 
         const result = await generateArticle(body, env, user, storageHelpers);
@@ -731,14 +747,17 @@ export default {
           }
         }
 
-        const index = await ensureSeed(bucket, env);
-        const article = buildArticle(body, null, user);
-        article.evaluation = evalResult || body.evaluation || null;
-        article.slug = uniqueSlug(index, slugify(body.slug || body.title));
-        article.readTime = estimateReadTime(article.blocks);
-        await putJson(bucket, getArticleObject(article.id, env), article);
-        index.unshift(summarize(article));
-        await putJson(bucket, getIndexPath(env), index);
+        const article = await withIndexLock(async () => {
+          const index = await ensureSeed(bucket, env);
+          const newArticle = buildArticle(body, null, user);
+          newArticle.evaluation = evalResult || body.evaluation || null;
+          newArticle.slug = uniqueSlug(index, slugify(body.slug || body.title));
+          newArticle.readTime = estimateReadTime(newArticle.blocks);
+          await putJson(bucket, getArticleObject(newArticle.id, env), newArticle);
+          index.unshift(summarize(newArticle));
+          await putJson(bucket, getIndexPath(env), index);
+          return newArticle;
+        });
         return json(article, 201, origin);
       }
 
@@ -805,22 +824,26 @@ export default {
             }
           }
 
-          const article = buildArticle(body, existing, user);
-          article.evaluation = evalResult || body.evaluation || existing.evaluation || null;
-          article.authorEmail = existing.authorEmail || user.email; // Preserved immutably
-          article.slug = uniqueSlug(
-            index,
-            slugify(body.slug || body.title || existing.slug),
-            existing.id
-          );
-          article.readTime = estimateReadTime(article.blocks);
-          await putJson(bucket, getArticleObject(existing.id, env), article);
-          await putJson(
-            bucket,
-            getIndexPath(env),
-            index.map((item) => (item.id === existing.id ? summarize(article) : item))
-          );
-          return json(article, 200, origin);
+          const updatedArticle = await withIndexLock(async () => {
+            const index = await ensureSeed(bucket, env);
+            const article = buildArticle(body, existing, user);
+            article.evaluation = evalResult || body.evaluation || existing.evaluation || null;
+            article.authorEmail = existing.authorEmail || user.email; // Preserved immutably
+            article.slug = uniqueSlug(
+              index,
+              slugify(body.slug || body.title || existing.slug),
+              existing.id
+            );
+            article.readTime = estimateReadTime(article.blocks);
+            await putJson(bucket, getArticleObject(existing.id, env), article);
+            await putJson(
+              bucket,
+              getIndexPath(env),
+              index.map((item) => (item.id === existing.id ? summarize(article) : item))
+            );
+            return article;
+          });
+          return json(updatedArticle, 200, origin);
         }
 
         if (request.method === "DELETE") {
@@ -840,16 +863,19 @@ export default {
             }
           }
 
-          try {
-            await bucket.del(getArticleObject(meta.id, env));
-          } catch {
-            // already gone
-          }
-          await putJson(
-            bucket,
-            getIndexPath(env),
-            index.filter((item) => item.id !== meta.id)
-          );
+          await withIndexLock(async () => {
+            try {
+              await bucket.del(getArticleObject(meta.id, env));
+            } catch {
+              // already gone
+            }
+            const index = await ensureSeed(bucket, env);
+            await putJson(
+              bucket,
+              getIndexPath(env),
+              index.filter((item) => item.id !== meta.id)
+            );
+          });
           return json({ok: true}, 200, origin);
         }
       }
