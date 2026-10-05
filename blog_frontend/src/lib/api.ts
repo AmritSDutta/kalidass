@@ -4,6 +4,9 @@ import type {
   ArticleDraft,
   ArticleSummary,
   AuthUser,
+  GenerateArticleRequest,
+  GenerateArticleResponse,
+  AiSearchInsightResponse,
   QualityEvalRequest,
   QualityEvalResult,
 } from "./types";
@@ -143,4 +146,17 @@ export function evaluateQuality(payload: QualityEvalRequest) {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export function generateArticle(payload: GenerateArticleRequest) {
+  return request<GenerateArticleResponse>("/api/generate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getAiSearchInsight(query: string) {
+  return request<AiSearchInsightResponse>(
+    `/api/ai_search_insight?q=${encodeURIComponent(query)}`
+  );
 }

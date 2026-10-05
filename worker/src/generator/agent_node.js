@@ -1,0 +1,289 @@
+import {buildSystemPrompt, buildUserPrompt} from "./prompts.js";
+
+/**
+ * Builds the Node.js in-box research agent script.
+ * Runs in an Upstash Box with runtime: "node".
+ *
+ * @param {import("./types").GenerateArticleRequest} request
+ * @param {any} env
+ * @returns {string}
+ */
+export function buildNodeAgentScript(request, env) {
+  const systemPrompt = JSON.stringify(buildSystemPrompt(request));
+  const userPrompt = JSON.stringify(buildUserPrompt(request));
+  const rawWeight = parseFloat(env.TAVILY_SEARCH_WEIGHT || "80");
+  const tavilyWeight = rawWeight <= 1.0 ? rawWeight * 100 : rawWeight;
+  const geminiModelName = JSON.stringify(request.model || env.GEMINI_MODEL || "gemini-3.1-flash-lite");
+  const ollamaModelName = JSON.stringify(env.OLLAMA_MODEL || "gemma4:31b-cloud");
+  const ollamaBaseUrl = JSON.stringify(env.OLLAMA_API_BASE_URL || "https://ollama.com");
+
+  return `// Kalidass Journal — Custom In-Box Research Agent (Node.js Runtime)
+import fs from "node:fs";
+
+async function searchTavily(query) {
+  try {
+    const res = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query,
+        search_depth: "advanced",
+        include_answer: true,
+        max_results: 5
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return (data.results || []).map(r => ({
+        title: r.title || "",
+        url: r.url || "",
+        description: r.content || ""
+      }));
+    }
+  } catch (err) {
+    console.error("Tavily search failed:", err);
+  }
+  return [];
+}
+
+async function searchSerpApi(query) {
+  try {
+    const url = new URL("https://serpapi.com/search.json");
+    url.searchParams.set("engine", "google");
+    url.searchParams.set("q", query);
+    const res = await fetch(url.toString(), {
+      headers: { "Accept": "application/json" }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const results = [];
+      if (data.ai_overview) {
+        results.push({
+          title: "Google SGE AI Overview",
+          url: "https://google.com/search",
+          description: JSON.stringify(data.ai_overview)
+        });
+      }
+      for (const r of (data.organic_results || []).slice(0, 5)) {
+        results.push({
+          title: r.title || "",
+          url: r.link || "",
+          description: r.snippet || ""
+        });
+      }
+      return results;
+    }
+  } catch (err) {
+    console.error("SerpApi search failed:", err);
+  }
+  return [];
+}
+
+async function searchWeb(query) {
+  const tavilyWeight = ${tavilyWeight};
+  const pickTavily = Math.random() * 100 < tavilyWeight;
+  let results = [];
+  if (pickTavily) {
+    results = await searchTavily(query);
+    if (!results.length) results = await searchSerpApi(query);
+  } else {
+    results = await searchSerpApi(query);
+    if (!results.length) results = await searchTavily(query);
+  }
+  return results;
+}
+
+async function run() {
+  const sysPrompt = ${systemPrompt};
+  const usrPrompt = ${userPrompt};
+
+  // 1. Gather empirical research citations via hybrid search
+  const citations = await searchWeb(${searchTopic});
+  let searchContext = "";
+  if (citations.length > 0) {
+    searchContext = "\\n\\nEMPIRICAL WEB RESEARCH CITATIONS:\\n" +
+      citations.map(c => "- " + c.title + ": " + c.description + " (" + c.url + ")").join("\\n");
+  }
+
+  const finalUserPrompt = usrPrompt + searchContext;
+
+  // 2. Primary: Google Gemini API
+  let generatedJson = null;
+  const geminiModel = ${geminiModelName};
+  try {
+    const geminiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + geminiModel + ":generateContent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: sysPrompt }] },
+        contents: [{ role: "user", parts: [{ text: finalUserPrompt }] }],
+        generationConfig: { responseMimeType: "application/json" }
+      })
+    });
+
+    if (geminiRes.ok) {
+      const data = await geminiRes.json();
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);
+      if (jsonMatch) generatedJson = JSON.parse(jsonMatch[0]);
+    }
+  } catch (err) {
+    console.warn("Gemini synthesis failed, cascading to Ollama:", err.message);
+  }
+
+  // 3. Fallback: Ollama Cloud API
+  if (!generatedJson) {
+    try {
+      const ollamaUrl = ${ollamaBaseUrl} + "/api/chat";
+      const ollamaRes = await fetch(ollamaUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: ${ollamaModelName},
+          format: "json",
+          stream: false,
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: finalUserPrompt }
+          ]
+        })
+      });
+
+      if (ollamaRes.ok) {
+        const data = await ollamaRes.json();
+        const content = data.message?.content || "";
+        const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);
+        if (jsonMatch) generatedJson = JSON.parse(jsonMatch[0]);
+      }
+    } catch (err) {
+      console.warn("Ollama synthesis failed:", err.message);
+    }
+  }
+
+  // 4. Deterministic fallback if external LLMs are unconfigured
+  if (!generatedJson) {
+    generatedJson = {
+      title: ${JSON.stringify(request.topic || "Autonomous Systems Synthesis")},
+      subtitle: ${JSON.stringify(request.angle || "Field notes from isolated container runtime.")},
+      excerpt: "Deep synthesis on neural state synchronization and containerized agentic execution in Kalidass Journal.",
+      coverImage: "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png",
+      videoUrl: "",
+      author: {
+        name: "Neural Agent (Upstash Box)",
+        role: "Systems Research Agent",
+        avatar: "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png"
+      },
+      tags: ["Systems", "Upstash Box", "Neural Runtimes", "Node"],
+      accent: ${JSON.stringify(request.accent || "#6366f1")},
+      featured: false,
+      blocks: [
+        {
+          type: "heading",
+          text: "1. Node Runtime Invariants in Isolated Containers"
+        },
+        {
+          type: "paragraph",
+          text: "By running an isolated Node container in Upstash Box, research agents orchestrate hybrid research workflows combining Tavily and SerpApi intelligence."
+        }
+      ],
+      published: false,
+      private: true,
+      aiGenerated: true,
+      isFallback: true,
+      fallbackNotice: "Generated using local systems fallback template. Configure GEMINI_API_KEY via attachHeaders for live neural synthesis."
+    };
+  }
+
+  // 5. OpenAI gpt-image-1 Technical Infographic Generation
+  try {
+    const title = generatedJson.title || "";
+    const excerpt = generatedJson.excerpt || "";
+    const topicDesc = (title + (excerpt ? " — " + excerpt : "")).slice(0, 300);
+
+    const infographicPrompt = \`Create a modern PREMIUM horizontal landscape infographic on:
+\${topicDesc}
+
+STYLE:
+- ultra clean pictorial colorful infographic for modern systems engineering and computing research
+- STRICTLY NO TEXT, NO WORDS, NO LABELS, NO LETTERS, NO TYPOGRAPHY anywhere in the image (except the subtle watermark below)
+- 100% visual and pictorial depiction using high-tech diagrams, architecture blocks, nodes, data conduits, neural pathways, memory hierarchy schematics, and geometric illustrations only
+- wide horizontal landscape composition (16:9 banner)
+- balanced systems architecture blocks arranged horizontally
+- sleek editorial engineering companion design with calm soothing colors and vivid accent highlights
+- looks like premium IEEE / ACM editorial systems poster
+- minimal clutter, mathematically precise framing
+
+SAFETY & ETHICS:
+- strictly professional, dignified, and universally positive
+- strictly NO vulgarity, NO nudity, NO suggestive content, and NO socially or morally abusive depictions
+- celebrate engineering rigor, distributed consensus, neural architectures, algorithmic beauty, and open-source systems
+
+WATERMARK (SOLE TEXT EXCEPTION):
+Add subtle semi-transparent watermark text:
+"Kalidass"
+
+Place watermark diagonally near bottom-right.
+Keep watermark elegant and non-intrusive.\`;
+
+    const imgRes = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-image-1",
+        prompt: infographicPrompt,
+        size: "1536x1024",
+        quality: "low",
+        output_format: "webp",
+        output_compression: 80,
+        n: 1
+      })
+    });
+
+    if (imgRes.ok) {
+      const imgData = await imgRes.json();
+      const firstItem = imgData?.data?.[0];
+      const b64 = firstItem?.b64_json || firstItem?.image_bytes;
+      const remoteUrl = firstItem?.url;
+
+      if (b64 && typeof b64 === "string") {
+        generatedJson.coverImage = "data:image/webp;base64," + b64;
+      } else if (remoteUrl && typeof remoteUrl === "string") {
+        generatedJson.coverImage = remoteUrl;
+      }
+    } else {
+      console.warn("gpt-image-1 returned status " + imgRes.status + ", retaining curated fallback cover.");
+    }
+  } catch (err) {
+    console.warn("gpt-image-1 infographic generation skipped:", err.message);
+  }
+
+  // 6. Ensure Mandatory Sources Attribution Block at the End
+  const blocks = generatedJson.blocks || [];
+  if (citations.length > 0) {
+    const attributionItems = citations
+      .filter(c => c.url)
+      .map(c => "• [" + c.title + "](" + c.url + ")")
+      .join("\\n");
+
+    blocks.push({
+      type: "heading",
+      text: "References & Empirical Attributions"
+    });
+    blocks.push({
+      type: "quote",
+      text: "Synthesized with live empirical sources gathered via hybrid search:\\n" + attributionItems,
+      cite: "Autonomous Research Tooling (Tavily/SerpApi)"
+    });
+  }
+  generatedJson.blocks = blocks;
+
+  fs.writeFileSync("/workspace/home/article_output.json", JSON.stringify(generatedJson, null, 2));
+  console.log("NODE_GENERATION_COMPLETE");
+}
+
+run().catch((err) => {
+  console.error("Node agent run error:", err);
+  process.exit(1);
+});
+`;
+}

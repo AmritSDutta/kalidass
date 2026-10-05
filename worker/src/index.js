@@ -3,6 +3,7 @@ import {createRemoteJWKSet, jwtVerify} from "jose";
 import {getMemoryObject, memoryBucket} from "./memory.js";
 import {seedArticles} from "./seed.js";
 import {runQualityEvaluation, extractArticleText} from "./eval/index.js";
+import {generateArticle} from "./generator/index.js";
 
 // Cloudflare Workers fetch guard: ensures @upstash/blob requests carry Content-Length
 const nativeFetch = globalThis.fetch;
@@ -585,6 +586,121 @@ export default {
         if (!user || user.role !== "admin") return json({error: "Unauthorized"}, 401, origin);
         await putJson(bucket, getIndexPath(env), []);
         return json({ok: true, message: "Article repository reset to empty"}, 200, origin);
+      }
+
+      if (url.pathname === "/api/ai_search_insight") {
+        const user = await getAuthUser(request, env);
+        if (!user) return json({error: "Unauthorized"}, 401, origin);
+
+        let query = "";
+        if (request.method === "GET") {
+          query = url.searchParams.get("q") || url.searchParams.get("query") || "";
+        } else if (request.method === "POST") {
+          try {
+            const body = await request.json();
+            query = body.q || body.query || "";
+          } catch {
+            return json({error: "Invalid JSON payload"}, 400, origin);
+          }
+        } else {
+          return json({error: "Method not allowed"}, 405, origin);
+        }
+
+        if (!query.trim()) {
+          return json({error: "Query parameter 'q' is required"}, 400, origin);
+        }
+
+        const serpApiKey = env.SERPAPI_API_KEY || env.SERP_API_KEY;
+        if (!serpApiKey) {
+          return json({error: "SERPAPI_API_KEY is not configured in worker environment"}, 503, origin);
+        }
+
+        try {
+          const serpUrl = new URL("https://serpapi.com/search.json");
+          serpUrl.searchParams.set("engine", "google");
+          serpUrl.searchParams.set("q", query.trim());
+          serpUrl.searchParams.set("api_key", serpApiKey);
+
+          const serpRes = await fetch(serpUrl.toString());
+          if (!serpRes.ok) {
+            const errText = await serpRes.text();
+            return json({error: `SerpApi error: ${serpRes.status}`, details: errText}, 502, origin);
+          }
+
+          const data = await serpRes.json();
+          let aiOverview = null;
+          if (typeof data.ai_overview === "string") {
+            aiOverview = data.ai_overview;
+          } else if (data.ai_overview && typeof data.ai_overview === "object") {
+            if (typeof data.ai_overview.text === "string" && data.ai_overview.text.trim()) {
+              aiOverview = data.ai_overview.text.trim();
+            } else if (Array.isArray(data.ai_overview.text_blocks)) {
+              aiOverview = data.ai_overview.text_blocks
+                .map((b) => (typeof b === "string" ? b : b?.text || ""))
+                .filter(Boolean)
+                .join("\n\n");
+            } else if (typeof data.ai_overview.snippet === "string") {
+              aiOverview = data.ai_overview.snippet;
+            } else {
+              aiOverview = JSON.stringify(data.ai_overview);
+            }
+          }
+
+          const organicResults = (data.organic_results || []).slice(0, 5).map((r) => ({
+            title: r.title || "",
+            link: r.link || "",
+            snippet: r.snippet || "",
+          }));
+
+          return json(
+            {
+              ok: true,
+              query: query.trim(),
+              ai_overview: aiOverview,
+              organic_results: organicResults,
+              search_metadata: data.search_metadata || null,
+            },
+            200,
+            origin
+          );
+        } catch (err) {
+          console.error("AI Search Insight error:", err);
+          return json({error: err.message || "Failed to fetch AI search insight"}, 500, origin);
+        }
+      }
+
+      if (url.pathname === "/api/generate" && request.method === "POST") {
+        const user = await getAuthUser(request, env);
+        if (!user || user.role !== "admin") {
+          return json({error: "Forbidden: Admin privileges required to generate articles"}, 403, origin);
+        }
+
+        let body = {};
+        try {
+          body = await request.json();
+        } catch {
+          return json({error: "Invalid JSON payload"}, 400, origin);
+        }
+
+        if (!body.topic || !String(body.topic).trim()) {
+          return json({error: "Field 'topic' is required"}, 400, origin);
+        }
+
+        const storageHelpers = {
+          bucket,
+          readJson,
+          putJson,
+          ensureSeed,
+          slugify,
+          uniqueSlug,
+          estimateReadTime,
+          summarize,
+          getIndexPath,
+          getArticleObject,
+        };
+
+        const result = await generateArticle(body, env, user, storageHelpers);
+        return json(result, 201, origin);
       }
 
       if (url.pathname === "/api/articles" && request.method === "POST") {

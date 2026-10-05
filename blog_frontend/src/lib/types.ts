@@ -41,6 +41,8 @@ export type ArticleSummary = {
   userId?: string;
   updatedAt?: string;
   evaluation?: QualityEvalResult | null;
+  isFallback?: boolean;
+  fallbackNotice?: string;
 };
 
 export type Article = ArticleSummary & {
@@ -66,6 +68,8 @@ export type ArticleDraft = {
   aiGenerated?: boolean;
   userId?: string;
   evaluation?: QualityEvalResult | null;
+  isFallback?: boolean;
+  fallbackNotice?: string;
 };
 
 export interface QualitySafetyRisks {
@@ -117,3 +121,38 @@ export interface QualityEvalRequest {
   clefApiKey?: string;
   provider?: "jev" | "clef" | "heuristic";
 }
+
+export interface GenerateArticleRequest {
+  topic: string;
+  angle?: string;
+  tone?: "research" | "field-notes" | "explainer" | "speculative";
+  blockCount?: number;
+  accent?: string;
+  provider?: string;
+  harness?: string;
+  model?: string;
+  runtime?: "node" | "python";
+  attachHeaders?: Record<string, Record<string, string>>;
+  publishImmediately?: boolean;
+  private?: boolean;
+}
+
+export interface GenerateArticleResponse {
+  ok: boolean;
+  article: Article;
+  evaluation: QualityEvalResult;
+}
+
+export interface AiSearchInsightResponse {
+  ok: boolean;
+  query: string;
+  ai_overview?: string | null;
+  organic_results: Array<{
+    title: string;
+    link: string;
+    snippet: string;
+  }>;
+  search_metadata?: unknown;
+}
+
+

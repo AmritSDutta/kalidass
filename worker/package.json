@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@upstash/blob": "0.0.6-canary.20260914173111",
-    "jose": "^6.2.12"
+    "@upstash/box": "^0.7.0",
+    "jose": "^6.2.12",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "wrangler": "^4.37.0"

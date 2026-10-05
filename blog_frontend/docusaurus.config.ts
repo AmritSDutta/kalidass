@@ -102,6 +102,7 @@ const config: Config = {
       items: [
         {to: "/magazine", label: "Issue", position: "right"},
         {to: "/admin", label: "Studio", position: "right"},
+        {to: "/generate_article", label: "Neural Gen", position: "right"},
         {type: "custom-auth" as any, position: "right"},
       ],
     },
