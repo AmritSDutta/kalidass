@@ -255,6 +255,7 @@ function summarize(article) {
     aiGenerated: article.aiGenerated ?? false,
     userId: article.userId || "system",
     updatedAt: article.updatedAt || article.publishedAt,
+    evaluation: article.evaluation || null,
   };
 }
 
@@ -353,6 +354,7 @@ function buildArticle(body, existing, user) {
     publishedAt: body.publishedAt || existing?.publishedAt || (published ? now : ""),
     featured: body.featured ?? existing?.featured ?? false,
     blocks: Array.isArray(body.blocks) ? body.blocks : existing?.blocks || [],
+    evaluation: body.evaluation !== undefined ? body.evaluation : (existing?.evaluation || null),
     createdAt: existing?.createdAt || now,
     updatedAt: now,
   };
@@ -590,15 +592,16 @@ export default {
         if (!user) return json({error: "Unauthorized"}, 401, origin);
         const body = await request.json();
 
-        // Safety verification guardrail
+        // Safety verification guardrail & evaluation
+        let evalResult = null;
         const payloadText = extractArticleText(body);
         if (payloadText) {
-          const safetyCheck = await runQualityEvaluation(payloadText, {}, env);
-          if (safetyCheck?.safety?.verdict && safetyCheck.safety.verdict !== "safe") {
+          evalResult = await runQualityEvaluation(payloadText, {}, env);
+          if (evalResult?.safety?.verdict && evalResult.safety.verdict !== "safe") {
             return json(
               {
                 error: "Safety Guardrail Blocked: Article failed safety screening.",
-                violations: safetyCheck.safety.violations,
+                violations: evalResult.safety.violations,
               },
               422,
               origin
@@ -608,6 +611,7 @@ export default {
 
         const index = await ensureSeed(bucket, env);
         const article = buildArticle(body, null, user);
+        article.evaluation = evalResult || body.evaluation || null;
         article.slug = uniqueSlug(index, slugify(body.slug || body.title));
         article.readTime = estimateReadTime(article.blocks);
         await putJson(bucket, getArticleObject(article.id, env), article);
@@ -662,15 +666,16 @@ export default {
 
           const body = await request.json();
 
-          // Safety verification guardrail
+          // Safety verification guardrail & evaluation
+          let evalResult = null;
           const payloadText = extractArticleText(body);
           if (payloadText) {
-            const safetyCheck = await runQualityEvaluation(payloadText, {}, env);
-            if (safetyCheck?.safety?.verdict && safetyCheck.safety.verdict !== "safe") {
+            evalResult = await runQualityEvaluation(payloadText, {}, env);
+            if (evalResult?.safety?.verdict && evalResult.safety.verdict !== "safe") {
               return json(
                 {
                   error: "Safety Guardrail Blocked: Article failed safety screening.",
-                  violations: safetyCheck.safety.violations,
+                  violations: evalResult.safety.violations,
                 },
                 422,
                 origin
@@ -679,6 +684,7 @@ export default {
           }
 
           const article = buildArticle(body, existing, user);
+          article.evaluation = evalResult || body.evaluation || existing.evaluation || null;
           article.authorEmail = existing.authorEmail || user.email; // Preserved immutably
           article.slug = uniqueSlug(
             index,

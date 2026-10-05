@@ -40,6 +40,7 @@ export type ArticleSummary = {
   aiGenerated: boolean;
   userId?: string;
   updatedAt?: string;
+  evaluation?: QualityEvalResult | null;
 };
 
 export type Article = ArticleSummary & {
@@ -64,6 +65,7 @@ export type ArticleDraft = {
   private?: boolean;
   aiGenerated?: boolean;
   userId?: string;
+  evaluation?: QualityEvalResult | null;
 };
 
 export interface QualitySafetyRisks {

@@ -363,11 +363,30 @@
 }
 
 .auditCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.evalSummaryText {
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--ink-soft);
+  background: var(--paper-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  margin: 0;
+}
+
+.structureSection {
   border-top: 1px solid var(--border-subtle);
   padding-top: 0.9rem;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 1.2rem;
 }
 
 .auditHeader {

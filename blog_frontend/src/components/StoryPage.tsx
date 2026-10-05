@@ -30,7 +30,12 @@ export default function StoryPage(): ReactNode {
   useEffect(() => {
     if (!slug) return;
     getArticle(slug)
-      .then(setArticle)
+      .then((art) => {
+        setArticle(art);
+        if (art.evaluation) {
+          setEvalResult(art.evaluation);
+        }
+      })
       .catch((err: Error) => setError(err.message));
   }, [slug]);
 
@@ -217,70 +222,9 @@ export default function StoryPage(): ReactNode {
               </div>
             </article>
 
-            {/* Right 20% Heading Analysis Panel */}
+            {/* Right 20% Heading Analysis & Heuristics Panel */}
             <aside className={styles.sidebar}>
               <div className={styles.analysisCard}>
-                <div className={styles.analysisHeader}>
-                  <span className={styles.analysisKicker}>Heading Analysis</span>
-                  <h3>Structure & Outline</h3>
-                </div>
-
-                <div className={styles.metricsGrid}>
-                  <div className={styles.metric}>
-                    <span className={styles.metricVal}>{headingsAnalysis.headings.length}</span>
-                    <span className={styles.metricLabel}>Sections</span>
-                  </div>
-                  <div className={styles.metric}>
-                    <span className={styles.metricVal}>{headingsAnalysis.totalWords}</span>
-                    <span className={styles.metricLabel}>Words</span>
-                  </div>
-                  <div className={styles.metric}>
-                    <span className={styles.metricVal}>{article.readTime}m</span>
-                    <span className={styles.metricLabel}>Pace</span>
-                  </div>
-                </div>
-
-                {headingsAnalysis.headings.length > 0 ? (
-                  <div className={styles.tocSection}>
-                    <p className={styles.tocTitle}>Document Flow</p>
-                    <nav className={styles.tocNav}>
-                      {headingsAnalysis.headings.map((h, i) => (
-                        <button
-                          key={h.id}
-                          type="button"
-                          onClick={() => scrollToHeading(h.id)}
-                          className={`${styles.tocItem} ${
-                            activeHeadingId === h.id ? styles.tocItemActive : ""
-                          }`}>
-                          <span className={styles.tocNum}>0{i + 1}</span>
-                          <span className={styles.tocText}>{h.text}</span>
-                          {h.wordCount > 0 ? (
-                            <span className={styles.tocWords}>{h.wordCount}w</span>
-                          ) : null}
-                        </button>
-                      ))}
-                    </nav>
-                  </div>
-                ) : (
-                  <p className={styles.noHeadings}>Single continuous dispatch</p>
-                )}
-
-                <div className={styles.distribution}>
-                  <p className={styles.tocTitle}>Element Density</p>
-                  <div className={styles.tagsList}>
-                    <span>{headingsAnalysis.blockCounts.p} paragraphs</span>
-                    {headingsAnalysis.blockCounts.q > 0 ? (
-                      <span>{headingsAnalysis.blockCounts.q} quotes</span>
-                    ) : null}
-                    {headingsAnalysis.blockCounts.img > 0 ? (
-                      <span>{headingsAnalysis.blockCounts.img} images</span>
-                    ) : null}
-                    {headingsAnalysis.blockCounts.vid > 0 ? (
-                      <span>{headingsAnalysis.blockCounts.vid} video</span>
-                    ) : null}
-                  </div>
-                </div>
-
                 <div className={styles.auditCard}>
                   <div className={styles.auditHeader}>
                     <span className={styles.analysisKicker}>Article Heuristics</span>
@@ -330,6 +274,10 @@ export default function StoryPage(): ReactNode {
                           <span className={styles.auditSub}>{evalResult.metrics.engagement.level}</span>
                         </div>
                       </div>
+
+                      {evalResult.summary ? (
+                        <p className={styles.evalSummaryText}>{evalResult.summary}</p>
+                      ) : null}
                     </div>
                   ) : (
                     <button
@@ -341,6 +289,69 @@ export default function StoryPage(): ReactNode {
                     </button>
                   )}
                   {evalError ? <p className={styles.evalError}>{evalError}</p> : null}
+                </div>
+
+                <div className={styles.structureSection}>
+                  <div className={styles.analysisHeader}>
+                    <span className={styles.analysisKicker}>Heading Analysis</span>
+                    <h3>Structure & Outline</h3>
+                  </div>
+
+                  <div className={styles.metricsGrid}>
+                    <div className={styles.metric}>
+                      <span className={styles.metricVal}>{headingsAnalysis.headings.length}</span>
+                      <span className={styles.metricLabel}>Sections</span>
+                    </div>
+                    <div className={styles.metric}>
+                      <span className={styles.metricVal}>{headingsAnalysis.totalWords}</span>
+                      <span className={styles.metricLabel}>Words</span>
+                    </div>
+                    <div className={styles.metric}>
+                      <span className={styles.metricVal}>{article.readTime}m</span>
+                      <span className={styles.metricLabel}>Pace</span>
+                    </div>
+                  </div>
+
+                  {headingsAnalysis.headings.length > 0 ? (
+                    <div className={styles.tocSection}>
+                      <p className={styles.tocTitle}>Document Flow</p>
+                      <nav className={styles.tocNav}>
+                        {headingsAnalysis.headings.map((h, i) => (
+                          <button
+                            key={h.id}
+                            type="button"
+                            onClick={() => scrollToHeading(h.id)}
+                            className={`${styles.tocItem} ${
+                              activeHeadingId === h.id ? styles.tocItemActive : ""
+                            }`}>
+                            <span className={styles.tocNum}>0{i + 1}</span>
+                            <span className={styles.tocText}>{h.text}</span>
+                            {h.wordCount > 0 ? (
+                              <span className={styles.tocWords}>{h.wordCount}w</span>
+                            ) : null}
+                          </button>
+                        ))}
+                      </nav>
+                    </div>
+                  ) : (
+                    <p className={styles.noHeadings}>Single continuous dispatch</p>
+                  )}
+
+                  <div className={styles.distribution}>
+                    <p className={styles.tocTitle}>Element Density</p>
+                    <div className={styles.tagsList}>
+                      <span>{headingsAnalysis.blockCounts.p} paragraphs</span>
+                      {headingsAnalysis.blockCounts.q > 0 ? (
+                        <span>{headingsAnalysis.blockCounts.q} quotes</span>
+                      ) : null}
+                      {headingsAnalysis.blockCounts.img > 0 ? (
+                        <span>{headingsAnalysis.blockCounts.img} images</span>
+                      ) : null}
+                      {headingsAnalysis.blockCounts.vid > 0 ? (
+                        <span>{headingsAnalysis.blockCounts.vid} video</span>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
 
                 <button

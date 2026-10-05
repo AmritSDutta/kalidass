@@ -13,7 +13,7 @@ import {
 } from "@site/src/lib/api";
 import {useAuth} from "@site/src/lib/auth";
 import {emptyDraft, formatDate} from "@site/src/lib/media";
-import type {ArticleDraft, ArticleSummary, Block, QualityEvalResult} from "@site/src/lib/types";
+import type {Article, ArticleDraft, ArticleSummary, Block, QualityEvalResult} from "@site/src/lib/types";
 import styles from "./admin.module.css";
 
 const ACCENTS = ["#6366f1", "#f97316", "#06b6d4", "#10b981", "#f43f5e", "#eab308"];
@@ -37,24 +37,7 @@ function ensureBlockId(block: Block): Block {
   return block._id ? block : {...block, _id: crypto.randomUUID()};
 }
 
-function fromArticle(article: {
-  title: string;
-  subtitle: string;
-  excerpt: string;
-  coverImage: string;
-  videoUrl: string;
-  author: ArticleDraft["author"];
-  authorEmail?: string;
-  tags: string[];
-  accent: string;
-  featured: boolean;
-  blocks: Block[];
-  slug: string;
-  published: boolean;
-  private: boolean;
-  aiGenerated: boolean;
-  userId?: string;
-}): ArticleDraft {
+function fromArticle(article: Article | ArticleDraft): ArticleDraft {
   return {
     title: article.title,
     subtitle: article.subtitle,
@@ -74,6 +57,7 @@ function fromArticle(article: {
     private: article.private ?? true,
     aiGenerated: article.aiGenerated ?? false,
     userId: article.userId,
+    evaluation: article.evaluation || null,
   };
 }
 
@@ -159,6 +143,7 @@ function AdminInner(): ReactNode {
         setEditingId(article.id);
         setDraft(fromArticle(article));
         setTagInput((article.tags || []).join(", "));
+        setDraftEval(article.evaluation || null);
       })
       .catch(() => setStatus("Could not load that story."));
   }, [editSlug, isAuthenticated]);
@@ -321,6 +306,8 @@ function AdminInner(): ReactNode {
     setStatus("");
     setSafetyAlert("");
 
+    let currentEval = draftEval;
+
     // Pre-save Quality & Safety Guardrail Check
     try {
       const evalRes = await evaluateQuality({
@@ -329,6 +316,7 @@ function AdminInner(): ReactNode {
         excerpt: draft.excerpt,
         blocks: draft.blocks,
       });
+      currentEval = evalRes;
       setDraftEval(evalRes);
 
       if (evalRes.safety.verdict !== "safe") {
@@ -351,6 +339,7 @@ function AdminInner(): ReactNode {
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean),
+      evaluation: currentEval || draft.evaluation || null,
     };
     try {
       const saved = editingId
@@ -358,6 +347,7 @@ function AdminInner(): ReactNode {
         : await createArticle(payload);
       setEditingId(saved.id);
       setDraft(fromArticle(saved));
+      setDraftEval(saved.evaluation || currentEval || null);
       setTagInput((saved.tags || []).join(", "));
       setStatus(
         editingId
@@ -384,6 +374,7 @@ function AdminInner(): ReactNode {
         avatar: user?.avatar || "",
       },
     });
+    setDraftEval(null);
     setTagInput("");
     setStatus("");
   };
@@ -394,6 +385,7 @@ function AdminInner(): ReactNode {
       setEditingId(article.id);
       setDraft(fromArticle(article));
       setTagInput((article.tags || []).join(", "));
+      setDraftEval(article.evaluation || null);
       setStatus(`Editing ${article.title}`);
       setMode("compose");
     } catch (err) {
@@ -806,79 +798,9 @@ function AdminInner(): ReactNode {
               ))}
             </form>
 
-            {/* Right 20% Heading Analysis & Live Outline Panel */}
+            {/* Right 20% Heading Analysis & Heuristics Panel */}
             <aside className={styles.editorSidebar}>
               <div className={styles.analysisCard}>
-                <div className={styles.analysisHeader}>
-                  <span className={styles.analysisKicker}>Heading Analysis</span>
-                  <h3>Live Outline</h3>
-                </div>
-
-                <div className={styles.metricsGrid}>
-                  <div className={styles.metric}>
-                    <span className={styles.metricVal}>{draftAnalysis.headings.length}</span>
-                    <span className={styles.metricLabel}>Sections</span>
-                  </div>
-                  <div className={styles.metric}>
-                    <span className={styles.metricVal}>{draftAnalysis.totalWords}</span>
-                    <span className={styles.metricLabel}>Words</span>
-                  </div>
-                  <div className={styles.metric}>
-                    <span className={styles.metricVal}>{draftAnalysis.estimatedReadTime}m</span>
-                    <span className={styles.metricLabel}>Read</span>
-                  </div>
-                </div>
-
-                {draftAnalysis.headings.length > 0 ? (
-                  <div className={styles.tocSection}>
-                    <p className={styles.tocTitle}>Document Structure</p>
-                    <nav className={styles.tocNav}>
-                      {draftAnalysis.headings.map((h, i) => (
-                        <button
-                          key={`${h.id}-${i}`}
-                          type="button"
-                          onClick={() => {
-                            const el = document.getElementById(h.id);
-                            if (el) el.scrollIntoView({behavior: "smooth", block: "center"});
-                          }}
-                          className={styles.tocItem}>
-                          <span className={styles.tocNum}>0{i + 1}</span>
-                          <span className={styles.tocText}>{h.text}</span>
-                          {h.wordCount > 0 ? (
-                            <span className={styles.tocWords}>{h.wordCount}w</span>
-                          ) : null}
-                        </button>
-                      ))}
-                    </nav>
-                  </div>
-                ) : (
-                  <div className={styles.noHeadingsBox}>
-                    <p className={styles.noHeadings}>No section headings</p>
-                    <button
-                      type="button"
-                      className={styles.addHeadingBtn}
-                      onClick={() => addBlock("heading")}>
-                      + Add Heading
-                    </button>
-                  </div>
-                )}
-
-                <div className={styles.distribution}>
-                  <p className={styles.tocTitle}>Block Breakdown</p>
-                  <div className={styles.tagsList}>
-                    <span>{draftAnalysis.blockCounts.paragraph} paragraphs</span>
-                    {draftAnalysis.blockCounts.quote > 0 ? (
-                      <span>{draftAnalysis.blockCounts.quote} quotes</span>
-                    ) : null}
-                    {draftAnalysis.blockCounts.image > 0 ? (
-                      <span>{draftAnalysis.blockCounts.image} images</span>
-                    ) : null}
-                    {draftAnalysis.blockCounts.video > 0 ? (
-                      <span>{draftAnalysis.blockCounts.video} video</span>
-                    ) : null}
-                  </div>
-                </div>
-
                 <div className={styles.auditCard}>
                   <div className={styles.auditHeader}>
                     <span className={styles.analysisKicker}>Article Heuristics</span>
@@ -931,6 +853,10 @@ function AdminInner(): ReactNode {
                         </div>
                       </div>
 
+                      {draftEval.summary ? (
+                        <p className={styles.evalSummaryText}>{draftEval.summary}</p>
+                      ) : null}
+
                       {draftEval.safety.violations.length > 0 ? (
                         <div className={styles.violationsBox}>
                           <strong>Violations:</strong>
@@ -943,6 +869,78 @@ function AdminInner(): ReactNode {
                       ) : null}
                     </div>
                   ) : null}
+                </div>
+
+                <div className={styles.structureSection}>
+                  <div className={styles.analysisHeader}>
+                    <span className={styles.analysisKicker}>Heading Analysis</span>
+                    <h3>Live Outline</h3>
+                  </div>
+
+                  <div className={styles.metricsGrid}>
+                    <div className={styles.metric}>
+                      <span className={styles.metricVal}>{draftAnalysis.headings.length}</span>
+                      <span className={styles.metricLabel}>Sections</span>
+                    </div>
+                    <div className={styles.metric}>
+                      <span className={styles.metricVal}>{draftAnalysis.totalWords}</span>
+                      <span className={styles.metricLabel}>Words</span>
+                    </div>
+                    <div className={styles.metric}>
+                      <span className={styles.metricVal}>{draftAnalysis.estimatedReadTime}m</span>
+                      <span className={styles.metricLabel}>Read</span>
+                    </div>
+                  </div>
+
+                  {draftAnalysis.headings.length > 0 ? (
+                    <div className={styles.tocSection}>
+                      <p className={styles.tocTitle}>Document Structure</p>
+                      <nav className={styles.tocNav}>
+                        {draftAnalysis.headings.map((h, i) => (
+                          <button
+                            key={`${h.id}-${i}`}
+                            type="button"
+                            onClick={() => {
+                              const el = document.getElementById(h.id);
+                              if (el) el.scrollIntoView({behavior: "smooth", block: "center"});
+                            }}
+                            className={styles.tocItem}>
+                            <span className={styles.tocNum}>0{i + 1}</span>
+                            <span className={styles.tocText}>{h.text}</span>
+                            {h.wordCount > 0 ? (
+                              <span className={styles.tocWords}>{h.wordCount}w</span>
+                            ) : null}
+                          </button>
+                        ))}
+                      </nav>
+                    </div>
+                  ) : (
+                    <div className={styles.noHeadingsBox}>
+                      <p className={styles.noHeadings}>No section headings</p>
+                      <button
+                        type="button"
+                        className={styles.addHeadingBtn}
+                        onClick={() => addBlock("heading")}>
+                        + Add Heading
+                      </button>
+                    </div>
+                  )}
+
+                  <div className={styles.distribution}>
+                    <p className={styles.tocTitle}>Block Breakdown</p>
+                    <div className={styles.tagsList}>
+                      <span>{draftAnalysis.blockCounts.paragraph} paragraphs</span>
+                      {draftAnalysis.blockCounts.quote > 0 ? (
+                        <span>{draftAnalysis.blockCounts.quote} quotes</span>
+                      ) : null}
+                      {draftAnalysis.blockCounts.image > 0 ? (
+                        <span>{draftAnalysis.blockCounts.image} images</span>
+                      ) : null}
+                      {draftAnalysis.blockCounts.video > 0 ? (
+                        <span>{draftAnalysis.blockCounts.video} video</span>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
               </div>
             </aside>
