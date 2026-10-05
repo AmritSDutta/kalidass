@@ -53,6 +53,30 @@ def http_get_json(url, headers=None):
         print(f"GET {url} failed: {e}", file=sys.stderr)
         return None
 
+def parse_json_safely(raw_text):
+    if not raw_text or not isinstance(raw_text, str):
+        return None
+    cleaned = raw_text.strip()
+    cleaned = re.sub(r"^[\\x60]{3}(?:json)?\\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\\s*[\\x60]{3}$", "", cleaned).strip()
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        pass
+    match_obj = re.search(r"\{[\s\S]*\}", cleaned)
+    if match_obj:
+        try:
+            return json.loads(match_obj.group(0))
+        except Exception:
+            pass
+    match_arr = re.search(r"\[[\s\S]*\]", cleaned)
+    if match_arr:
+        try:
+            return json.loads(match_arr.group(0))
+        except Exception:
+            pass
+    return None
+
 def search_tavily(query):
     # attachHeaders injects Authorization: Bearer <key> for api.tavily.com
     url = "https://api.tavily.com/search"
@@ -135,11 +159,7 @@ def main():
         try:
             cand = data.get("candidates", [])[0]
             text = cand.get("content", {}).get("parts", [])[0].get("text", "")
-            match = re.search(r"\{[\s\S]*\}", text)
-            if match:
-                generated_json = json.loads(match.group(0))
-            else:
-                generated_json = json.loads(text)
+            generated_json = parse_json_safely(text)
         except Exception as e:
             print(f"Gemini parsing failed: {e}", file=sys.stderr)
 
@@ -159,15 +179,30 @@ def main():
         if data and "message" in data:
             try:
                 content = data["message"].get("content", "")
-                match = re.search(r"\{[\s\S]*\}", content)
-                if match:
-                    generated_json = json.loads(match.group(0))
-                else:
-                    generated_json = json.loads(content)
-            except Exception:
-                pass
+                generated_json = parse_json_safely(content)
+            except Exception as e:
+                print(f"Ollama parsing failed: {e}", file=sys.stderr)
 
-    # 4. Deterministic fallback if external LLMs are unconfigured
+    # 3.5. Normalize polymorphic structure (handle bare block arrays or wrapped arrays)
+    if isinstance(generated_json, list):
+        if len(generated_json) > 0 and isinstance(generated_json[0], dict) and ("blocks" in generated_json[0] or "title" in generated_json[0]):
+            generated_json = generated_json[0]
+        elif len(generated_json) > 0 and all(isinstance(item, dict) and "type" in item for item in generated_json):
+            generated_json = {
+                "title": ${JSON.stringify(request.topic || "Autonomous Systems Synthesis")},
+                "subtitle": ${JSON.stringify(request.angle || "Field notes from isolated container runtime.")},
+                "excerpt": f"Empirical systems research on {${JSON.stringify(request.topic || 'systems architecture')}}.",
+                "tags": ["Systems", "Research", "Upstash Box"],
+                "accent": ${JSON.stringify(request.accent || "#6366f1")},
+                "blocks": generated_json
+            }
+        else:
+            generated_json = None
+
+    if not isinstance(generated_json, dict):
+        generated_json = None
+
+    # 4. Deterministic fallback if external LLMs are unconfigured or failed
     is_fallback = False
     if not generated_json:
         is_fallback = True
@@ -202,11 +237,11 @@ def main():
             "fallbackNotice": "Generated using local systems fallback template. Configure GEMINI_API_KEY via attachHeaders for live neural synthesis."
         }
 
-    # 5. OpenAI gpt-image-1 Technical Infographic Generation
+    # 5. OpenAI gpt-image-1 Technical Infographic Generation (strictly single cover image)
     try:
-        title = generated_json.get("title", "")
-        excerpt = generated_json.get("excerpt", "")
-        topic_desc = f"{title} — {excerpt}" if excerpt else title
+        title = generated_json.get("title", "") if isinstance(generated_json, dict) else ""
+        excerpt = generated_json.get("excerpt", "") if isinstance(generated_json, dict) else ""
+        topic_desc = f"{title} — {excerpt}" if excerpt else str(title or ${JSON.stringify(request.topic || "Systems Architecture")})
         topic_desc = topic_desc[:300]
 
         infographic_prompt = (
@@ -254,7 +289,8 @@ def main():
         print(f"gpt-image-1 generation skipped: {e}", file=sys.stderr)
 
     # 6. Ensure Mandatory Sources Attribution Block at the End
-    blocks = generated_json.get("blocks", [])
+    raw_blocks = generated_json.get("blocks", []) if isinstance(generated_json, dict) else []
+    blocks = raw_blocks if isinstance(raw_blocks, list) else []
     if citations:
         attribution_items = "\\n".join([f"• [{c['title']}]({c['url']})" for c in citations if c.get("url")])
         blocks.append({

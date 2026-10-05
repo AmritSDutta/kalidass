@@ -11,6 +11,7 @@ import {buildSystemPrompt, buildUserPrompt} from "./prompts.js";
 export function buildNodeAgentScript(request, env) {
   const systemPrompt = JSON.stringify(buildSystemPrompt(request));
   const userPrompt = JSON.stringify(buildUserPrompt(request));
+  const searchTopic = JSON.stringify(request.topic || "systems research");
   const rawWeight = parseFloat(env.TAVILY_SEARCH_WEIGHT || "80");
   const tavilyWeight = rawWeight <= 1.0 ? rawWeight * 100 : rawWeight;
   const geminiModelName = JSON.stringify(request.model || env.GEMINI_MODEL || "gemini-3.1-flash-lite");
@@ -19,6 +20,27 @@ export function buildNodeAgentScript(request, env) {
 
   return `// Kalidass Journal — Custom In-Box Research Agent (Node.js Runtime)
 import fs from "node:fs";
+
+function parseJsonSafely(rawText) {
+  if (!rawText || typeof rawText !== "string") return null;
+  const cleaned = rawText.trim().replace(/^[\\x60]{3}(?:json)?\\s*/i, "").replace(/\\s*[\\x60]{3}$/, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+  const matchObj = cleaned.match(/\{[\s\S]*\}/);
+  if (matchObj) {
+    try {
+      return JSON.parse(matchObj[0]);
+    } catch {}
+  }
+  const matchArr = cleaned.match(/\[[\s\S]*\]/);
+  if (matchArr) {
+    try {
+      return JSON.parse(matchArr[0]);
+    } catch {}
+  }
+  return null;
+}
 
 async function searchTavily(query) {
   try {
@@ -124,8 +146,7 @@ async function run() {
     if (geminiRes.ok) {
       const data = await geminiRes.json();
       const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);
-      if (jsonMatch) generatedJson = JSON.parse(jsonMatch[0]);
+      generatedJson = parseJsonSafely(content);
     }
   } catch (err) {
     console.warn("Gemini synthesis failed, cascading to Ollama:", err.message);
@@ -152,15 +173,36 @@ async function run() {
       if (ollamaRes.ok) {
         const data = await ollamaRes.json();
         const content = data.message?.content || "";
-        const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);
-        if (jsonMatch) generatedJson = JSON.parse(jsonMatch[0]);
+        generatedJson = parseJsonSafely(content);
       }
     } catch (err) {
       console.warn("Ollama synthesis failed:", err.message);
     }
   }
 
-  // 4. Deterministic fallback if external LLMs are unconfigured
+  // 3.5. Normalize polymorphic structure (handle bare block arrays or wrapped arrays)
+  if (Array.isArray(generatedJson)) {
+    if (generatedJson.length > 0 && typeof generatedJson[0] === "object" && generatedJson[0] !== null && ("blocks" in generatedJson[0] || "title" in generatedJson[0])) {
+      generatedJson = generatedJson[0];
+    } else if (generatedJson.length > 0 && generatedJson.every(item => typeof item === "object" && item !== null && "type" in item)) {
+      generatedJson = {
+        title: ${JSON.stringify(request.topic || "Autonomous Systems Synthesis")},
+        subtitle: ${JSON.stringify(request.angle || "Field notes from isolated container runtime.")},
+        excerpt: "Empirical systems research on " + ${JSON.stringify(request.topic || "systems architecture")} + ".",
+        tags: ["Systems", "Research", "Upstash Box"],
+        accent: ${JSON.stringify(request.accent || "#6366f1")},
+        blocks: generatedJson,
+      };
+    } else {
+      generatedJson = null;
+    }
+  }
+
+  if (!generatedJson || typeof generatedJson !== "object") {
+    generatedJson = null;
+  }
+
+  // 4. Deterministic fallback if external LLMs are unconfigured or failed
   if (!generatedJson) {
     generatedJson = {
       title: ${JSON.stringify(request.topic || "Autonomous Systems Synthesis")},
@@ -194,10 +236,10 @@ async function run() {
     };
   }
 
-  // 5. OpenAI gpt-image-1 Technical Infographic Generation
+  // 5. OpenAI gpt-image-1 Technical Infographic Generation (strictly single cover image)
   try {
-    const title = generatedJson.title || "";
-    const excerpt = generatedJson.excerpt || "";
+    const title = (generatedJson && typeof generatedJson === "object" && generatedJson.title) || ${JSON.stringify(request.topic || "Systems Architecture")};
+    const excerpt = (generatedJson && typeof generatedJson === "object" && generatedJson.excerpt) || "";
     const topicDesc = (title + (excerpt ? " — " + excerpt : "")).slice(0, 300);
 
     const infographicPrompt = \`Create a modern PREMIUM horizontal landscape infographic on:
@@ -258,7 +300,8 @@ Keep watermark elegant and non-intrusive.\`;
   }
 
   // 6. Ensure Mandatory Sources Attribution Block at the End
-  const blocks = generatedJson.blocks || [];
+  const rawBlocks = generatedJson && typeof generatedJson === "object" && Array.isArray(generatedJson.blocks) ? generatedJson.blocks : [];
+  const blocks = [...rawBlocks];
   if (citations.length > 0) {
     const attributionItems = citations
       .filter(c => c.url)

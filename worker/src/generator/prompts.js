@@ -39,18 +39,28 @@ EDITORIAL GUIDELINES:
 - Tone: ${toneDesc}
 - Quality Standard: Extreme signal-to-noise ratio. Reject fluff, generic summaries, and buzzword padding.
 - Technical Rigor: Use precise systems terminology, architectural comparisons, latency/throughput considerations, and state machine transitions.
-- Structure:
-  - Title: Crisp, authoritative, and evocative.
-  - Subtitle: A one-sentence distillation of the thesis.
-  - Excerpt: 2-3 sentences capturing the core takeaway.
-  - Content Blocks: A polymorphic sequence of blocks (heading, paragraph, quote) with clear narrative flow.
-  - Block Types Allowed:
-    1. {"type": "heading", "text": "Section title"}
-    2. {"type": "paragraph", "text": "Technical body text"}
-    3. {"type": "quote", "text": "Key thesis or empirical insight", "cite": "Source/Paper/Author"}
-  - Accent Color: Hex pigment code (e.g. #6366f1).
-  - Tags: 3-5 high-signal technical tags.
-  - Mandatory Sources Block: The final section of the article blocks must conclude with {"type": "heading", "text": "References & Empirical Attributions"} and a {"type": "quote", "text": "...", "cite": "..."} citing live empirical sources.
+
+OUTPUT FORMAT REQUIREMENTS:
+You MUST respond with a single valid JSON Object adhering strictly to this schema:
+{
+  "title": "A crisp, authoritative, evocative title",
+  "subtitle": "A one-sentence distillation of the thesis",
+  "excerpt": "2-3 sentences capturing the core takeaway and technical architecture",
+  "tags": ["Systems", "Architecture", "Evals"],
+  "accent": "${request.accent || "#6366f1"}",
+  "blocks": [
+    {"type": "heading", "text": "1. Section Heading"},
+    {"type": "paragraph", "text": "Deep technical analysis body text..."},
+    {"type": "quote", "text": "Key thesis or empirical insight", "cite": "Source Paper/Specification"}
+  ]
+}
+
+CRITICAL SCHEMA INVARIANTS:
+1. The root MUST be a JSON Object { ... } with keys "title", "subtitle", "excerpt", "tags", "accent", and "blocks".
+2. Do NOT output a top-level JSON array [ ... ].
+3. Allowed block types in "blocks" are strictly: "heading", "paragraph", and "quote".
+4. Do NOT output any image blocks in "blocks" — exactly ONE cover image is generated separately for the article.
+5. The final blocks must conclude with {"type": "heading", "text": "References & Empirical Attributions"} and a {"type": "quote", "text": "...", "cite": "..."} citing empirical papers/sources.
 
 Always output strictly valid JSON conforming to the requested schema.`;
 
@@ -73,10 +83,10 @@ CURRENT DATE: {{CURRENT_DATE}}
 TOPIC: ${request.topic}
 ${request.angle ? `THESIS ANGLE / FOCUS: ${request.angle}` : ""}
 ${request.tone ? `EDITORIAL TONE: ${request.tone}` : ""}
-TARGET BLOCK COUNT: Approximately ${blockTarget} structured blocks (sections with headings, dense analytical paragraphs, and highlighted insight quotes).
+TARGET BLOCK COUNT: Approximately ${blockTarget} structured blocks (headings, technical paragraphs, and highlighted insight quotes).
 ACCENT COLOR: ${request.accent || "#6366f1"}
 
-Ensure the response contains only the structured JSON payload with full references and attributions.`;
+Ensure the response contains only the structured JSON Object { "title": ..., "subtitle": ..., "excerpt": ..., "tags": [...], "accent": "...", "blocks": [...] } with full references and attributions. Do NOT output a bare JSON array.`;
 
   return template.replace(/\{\{CURRENT_DATE\}\}/g, currentDate);
 }
