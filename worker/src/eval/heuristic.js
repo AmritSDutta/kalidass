@@ -15,12 +15,12 @@ export function evaluateHeuristic(text, options = {}) {
   const violenceTerms = [
     "kill", "murder", "bomb", "suicide", "stab", "assassinate", "massacre",
     "slaughter", "shoot", "gunshot", "blood", "torture", "decapitate",
-    "lynch", "strangle", "mutilat", "behead", "bullet", "homicide"
+    "lynch", "strangle", "mutilate", "mutilation", "behead", "bullet", "homicide"
   ];
   const sexualTerms = [
     "sex", "sexual", "sexually", "bad sex", "porn", "porno", "nsfw", "erotic",
     "nude", "nudity", "xxx", "hentai", "blowjob", "intercourse", "positions in bed",
-    "69", "climax", "orgasm", "masturbat", "anal", "genital", "fetish",
+    "69", "climax", "orgasm", "masturbate", "masturbation", "masturbating", "anal sex", "anus", "genital", "fetish",
     "dildo", "vagina", "penis", "boobs", "breast", "slut", "whore", "hooker"
   ];
   const hateTerms = [
@@ -29,19 +29,19 @@ export function evaluateHeuristic(text, options = {}) {
     "die in a fire", "kill yourself"
   ];
 
-  let violenceHits = 0;
-  let sexualHits = 0;
-  let hateHits = 0;
+  const countWordMatches = (termList) => {
+    let hits = 0;
+    for (const term of termList) {
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`\\b${escaped}\\b`, "i");
+      if (regex.test(content)) hits += 1;
+    }
+    return hits;
+  };
 
-  for (const term of violenceTerms) {
-    if (content.includes(term)) violenceHits += 1;
-  }
-  for (const term of sexualTerms) {
-    if (content.includes(term)) sexualHits += 1;
-  }
-  for (const term of hateTerms) {
-    if (content.includes(term)) hateHits += 1;
-  }
+  const violenceHits = countWordMatches(violenceTerms);
+  const sexualHits = countWordMatches(sexualTerms);
+  const hateHits = countWordMatches(hateTerms);
 
   const violenceProb = violenceHits > 0 ? Math.min(0.99, 0.75 + (violenceHits - 1) * 0.12) : 0.02;
   const sexualProb = sexualHits > 0 ? Math.min(0.99, 0.85 + (sexualHits - 1) * 0.10) : 0.01;
@@ -62,10 +62,7 @@ export function evaluateHeuristic(text, options = {}) {
     if (content.includes(p)) aiHits += 1;
   }
 
-  let techHits = 0;
-  for (const t of technicalTerms) {
-    if (content.includes(t)) techHits += 1;
-  }
+  const techHits = countWordMatches(technicalTerms);
 
   const aiProb = Math.min(0.95, Math.max(0.08, (aiHits * 0.18) + (words.length > 200 && techHits === 0 ? 0.4 : 0.15)));
   const techScore = Math.min(5.0, Math.max(2.0, 2.8 + (techHits * 0.35) + (wordCount > 300 ? 0.5 : 0)));
