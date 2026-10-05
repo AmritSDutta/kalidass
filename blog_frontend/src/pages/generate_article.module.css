@@ -86,10 +86,19 @@
 }
 
 /* Admin Lock / Auth Gate */
+.lockContainer {
+  min-height: 55vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
 .lockCard {
-  max-width: 520px;
-  margin: 4rem auto;
-  padding: 2.5rem;
+  width: 100%;
+  max-width: 480px;
+  margin: 2rem auto;
+  padding: 2.5rem 2rem;
   background: var(--paper);
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
@@ -97,6 +106,17 @@
   text-align: center;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+.lockBadge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--chroma-neel);
+  margin-bottom: 0.8rem;
 }
 
 .lockCard h2 {
@@ -110,6 +130,80 @@
   font-size: 0.95rem;
   line-height: 1.5;
   margin-bottom: 1.5rem;
+}
+
+.auth0Button {
+  width: 100%;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #ffffff !important;
+  border: 0;
+  border-radius: 12px;
+  padding: 0.85rem 1.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.auth0Button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+}
+
+.authDivider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem 0 1rem;
+  color: var(--ink-muted, #888);
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.authDivider::before,
+.authDivider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.authDivider:not(:empty)::before {
+  margin-right: 0.8rem;
+}
+
+.authDivider:not(:empty)::after {
+  margin-left: 0.8rem;
+}
+
+.adminTokenToggle {
+  background: transparent;
+  border: 0;
+  color: var(--ink-muted, #888);
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0.4rem;
+  margin-bottom: 0.5rem;
+  transition: color 0.15s;
+}
+
+.adminTokenToggle:hover {
+  color: var(--ink);
+}
+
+.authError {
+  margin-top: 1rem;
+  color: #ef4444;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .lockForm {

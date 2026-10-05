@@ -19,12 +19,20 @@ const TONES: {key: "research" | "field-notes" | "explainer" | "speculative"; lab
 const BLOCK_COUNTS = [6, 8, 12, 16];
 
 export default function GenerateArticlePage(): ReactNode {
-  const {user, isAuthenticated, isAdmin, isLoading, unlockWithAdminToken} =
-    useAuth();
+  const {
+    user,
+    isAuthenticated,
+    isAdmin,
+    isLoading,
+    isAuth0Configured,
+    loginWithAuth0,
+    unlockWithAdminToken,
+  } = useAuth();
 
   const [passwordInput, setPasswordInput] = useState("");
   const [authError, setAuthError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [showAdminTokenInput, setShowAdminTokenInput] = useState(false);
 
   // Form State
   const [topic, setTopic] = useState("");
@@ -168,38 +176,70 @@ export default function GenerateArticlePage(): ReactNode {
     return (
       <Layout title="AI Article Generator — Kalidass Journal">
         <main className={styles.page}>
-          <p>Verifying admin permissions...</p>
+          <div className={styles.lockContainer}>
+            <p className={styles.formHelp}>Checking authentication...</p>
+          </div>
         </main>
       </Layout>
     );
   }
 
-  // Admin Auth Gate
-  if (!isAuthenticated || !isAdmin) {
+  // Auth Gate — Aligned with Studio Edit Flow
+  if (!isAuthenticated) {
     return (
-      <Layout title="Admin Unlock — Kalidass Journal">
+      <Layout
+        title="AI Article Generator — Sign In"
+        description="Authentication required to generate research articles.">
         <main className={styles.page}>
-          <div className={styles.lockCard}>
-            <h2>Studio Admin Unlock</h2>
-            <p>
-              Autonomous article generation with Upstash Box is restricted to authorized Kalidass
-              super-administrators.
-            </p>
-            {authError && <div className={`${styles.alert} ${styles.alertError}`}>{authError}</div>}
-            <form onSubmit={handleAdminUnlock} className={styles.lockForm}>
-              <input
-                type="password"
-                className={styles.input}
-                placeholder="Enter Super-Admin Token..."
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                disabled={authBusy}
-                autoFocus
-              />
-              <button type="submit" className={styles.primary} disabled={authBusy || !passwordInput.trim()}>
-                {authBusy ? "Verifying..." : "Unlock Generator"}
-              </button>
-            </form>
+          <div className={styles.lockContainer}>
+            <div className={styles.lockCard}>
+              <div className={styles.lockBadge}>⚡ Neural Article Generator</div>
+              <h2>Sign in to Generate</h2>
+              <p>
+                Sign in with your Auth0 account or enter an admin token to autonomously generate,
+                evaluate, and draft research essays with Upstash Box.
+              </p>
+
+              {isAuth0Configured ? (
+                <button
+                  type="button"
+                  className={styles.auth0Button}
+                  onClick={loginWithAuth0}>
+                  🚀 Sign in with Auth0
+                </button>
+              ) : null}
+
+              <div className={styles.authDivider}>
+                {isAuth0Configured ? "or unlock with admin token" : "enter admin token"}
+              </div>
+
+              {!isAuth0Configured || showAdminTokenInput ? (
+                <form onSubmit={handleAdminUnlock} className={styles.lockForm}>
+                  <input
+                    type="password"
+                    className={styles.input}
+                    placeholder="Enter ADMIN_TOKEN"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    disabled={authBusy}
+                    autoFocus={!isAuth0Configured}
+                    required
+                  />
+                  <button type="submit" className={styles.primary} disabled={authBusy || !passwordInput.trim()}>
+                    {authBusy ? "Verifying..." : "Unlock Generator"}
+                  </button>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.adminTokenToggle}
+                  onClick={() => setShowAdminTokenInput(true)}>
+                  Developer: Unlock with ADMIN_TOKEN
+                </button>
+              )}
+
+              {authError ? <p className={styles.authError}>{authError}</p> : null}
+            </div>
           </div>
         </main>
       </Layout>

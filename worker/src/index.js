@@ -71,6 +71,12 @@ async function getAuthUser(request, env) {
   if (auth.startsWith("Bearer ")) {
     token = auth.slice(7).trim();
   }
+
+  const elevationToken = (request.headers.get("x-admin-token") || "").trim();
+  if (!token && elevationToken && matchesAdminToken(elevationToken, env)) {
+    token = elevationToken;
+  }
+
   if (!token) return null;
 
   const adminEmails = (env.ADMIN_EMAILS || "")
@@ -148,7 +154,7 @@ async function getAuthUser(request, env) {
 
       // Step-up elevation check via x-admin-token header
       const elevationToken = (request.headers.get("x-admin-token") || "").trim();
-      const isElevated = isSuperuserEligible && matchesAdminToken(elevationToken, env);
+      const isElevated = matchesAdminToken(elevationToken, env);
 
       return {
         sub: payload.sub,
@@ -671,8 +677,8 @@ export default {
 
       if (url.pathname === "/api/generate" && request.method === "POST") {
         const user = await getAuthUser(request, env);
-        if (!user || user.role !== "admin") {
-          return json({error: "Forbidden: Admin privileges required to generate articles"}, 403, origin);
+        if (!user) {
+          return json({error: "Unauthorized: Authentication required to generate articles"}, 401, origin);
         }
 
         let body = {};

@@ -32,17 +32,16 @@ export async function authHeaders(): Promise<HeadersInit> {
     }
   }
 
+  const adminToken = localStorage.getItem("kalidass-admin-token");
+
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
-    const elevationToken = sessionStorage.getItem("kalidass-elevation-token");
-    if (elevationToken) {
-      headers["X-Admin-Token"] = elevationToken;
-    }
-  } else {
-    const adminToken = localStorage.getItem("kalidass-admin-token");
     if (adminToken) {
-      headers["Authorization"] = `Bearer ${adminToken}`;
+      headers["X-Admin-Token"] = adminToken;
     }
+  } else if (adminToken) {
+    headers["Authorization"] = `Bearer ${adminToken}`;
+    headers["X-Admin-Token"] = adminToken;
   }
 
   return headers;
@@ -73,10 +72,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function getAuthMe(tokenOverride?: string, elevationOverride?: string) {
+export function getAuthMe(tokenOverride?: string, adminTokenOverride?: string) {
   const headers: Record<string, string> = {};
   if (tokenOverride) headers["Authorization"] = `Bearer ${tokenOverride}`;
-  if (elevationOverride) headers["X-Admin-Token"] = elevationOverride;
+  const effectiveAdminToken = adminTokenOverride || (typeof window !== "undefined" ? localStorage.getItem("kalidass-admin-token") : null);
+  if (effectiveAdminToken) headers["X-Admin-Token"] = effectiveAdminToken;
   return request<{ok: boolean; user: AuthUser}>("/api/auth/me", {headers});
 }
 

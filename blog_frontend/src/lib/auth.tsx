@@ -128,12 +128,13 @@ export function AuthProvider({children}: {children: ReactNode}) {
             }
 
             if (rawToken && auth0User) {
-              // Clear stale legacy admin tokens
-              localStorage.removeItem("kalidass-admin-token");
-              const elevationToken = sessionStorage.getItem("kalidass-elevation-token");
+              if (typeof window !== "undefined") {
+                sessionStorage.removeItem("kalidass-elevation-token");
+              }
+              const adminToken = localStorage.getItem("kalidass-admin-token");
 
               try {
-                const data = await getAuthMe(rawToken, elevationToken || undefined);
+                const data = await getAuthMe(rawToken, adminToken || undefined);
                 if (isMounted) {
                   const email = (auth0User.email || data.user.email || "").toLowerCase().trim();
                   const isEligible = Boolean(
@@ -231,7 +232,9 @@ export function AuthProvider({children}: {children: ReactNode}) {
   };
 
   const logout = async () => {
-    sessionStorage.removeItem("kalidass-elevation-token");
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("kalidass-elevation-token");
+    }
     localStorage.removeItem("kalidass-admin-token");
     setUser(null);
     setToken(null);
@@ -273,7 +276,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
 
       const res = await elevateAuth(trimmed, rawToken || undefined);
       if (res.ok) {
-        sessionStorage.setItem("kalidass-elevation-token", trimmed);
+        localStorage.setItem("kalidass-admin-token", trimmed);
         const auth0User = auth0ClientInstance ? await auth0ClientInstance.getUser() : null;
         try {
           const me = await getAuthMe(rawToken || undefined, trimmed);
@@ -294,14 +297,16 @@ export function AuthProvider({children}: {children: ReactNode}) {
       return false;
     } catch (err) {
       console.warn("Superuser elevation failed:", err);
-      sessionStorage.removeItem("kalidass-elevation-token");
+      localStorage.removeItem("kalidass-admin-token");
       return false;
     }
   };
 
   const dropSuperuser = async () => {
-    sessionStorage.removeItem("kalidass-elevation-token");
     localStorage.removeItem("kalidass-admin-token");
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("kalidass-elevation-token");
+    }
     if (token && auth0ClientInstance) {
       try {
         const isAuth = await auth0ClientInstance.isAuthenticated();
@@ -348,8 +353,10 @@ export function AuthProvider({children}: {children: ReactNode}) {
   };
 
   const clearAuth = () => {
-    sessionStorage.removeItem("kalidass-elevation-token");
     localStorage.removeItem("kalidass-admin-token");
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("kalidass-elevation-token");
+    }
     setUser(null);
     setToken(null);
   };
