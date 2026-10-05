@@ -95,7 +95,7 @@ Or from the repo root:
 ./start.sh
 ```
 
-Without `UPSTASH_BLOB_TOKEN`, the Worker seeds sample AI briefs in memory. Direct browser uploads to Upstash (`/api/upload`) require the token.
+Without `UPSTASH_BLOB_TOKEN`, the Worker's in-memory store starts empty. Direct browser uploads to Upstash (`/api/upload`) require the token.
 
 ## 5. Studio Notes
 

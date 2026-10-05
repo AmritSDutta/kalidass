@@ -67,7 +67,7 @@ kalidass/
 │   │   ├── eval/              # Quality & safety evaluation pipeline (heuristic, Jev, Clef)
 │   │   ├── generator/         # Upstash Box AI article generator (Python & Node harnesses)
 │   │   ├── memory.js          # In-memory storage adapter fallback
-│   │   └── seed.js            # Sample articles for local preview
+│   │   └── seed.js            # Seed bootstrap (empty by default)
 │   ├── package.json           # Worker dependencies
 │   ├── wrangler.toml          # Cloudflare Worker configuration & bindings
 │   └── .dev.vars.example      # Example environment variables template
@@ -140,7 +140,7 @@ npm run start
 ```
 
 - Worker listens on `http://127.0.0.1:8787`.
-- Without `UPSTASH_BLOB_TOKEN`, the worker runs on the in-memory store seeded with sample articles.
+- Without `UPSTASH_BLOB_TOKEN`, the worker runs on an empty in-memory store (no seeded articles).
 
 #### 2. Start the Frontend
 In your second terminal:
@@ -165,7 +165,7 @@ The unified Docs7 documentation suite is hosted at the repository root in `docs/
 npx docs7 dev docs --port 3333
 
 # Validate docs integrity (zero errors / zero warnings)
-node C:/Users/amrit/.gemini/config/skills/docs7/scripts/validate_docs7.mjs docs
+node scripts/validate_docs.mjs docs
 ```
 
 ---

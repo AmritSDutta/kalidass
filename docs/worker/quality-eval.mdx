@@ -62,9 +62,9 @@ If the primary provider encounters missing credentials or a network outage, the 
 | Dimension | Primitive | Range / Values | Purpose |
 | :--- | :--- | :--- | :--- |
 | **AI Writing Detection** | `noul` | Probability $0.0 - 1.0$ | Estimates likelihood of synthetic LLM generation vs. human composition |
-| **Technical Accuracy** | `score` | $1.0 - 5.0$ (Level: beginner, intermediate, advanced) | Scores systems architecture depth, engineering precision, and factual rigor |
-| **Reader Engagement** | `score` | $1.0 - 5.0$ (Level: low, moderate, high, viral) | Evaluates narrative flow, clarity, and pacing |
-| **Editorial Readiness** | `choice` | `ready`, `needs_revision`, `draft_only` | Editorial triage classification |
+| **Technical Accuracy** | `score` | $1.0 - 5.0$ (Level: elementary, competent, rigorous, expert) | Scores systems architecture depth, engineering precision, and factual rigor |
+| **Reader Engagement** | `score` | $1.0 - 5.0$ (Level: dry, clear, engaging, captivating) | Evaluates narrative flow, clarity, and pacing |
+| **Editorial Readiness** | `choice` | `needs_major_revision`, `needs_minor_polish`, `ready_for_publication` | Editorial triage classification |
 | **Safety: Violence** | `noul` | Probability $0.0 - 1.0$ | Hard-blocks violent or harmful content when $> 0.55$ |
 | **Safety: Sexual** | `noul` | Probability $0.0 - 1.0$ | Hard-blocks sexually explicit content when $> 0.55$ |
 | **Safety: Antisocial** | `noul` | Probability $0.0 - 1.0$ | Hard-blocks harassment, hate speech, or unsocial content when $> 0.55$ |
@@ -121,7 +121,7 @@ If the primary provider encounters missing credentials or a network outage, the 
       "confidence": 0.95
     }
   },
-  "summary": "Article heuristics: expert accuracy, engaging prose. Safety: safe."
+  "summary": "Article heuristics: expert accuracy, engaging prose, Human-authored. Safety: safe."
 }
 ```
 

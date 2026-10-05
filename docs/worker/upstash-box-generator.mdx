@@ -126,13 +126,17 @@ Content-Type: application/json
     "ok": true,
     "source": "local-heuristic",
     "safety": {
+      "violence": 0.02,
+      "sexual": 0.01,
+      "antisocial": 0.02,
       "verdict": "safe",
       "violations": []
     },
     "metrics": {
-      "isAiWritten": { "probability": 0.94, "label": "AI Generated" },
-      "accuracy": { "score": 0.92, "level": "High" },
-      "editorialReadiness": { "choice": "Ready with Review" }
+      "isAiWritten": { "probability": 0.94, "label": "AI-Synthesized" },
+      "accuracy": { "score": 4.2, "level": "rigorous", "confidence": 0.9 },
+      "engagement": { "score": 3.8, "level": "engaging", "confidence": 0.88 },
+      "editorialReadiness": { "choice": "needs_minor_polish", "confidence": 0.88 }
     }
   }
 }

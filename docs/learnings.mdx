@@ -37,5 +37,5 @@ On Windows filesystems, colons (`:`) are prohibited characters, causing `fs-extr
 ## Verification Protocol
 
 1. Run `npm run typecheck` first (fast static type analysis with `noEmit`).
-2. Run `node C:/Users/amrit/.gemini/config/skills/docs7/scripts/validate_docs7.mjs docs` to ensure 100% docs7 validity.
+2. Run `node scripts/validate_docs.mjs docs` to ensure 100% docs7 validity.
 3. Validate runtime behavior by launching `npm run start` and ensuring the Cloudflare Worker is active on port `8787`.

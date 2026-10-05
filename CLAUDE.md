@@ -38,7 +38,7 @@ kalidass/
 │   │   ├── eval/              # Heuristic, Jev, and Clef quality & safety evaluators
 │   │   ├── generator/         # Upstash Box sandbox article generator & agent runners
 │   │   ├── memory.js          # In-memory dev fallback store
-│   │   └── seed.js            # Default article seeds
+│   │   └── seed.js            # Seed bootstrap (empty by default)
 │   ├── package.json           # Worker dependencies
 │   ├── wrangler.toml          # Worker routing and environment bindings
 │   └── .dev.vars.example      # Example local environment secrets
@@ -96,7 +96,7 @@ kalidass/
 3. **Browser DOM Guards**:
    - Wrap browser globals (`window`, `localStorage`, `document`) with `typeof window !== "undefined"` or `ExecutionEnvironment.canUseDOM`.
 4. **Storage Modes & Cloudflare Fetch Guard**:
-   - In-memory fallback seeds 4 default articles when `UPSTASH_BLOB_TOKEN` is unset.
+   - In-memory fallback bootstraps an empty index when `UPSTASH_BLOB_TOKEN` is unset (the seed list is intentionally empty).
    - Upstash Blob storage activates automatically when `UPSTASH_BLOB_TOKEN` is configured.
    - Cloudflare Workers buffer stream bodies to `Uint8Array` in `globalThis.fetch` to ensure `Content-Length` preservation on `@upstash/blob` S3 calls.
 5. **Admin Auth Token Invariant**:

@@ -108,14 +108,14 @@ ROOT_BUCKET = "kalidass"
 cd blog_frontend && npm.cmd run typecheck
 
 # 2. Validate Docs Suite
-node C:/Users/amrit/.gemini/config/skills/docs7/scripts/validate_docs7.mjs docs
+node scripts/validate_docs.mjs docs
 
 # 3. Deploy Worker
 cd ../worker && npx.cmd wrangler deploy
 
 # 4. Test Live Health via Pages
 curl https://kalidass.amrit.fyi/api/health
-# Expected: {"ok":true,"storage":"upstash-blob"}
+# Expected: {"ok":true}
 
 # 5. Test Live Article Index via Pages
 curl https://kalidass.amrit.fyi/api/articles

@@ -74,7 +74,7 @@ npm run start
 # Equivalent: npx wrangler dev --port 8787 --ip 0.0.0.0
 ```
 
-With `UPSTASH_BLOB_TOKEN` set in `.dev.vars`, the worker connects to the live Upstash bucket. Without it, articles are served from the in-memory store seeded with four default briefs.
+With `UPSTASH_BLOB_TOKEN` set in `.dev.vars`, the worker connects to the live Upstash bucket. Without it, articles are served from an empty in-memory store (no seeded articles).
 
 ## Deployment
 
@@ -94,5 +94,5 @@ curl https://kalidass.amrit.fyi/api/health
 Expected production response:
 
 ```json
-{"ok":true,"storage":"upstash-blob","runtime":"cloudflare-worker"}
+{"ok":true}
 ```

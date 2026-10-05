@@ -153,7 +153,7 @@ export function adminOk(request, env) {
    - `curl -I https://kalidass-journal-worker.amrit08ju.workers.dev/api/health` → Disabled / Connection refused.
    - `curl -I https://api.kalidass.amrit.fyi/api/health` → DNS lookup fails (Domain removed).
 2. **Pages Edge Gateway Test**:
-   - `curl https://kalidass.amrit.fyi/api/health` → `{"ok":true,"storage":"upstash-blob"}`.
+   - `curl https://kalidass.amrit.fyi/api/health` → `{"ok":true}`.
 3. **Admin Token Boundary Test**:
    - `curl -X POST https://kalidass.amrit.fyi/api/articles` → `401 Unauthorized` (`{"error":"Unauthorized"}`).
    - `curl -X POST https://kalidass.amrit.fyi/api/articles -H "Authorization: Bearer <VALID_TOKEN>"` → `200 OK` / Accepted.

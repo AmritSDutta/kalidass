@@ -16,7 +16,7 @@ flowchart TD
   MemoryMode["mode = 'memory' - memoryBucket from memory.js"]
   SeedCheck["ensureSeed: read getIndexPath(env)"]
   Populated["Index exists and non-empty - serve as-is"]
-  Empty["Index missing or empty - write 4 seed articles"]
+  Empty["Index missing or empty - bootstrap empty index"]
   EnvCheck -->|"Yes"| UpstashMode
   EnvCheck -->|"No"| MemoryMode
   UpstashMode --> SeedCheck
@@ -130,8 +130,8 @@ On the first request to any articles endpoint, `ensureSeed(bucket, env)` is call
 
 1. Reads `<rootBucket>/index.json` (via `getIndexPath(env)`).
 2. If the index is already a non-empty array, returns it immediately.
-3. Otherwise, writes all four articles from `seed.js` as individual `<rootBucket>/articles/<id>.json` objects.
+3. Otherwise, iterates `seedArticles` from `seed.js` and writes any entries as individual `<rootBucket>/articles/<id>.json` objects.
 4. Builds and writes a fresh `<rootBucket>/index.json` from the summarized seed articles.
-5. Returns the populated index array.
+5. Returns the index array.
 
-The four seed articles cover: *The Geometry of Attention*, *Agents That Remember Too Much*, *Eval Is a Product Decision*, and *Multimodal Is a Plumbing Problem*. Each has a full `blocks` array, cover image URL, author, tags, accent color, and `featured` flag.
+`seed.js` currently exports an empty placeholder list (`export const seedArticles = []`), so the first request against an empty store bootstraps an empty `index.json` and the public feed renders with no articles until content is created or published.
