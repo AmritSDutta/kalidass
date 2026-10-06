@@ -39,13 +39,15 @@ When a user or AI agent visits any page on Kalidass Journal, the frontend automa
 ## 2. Available WebMCP Tools
 
 ### `searchArticles`
-Searches publication articles and research briefs by text keyword or category tag, strictly bounded to a maximum of 5 items.
+Searches publication articles and research briefs by text keyword or category tag.
+* **On `/magazine` (Issues Page) & Non-Story Pages**: Strictly bounded to a maximum of 5 items matching query/tag.
+* **On `/story/:slug` Pages**: Automatically detects the active story path and returns **only that article** (1-item array).
 
-* **Description**: `"Search Kalidass Journal research articles by text query or tag (returns up to 5 articles)."`
+* **Description**: `"Search Kalidass Journal research articles by text query or tag (returns up to 5 articles, or only the current story on /story/:slug)."`
 * **Input Schema / Parameters**:
   * `query` *(string, optional)*: Keyword to match in title, subtitle, excerpt, or tags.
   * `tag` *(string, optional)*: Category filter (e.g. `'Agents'`, `'Evals'`, `'Systems'`).
-* **Returns**: Array of at most 5 article summaries:
+* **Returns**: Array of matching article summaries (or single isolated story on `/story/:slug`):
   ```json
   [
     {
@@ -68,11 +70,13 @@ Searches publication articles and research briefs by text keyword or category ta
 
 ### `readArticle`
 Gets the direct canonical reading URL, path, and summary metadata for a specific article.
+* **On `/magazine` & Non-Story Pages**: Requires an explicit `slug` argument.
+* **On `/story/:slug` Pages**: Automatically resolves the slug from `window.location.pathname` if omitted in arguments.
 
-* **Description**: `"Get the direct reading URL and summary metadata for a specific article by slug."`
+* **Description**: `"Get the direct reading URL and summary metadata for a specific article by slug (or automatically for the current story on /story/:slug)."`
 * **Input Schema / Parameters**:
-  * `slug` *(string, required)*: The URL slug of the article (e.g. `'attention-as-routing'`).
-* **Returns**: Lightweight navigation and metadata object:
+  * `slug` *(string, optional)*: The bare URL slug of the article (e.g. `'attention-as-routing'` — not a path or URL; optional if currently viewing `/story/:slug`).
+* **Returns**: Canonical navigation and metadata object:
   ```json
   {
     "slug": "attention-as-routing",
