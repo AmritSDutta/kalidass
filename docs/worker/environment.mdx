@@ -14,13 +14,15 @@ The worker reads configuration from two sources: **Cloudflare secrets** (set via
 | `UPSTASH_BLOB_TOKEN` | Secret | For persistence | *(absent)* | Upstash Blob read/write token. When absent, the worker falls back to in-memory storage and articles do not persist across restarts. |
 | `ADMIN_TOKEN` | Secret | Optional | *(absent)* | Legacy/M2M Bearer token for Super-Admin and AI Agent automated publishing. Write endpoints require valid Auth0 JWT or `ADMIN_TOKEN`. |
 | `UPSTASH_BOX_API_KEY` | Secret | For Box features | *(absent)* | Upstash Box API key required for autonomous article generation (`/api/generate`) and Python intelligence runs. |
-| `SERPAPI_API_KEY` | Secret | For intelligence | *(absent)* | SerpApi key (`SERPAPI_API_KEY` or `SERP_API_KEY`) used to extract Google search intelligence and AI Overviews. |
+| `SERPAPI_API_KEY` | Secret | For intelligence | *(absent)* | SerpApi key (`SERPAPI_API_KEY` or `SERP_API_KEY`) dedicated exclusively to extracting Google search intelligence, Knowledge Graphs, and AI Overviews in the `/intel` cascade. |
+| `FIRECRAWL_API_KEY` | Secret | For Box generator | *(absent)* | Firecrawl API key injected into Upstash Box (`api.firecrawl.dev`) for deep web research and markdown extraction during article generation. |
+| `FIRECRAWL_SEARCH_WEIGHT` | Var / Secret | Optional | `"70"` | Percentage weighting for Firecrawl vs. Tavily during article generation (defaults to 70% Firecrawl, 30% Tavily). |
 | `UPSTASH_REDIS_REST_URL` | Var / Secret | For caching | *(absent)* | Upstash Redis REST endpoint URL. When absent, the worker falls back to an in-memory Map cache. |
 | `UPSTASH_REDIS_REST_TOKEN` | Secret | For caching | *(absent)* | Upstash Redis REST authentication token. |
 | `EVAL_PROVIDER` | Var / Secret | Optional | `"jev"` | Active quality evaluation provider (`"jev"`, `"clef"`, or `"heuristic"`). Cascades on failure. |
 | `JEV_API_KEY` | Secret | For Jev eval | *(absent)* | TypeSafe AI Jev decision API key used by the quality & safety evaluation pipeline. |
 | `OPENAI_API_KEY` | Secret | For Box generator | *(absent)* | OpenAI API key passed to Upstash Box containers for agent content authoring and DALL-E hero art. |
-| `TAVILY_API_KEY` | Secret | For Box generator | *(absent)* | Tavily API key passed to Upstash Box containers for deep research search grounding. |
+| `TAVILY_API_KEY` | Secret | For Box generator | *(absent)* | Tavily API key passed to Upstash Box containers for search grounding (30% share in Firecrawl/Tavily hybrid). |
 | `AUTH0_DOMAIN` | Var / Secret | Optional | `""` | Auth0 tenant domain (e.g. `dev-xxx.us.auth0.com`) used for JWKS remote signature verification. |
 | `AUTH0_AUDIENCE` | Var (`wrangler.toml`) | Optional | `"https://api.kalidass.amrit.fyi"` | Auth0 API identifier (audience) for validating JWT claims. |
 | `ADMIN_EMAILS` | Var / Secret | Optional | `""` | Comma-separated list of email addresses granted Super-Admin permissions (`role: "admin"`). |

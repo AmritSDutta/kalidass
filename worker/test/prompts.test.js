@@ -8,6 +8,7 @@ import {
 } from "../src/generator/prompts.js";
 import {buildPythonAgentScript} from "../src/generator/agent_python.js";
 import {buildNodeAgentScript} from "../src/generator/agent_node.js";
+import {buildAttachHeaders} from "../src/generator/box_based_generator.js";
 
 describe("Generator Prompts & Non-Negotiable Angle (Hermetic)", () => {
   const currentYear = new Date().getFullYear().toString();
@@ -91,21 +92,30 @@ describe("Generator Prompts & Non-Negotiable Angle (Hermetic)", () => {
     expect(userPrompt).toContain("Approximately 12 structured blocks");
   });
 
-  it("buildPythonAgentScript embeds Tavily time_range: year, SerpApi as of date grounding, and milder vibrant infographic styling", () => {
+  it("buildPythonAgentScript embeds Firecrawl and Tavily (70/30 ratio), excludes SerpApi, and milder vibrant infographic styling", () => {
     const req = {
       topic: "Sparse Autoencoders",
       angle: "Feature dictionary steering in language models with top-k activation sparsification",
     };
     const script = buildPythonAgentScript(req, {});
 
-    // Search query
+    // Search query & 70/30 weight
     expect(script).toContain("search_web(");
     expect(script).toContain("Sparse Autoencoders");
+    expect(script).toContain("firecrawl_weight = 70");
 
-    // Tavily recency & SerpApi as of date grounding
+    // Firecrawl and Tavily integration
+    expect(script).toContain("search_firecrawl(");
+    expect(script).toContain("api.firecrawl.dev");
+    expect(script).toContain("search_tavily(");
     expect(script).toContain('"time_range": "year"');
-    expect(script).toContain(", as of ");
-    expect(script).toContain(currentDate);
+
+    // SerpApi exclusion from article generator
+    expect(script).not.toContain("search_serpapi");
+    expect(script).not.toContain("serpapi.com");
+
+    // Attribution
+    expect(script).toContain("Autonomous Research Tooling (Firecrawl/Tavily)");
 
     // Anti-recency reminder
     expect(script).toContain("MANDATORY REMINDER");
@@ -118,21 +128,30 @@ describe("Generator Prompts & Non-Negotiable Angle (Hermetic)", () => {
     expect(script).toContain("IEEE / Elsevier");
   });
 
-  it("buildNodeAgentScript embeds Tavily time_range: year, SerpApi as of date grounding, and milder vibrant infographic styling", () => {
+  it("buildNodeAgentScript embeds Firecrawl and Tavily (70/30 ratio), excludes SerpApi, and milder vibrant infographic styling", () => {
     const req = {
       topic: "Sparse Autoencoders",
       angle: "Feature dictionary steering in language models with top-k activation sparsification",
     };
     const script = buildNodeAgentScript(req, {});
 
-    // Search query
+    // Search query & 70/30 weight
     expect(script).toContain("searchWeb(");
     expect(script).toContain("Sparse Autoencoders");
+    expect(script).toContain("firecrawlWeight = 70");
 
-    // Tavily recency & SerpApi as of date grounding
+    // Firecrawl and Tavily integration
+    expect(script).toContain("searchFirecrawl(");
+    expect(script).toContain("api.firecrawl.dev");
+    expect(script).toContain("searchTavily(");
     expect(script).toContain('time_range: "year"');
-    expect(script).toContain(", as of ");
-    expect(script).toContain(currentDate);
+
+    // SerpApi exclusion from article generator
+    expect(script).not.toContain("searchSerpApi");
+    expect(script).not.toContain("serpapi.com");
+
+    // Attribution
+    expect(script).toContain("Autonomous Research Tooling (Firecrawl/Tavily)");
 
     // Anti-recency reminder
     expect(script).toContain("MANDATORY REMINDER");
@@ -143,5 +162,23 @@ describe("Generator Prompts & Non-Negotiable Angle (Hermetic)", () => {
     expect(script).toContain("MILDER, VIBRANT COLOR SHADES");
     expect(script).toContain("whitish background");
     expect(script).toContain("IEEE / Elsevier");
+  });
+
+  it("buildAttachHeaders injects Firecrawl header and isolates SerpApi from generator", () => {
+    const env = {
+      FIRECRAWL_API_KEY: "fc-test-key",
+      TAVILY_API_KEY: "tv-test-key",
+      SERPAPI_API_KEY: "serp-secret",
+    };
+    const headers = buildAttachHeaders(env, {});
+
+    expect(headers["api.firecrawl.dev"]).toEqual({
+      Authorization: "Bearer fc-test-key",
+    });
+    expect(headers["api.tavily.com"]).toEqual({
+      Authorization: "Bearer tv-test-key",
+    });
+    // SerpApi is preserved exclusively for AI intelligence dossiers
+    expect(headers["serpapi.com"]).toBeUndefined();
   });
 });

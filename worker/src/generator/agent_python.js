@@ -13,8 +13,8 @@ export function buildPythonAgentScript(request, env) {
   const userPrompt = JSON.stringify(buildUserPrompt(request));
   const searchTopic = JSON.stringify(buildSearchQuery(request));
   const currentDateFormatted = JSON.stringify(getCurrentDateFormatted());
-  const rawWeight = parseFloat(env.TAVILY_SEARCH_WEIGHT || "80");
-  const tavilyWeight = rawWeight <= 1.0 ? rawWeight * 100 : rawWeight;
+  const rawWeight = parseFloat(env.FIRECRAWL_SEARCH_WEIGHT || "70");
+  const firecrawlWeight = rawWeight <= 1.0 ? rawWeight * 100 : rawWeight;
   const geminiModelName = JSON.stringify(request.model || env.GEMINI_MODEL || "gemini-3.1-flash-lite");
   const ollamaModelName = JSON.stringify(env.OLLAMA_MODEL || "gemma4:31b-cloud");
   const ollamaBaseUrl = JSON.stringify(env.OLLAMA_API_BASE_URL || "https://ollama.com");
@@ -96,42 +96,38 @@ def search_tavily(query):
         ]
     return []
 
-def search_serpapi(query):
-    # attachHeaders injects X-Api-Key for serpapi.com, or queries with engine=google
-    current_date = ${currentDateFormatted}
-    date_query = f"{query}, as of {current_date}"
-    url = f"https://serpapi.com/search.json?engine=google&q={urllib.parse.quote(date_query)}"
-    data = http_get_json(url)
-    results = []
-    if data:
-        # Check for AI overview
-        ai_overview = data.get("ai_overview")
-        if ai_overview:
-            results.append({
-                "title": "Google SGE AI Overview",
-                "url": "https://google.com/search",
-                "description": json.dumps(ai_overview)
-            })
-        for r in data.get("organic_results", [])[:5]:
-            results.append({
+def search_firecrawl(query):
+    # attachHeaders injects Authorization: Bearer <key> for api.firecrawl.dev
+    url = "https://api.firecrawl.dev/v1/search"
+    payload = {
+        "query": query,
+        "limit": 5,
+        "scrapeOptions": {"formats": ["markdown"]}
+    }
+    data = http_post_json(url, payload)
+    if data and "data" in data and isinstance(data["data"], list):
+        return [
+            {
                 "title": r.get("title", ""),
-                "url": r.get("link", ""),
-                "description": r.get("snippet", "")
-            })
-    return results
+                "url": r.get("url", ""),
+                "description": r.get("description", "") or (r.get("markdown", "")[:300] if r.get("markdown") else "")
+            }
+            for r in data["data"]
+        ]
+    return []
 
 def search_web(query):
-    tavily_weight = ${tavilyWeight}
-    pick_tavily = (random.random() * 100) < tavily_weight
+    firecrawl_weight = ${firecrawlWeight}
+    pick_firecrawl = (random.random() * 100) < firecrawl_weight
     results = []
-    if pick_tavily:
-        results = search_tavily(query)
-        if not results:
-            results = search_serpapi(query)
-    else:
-        results = search_serpapi(query)
+    if pick_firecrawl:
+        results = search_firecrawl(query)
         if not results:
             results = search_tavily(query)
+    else:
+        results = search_tavily(query)
+        if not results:
+            results = search_firecrawl(query)
     return results
 
 def main():
@@ -314,7 +310,7 @@ def main():
         blocks.append({
             "type": "quote",
             "text": f"Synthesized with live empirical sources gathered via hybrid search:\\n{attribution_items}",
-            "cite": "Autonomous Research Tooling (Tavily/SerpApi)"
+            "cite": "Autonomous Research Tooling (Firecrawl/Tavily)"
         })
     generated_json["blocks"] = blocks
 

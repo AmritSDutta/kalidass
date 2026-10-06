@@ -13,8 +13,8 @@ export function buildNodeAgentScript(request, env) {
   const userPrompt = JSON.stringify(buildUserPrompt(request));
   const searchTopic = JSON.stringify(buildSearchQuery(request));
   const currentDateFormatted = JSON.stringify(getCurrentDateFormatted());
-  const rawWeight = parseFloat(env.TAVILY_SEARCH_WEIGHT || "80");
-  const tavilyWeight = rawWeight <= 1.0 ? rawWeight * 100 : rawWeight;
+  const rawWeight = parseFloat(env.FIRECRAWL_SEARCH_WEIGHT || "70");
+  const firecrawlWeight = rawWeight <= 1.0 ? rawWeight * 100 : rawWeight;
   const geminiModelName = JSON.stringify(request.model || env.GEMINI_MODEL || "gemini-3.1-flash-lite");
   const ollamaModelName = JSON.stringify(env.OLLAMA_MODEL || "gemma4:31b-cloud");
   const ollamaBaseUrl = JSON.stringify(env.OLLAMA_API_BASE_URL || "https://ollama.com");
@@ -70,51 +70,41 @@ async function searchTavily(query) {
   return [];
 }
 
-async function searchSerpApi(query) {
+async function searchFirecrawl(query) {
   try {
-    const currentDate = ${currentDateFormatted};
-    const dateQuery = query + ", as of " + currentDate;
-    const url = new URL("https://serpapi.com/search.json");
-    url.searchParams.set("engine", "google");
-    url.searchParams.set("q", dateQuery);
-    const res = await fetch(url.toString(), {
-      headers: { "Accept": "application/json" }
+    const res = await fetch("https://api.firecrawl.dev/v1/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query,
+        limit: 5,
+        scrapeOptions: { formats: ["markdown"] }
+      })
     });
     if (res.ok) {
       const data = await res.json();
-      const results = [];
-      if (data.ai_overview) {
-        results.push({
-          title: "Google SGE AI Overview",
-          url: "https://google.com/search",
-          description: JSON.stringify(data.ai_overview)
-        });
-      }
-      for (const r of (data.organic_results || []).slice(0, 5)) {
-        results.push({
-          title: r.title || "",
-          url: r.link || "",
-          description: r.snippet || ""
-        });
-      }
-      return results;
+      return (data.data || []).map(r => ({
+        title: r.title || "",
+        url: r.url || "",
+        description: r.description || (r.markdown ? r.markdown.slice(0, 300) : "") || ""
+      }));
     }
   } catch (err) {
-    console.error("SerpApi search failed:", err);
+    console.error("Firecrawl search failed:", err);
   }
   return [];
 }
 
 async function searchWeb(query) {
-  const tavilyWeight = ${tavilyWeight};
-  const pickTavily = Math.random() * 100 < tavilyWeight;
+  const firecrawlWeight = ${firecrawlWeight};
+  const pickFirecrawl = Math.random() * 100 < firecrawlWeight;
   let results = [];
-  if (pickTavily) {
-    results = await searchTavily(query);
-    if (!results.length) results = await searchSerpApi(query);
-  } else {
-    results = await searchSerpApi(query);
+  if (pickFirecrawl) {
+    results = await searchFirecrawl(query);
     if (!results.length) results = await searchTavily(query);
+  } else {
+    results = await searchTavily(query);
+    if (!results.length) results = await searchFirecrawl(query);
   }
   return results;
 }
@@ -327,7 +317,7 @@ Keep watermark elegant and non-intrusive.\`;
     blocks.push({
       type: "quote",
       text: "Synthesized with live empirical sources gathered via hybrid search:\\n" + attributionItems,
-      cite: "Autonomous Research Tooling (Tavily/SerpApi)"
+      cite: "Autonomous Research Tooling (Firecrawl/Tavily)"
     });
   }
   generatedJson.blocks = blocks;

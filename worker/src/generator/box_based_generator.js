@@ -11,16 +11,15 @@ import {sanitizeArticleDraft} from "./schemas.js";
  * @param {import("./types").GenerateArticleRequest} request
  * @returns {Record<string, Record<string, string>>}
  */
-function buildAttachHeaders(env, request) {
+export function buildAttachHeaders(env, request) {
   const custom = request.attachHeaders || {};
   const map = {
     ...custom,
   };
 
-  const serpApiKey = env.SERPAPI_API_KEY || env.SERP_API_KEY;
-  if (serpApiKey && !map["serpapi.com"]) {
-    map["serpapi.com"] = {
-      "X-Api-Key": serpApiKey,
+  if (env.FIRECRAWL_API_KEY && !map["api.firecrawl.dev"]) {
+    map["api.firecrawl.dev"] = {
+      Authorization: `Bearer ${env.FIRECRAWL_API_KEY}`,
     };
   }
 

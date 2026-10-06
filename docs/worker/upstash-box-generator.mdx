@@ -70,8 +70,8 @@ Generates modern, typography-free 16:9 landscape infographics (`1536x1024`, WebP
 - Eliminates AI hallucinated text and typographical artifact clutter.
 - **Strict Single-Image Invariant**: Exactly ONE image is generated per article, saved directly to `coverImage`. No inline image blocks are emitted.
 
-### E. Date-Aware Search & Non-Negotiable Thesis Angle Invariant
-- **Date-Aware Hybrid Search**: Research queries automatically append the dynamic operational year (e.g. `2026`) and thesis angle directives (`buildSearchQuery`) so Tavily and SerpApi fetch cutting-edge empirical sources.
+### E. Firecrawl & Tavily Hybrid Search (70/30 Ratio) & Non-Negotiable Thesis Angle Invariant
+- **Firecrawl & Tavily Hybrid Search (70/30 Ratio)**: Research queries automatically append the dynamic operational year (e.g. `2026`) and thesis angle directives (`buildSearchQuery`). In-box agents split research load across **Firecrawl (70%)** and **Tavily (30%)** with bidirectional fallback. SerpApi is strictly excluded from generation containers, isolating its rate limits and quota exclusively for `/intel` Google SERP intelligence extraction.
 - **Non-Negotiable Thesis Angle Priority**: The `angle` field is enforced as a top-priority non-negotiable invariant. Anti-recency prompting guarantees the model fulfills specific architectural requirements and constraints over generic search snippets.
 - **IEEE & Elsevier Publishing Standard with Developer Pragmatism**: Synthesizes formal taxonomy, problem formulations, and citations benchmarked against IEEE/Elsevier journals, paired with actionable systems engineering intuition.
 - **Beginner-Friendly Introduction & Elaborated Block Depth**: Accessible introductory analogies and motivations in the excerpt and first section, followed by deeply elaborated 3-5 sentence paragraphs for all technical blocks.

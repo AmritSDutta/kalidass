@@ -85,6 +85,7 @@ The intelligence module is structured into isolated, testable modules within the
    - Dual-tier resolution: checks Upstash Redis first, falls back to Upstash Blob (`kalidass/intelligence/{id}.json`), and populates the cache on blob hits.
    - `peekArticleIntelligence()` provides the read-only Redis → Blob → re-cache cascade (24h TTL, key `kalidass:ai_intel:<id>`) behind the public `/intel` route — it never spawns a Box or joins in-flight generation locks.
 4. **`redis/`**: Uniform Redis interface abstraction providing `@upstash/redis` connectivity in production and an in-memory Map adapter for local development.
+5. **SerpApi Quota Isolation**: SerpApi is dedicated exclusively to the Article Intelligence Engine. Article authoring in the generator relies on Firecrawl and Tavily (70/30 ratio), preserving 100% of SerpApi rate limits and search quotas for reader dossier compilation.
 
 ---
 

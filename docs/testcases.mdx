@@ -21,7 +21,7 @@ flowchart TD
     ConcurrencySuite["concurrency.test.js - 2 tests"]
     IntelligenceSuite["intelligence.test.js - 12 tests"]
     WebMcpSuite["webmcp.test.js - 9 tests"]
-    PromptsSuite["prompts.test.js - 7 tests"]
+    PromptsSuite["prompts.test.js - 8 tests"]
     RedisSuite["redis_cache.test.js - 15 tests"]
   end
   subgraph SystemUnderTest["Worker Engine Under Test"]
@@ -176,7 +176,8 @@ Verifies Upstash Box generator prompt construction for `/api/generate`:
 | :--- | :--- | :--- |
 | **Query Building** | `getCurrentYear` and `buildSearchQuery` combine verbatim topic and angle. | Clean current-year-aware query strings. |
 | **System & User Prompts** | `buildSystemPrompt` / `buildUserPrompt` embed IEEE/Elsevier grounding, developer pragmatism, and the non-negotiable thesis angle. | Structural directives present in both prompts. |
-| **Agent Scripts** | `buildPythonAgentScript` / `buildNodeAgentScript` embed Tavily `time_range: year`, SerpApi as-of grounding, and infographic styling directives. | Grounding tokens present in both scripts. |
+| **Agent Scripts: Firecrawl/Tavily Hybrid** | `buildPythonAgentScript` / `buildNodeAgentScript` embed Firecrawl (70%) and Tavily (30%) with bidirectional fallback, isolate SerpApi, and enforce infographic styling directives. | Firecrawl & Tavily grounding tokens present; SerpApi excluded; 70/30 weights validated. |
+| **Outbound attachHeaders Injection** | `buildAttachHeaders` injects `api.firecrawl.dev` and `api.tavily.com` proxy headers while strictly isolating `serpapi.com`. | Accurate hypervisor proxy header map without SerpApi leakage. |
 
 ---
 
@@ -226,7 +227,7 @@ npm.cmd --prefix blog_frontend test
 Execution output (worker):
 ```text
  Test Files  9 passed (9)
-      Tests  68 passed (68)
+      Tests  69 passed (69)
    Duration  ~750ms
 ```
 
