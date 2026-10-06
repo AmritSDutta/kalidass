@@ -103,8 +103,8 @@
 
 .aiTag {
   display: inline-block;
-  border: 1px solid var(--chroma-sindoor);
-  color: var(--chroma-sindoor);
+  border: 1px solid var(--chroma-kesari);
+  color: var(--chroma-kesari);
   border-radius: 999px;
   padding: 0.2rem 0.55rem;
   font-size: 0.6rem;

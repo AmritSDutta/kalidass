@@ -191,7 +191,9 @@ export default function StoryPage(): ReactNode {
                     {article.aiGenerated ? (
                       <>
                         {" · "}
-                        <span className={styles.aiTag}>AI</span>
+                        <span className={styles.aiTag}>
+                          Ai generated content, verify before applying in real life
+                        </span>
                       </>
                     ) : null}
                   </span>
