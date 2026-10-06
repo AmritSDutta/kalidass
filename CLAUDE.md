@@ -109,7 +109,7 @@ kalidass/
 7. **Upstash Box Generator Invariants**:
    - Enforce strictly ONE image per article (`coverImage` via `gpt-image-1` 16:9 typography-free landscape infographics). No inline images.
 8. **Intelligence In-Flight Concurrency Locks & Redis Cache**:
-   - `worker/src/intelligence/service.js` uses `_intelInflightLocks` to prevent duplicate Upstash Box executions for the same article. Intelligence dossiers are cached in Upstash Redis (`kalidass:intel:<id>`) with a 24h TTL and backed by Upstash Blob at `kalidass/intelligence/<id>.json`.
+   - `worker/src/intelligence/service.js` uses `_intelInflightLocks` to prevent duplicate Upstash Box executions for the same article. Intelligence dossiers are cached in Upstash Redis (`kalidass:ai_intel:<id>`) with a 24h TTL and backed by Upstash Blob at `kalidass/intelligence/<id>.json`.
 9. **WebMCP Route Context Isolation**:
    - On `/story/:slug`, `searchArticles` automatically restricts output to the current story and `readArticle` defaults to the active story slug without requiring an explicit parameter.
 

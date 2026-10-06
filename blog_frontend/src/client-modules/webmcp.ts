@@ -1,42 +1,11 @@
 import {getArticle, listArticles} from "../lib/api";
 import type {Article, ArticleSummary} from "../lib/types";
+import {StoryWebMcp} from "./storyWebMcp";
+import {getBrowserStorySlug} from "./webmcpShared";
+import type {ModelContextRegistry, WebMcpTool} from "./webmcpShared";
 
-// Types for the W3C WebMCP Specification
-export interface WebMcpTool {
-  name: string;
-  description: string;
-  inputSchema?: {
-    type: "object";
-    properties: Record<string, {type: string; description: string}>;
-    required?: string[];
-  };
-  parameters?: {
-    type: "object";
-    properties: Record<string, {type: string; description: string}>;
-    required?: string[];
-  };
-  execute: (args: any) => Promise<unknown> | unknown;
-}
-
-export interface ModelContextRegistry {
-  tools: Record<string, WebMcpTool>;
-  registerTool: (tool: WebMcpTool) => void;
-  unregisterTool: (name: string) => void;
-  listTools: () => Promise<WebMcpTool[]>;
-  getTools: () => WebMcpTool[];
-}
-
-declare global {
-  interface Document {
-    modelContext?: ModelContextRegistry;
-  }
-  interface Navigator {
-    modelContext?: ModelContextRegistry;
-  }
-  interface Window {
-    modelContext?: ModelContextRegistry;
-  }
-}
+export type {ModelContextRegistry, WebMcpTool} from "./webmcpShared";
+export {getBrowserStorySlug} from "./webmcpShared";
 
 function ensureModelContext(): ModelContextRegistry {
   const existing =
@@ -95,21 +64,6 @@ function ensureModelContext(): ModelContextRegistry {
   window.modelContext = registry;
 
   return registry;
-}
-
-/**
- * Extracts story slug from browser URL pathname if path starts with /story/:slug.
- * Returns null for non-story routes (e.g. /magazine, /, /admin).
- */
-export function getBrowserStorySlug(pathname?: string): string | null {
-  const path =
-    typeof pathname === "string"
-      ? pathname
-      : typeof window !== "undefined" && window.location
-      ? window.location.pathname || ""
-      : "";
-  const match = path.match(/^\/story\/([^/?#]+)/i);
-  return match ? decodeURIComponent(match[1].trim()) : null;
 }
 
 export async function executeSearchArticles(
@@ -309,11 +263,29 @@ export function initWebMcp(): void {
       console.warn("[WebMCP] Could not register 'readArticle':", err);
     }
 
-    console.log("[WebMCP] Registered in-page tools: searchArticles, readArticle");
+    // Tools 3-6: Story-specific tools via StoryWebMcp
+    try {
+      const storyWebMcp = new StoryWebMcp();
+      for (const tool of storyWebMcp.getToolDefinitions()) {
+        try {
+          context.registerTool(tool);
+        } catch (err) {
+          console.warn(`[WebMCP] Could not register '${tool.name}':`, err);
+        }
+      }
+    } catch (err) {
+      console.warn("[WebMCP] Could not register story tools:", err);
+    }
+
+    console.log(
+      "[WebMCP] Registered in-page tools: searchArticles, readArticle, getStoryAiOverview, getStoryCitations, getStoryVideoLinks, getPeopleAlsoAsk"
+    );
   } catch (err) {
     console.warn("[WebMCP] Initialization error:", err);
   }
 }
+
+export {StoryWebMcp};
 
 // Auto-run on client bundle load
 if (typeof window !== "undefined") {
