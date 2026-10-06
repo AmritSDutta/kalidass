@@ -7,6 +7,7 @@ import {
   isValidIntelligencePayload,
 } from "../src/intelligence/service.js";
 import {formatRedisKey, getRedisClient} from "../src/redis/index.js";
+import {memoryBucket} from "../src/memory.js";
 
 describe("Redis Package Contract & Key Prefixes (Hermetic)", () => {
   it("enforces permanent kalidass: root prefix idempotently", () => {
@@ -171,7 +172,7 @@ describe("SerpApi AI Intelligence Pipeline (Hermetic)", () => {
     expect(globalThis.__kalidass_redis_memory.has("kalidass:ai_intel:art-failed-1")).toBe(false);
   });
 
-  it("GET /api/articles/:slug strips ai_intelligence by default for normal reader responses", async () => {
+  it("GET /api/articles/:slug omits ai_intelligence by default when none is stored", async () => {
     const uniqueSlug = `intel-privacy-test-${Date.now()}`;
     const createReq = createRequest("/api/articles", {
       method: "POST",
@@ -195,6 +196,7 @@ describe("SerpApi AI Intelligence Pipeline (Hermetic)", () => {
     const getData = await getRes.json();
     expect(getData.title).toBe("Intelligence Privacy Test");
     expect(getData).not.toHaveProperty("ai_intelligence");
+    expect(getData.has_intelligence).toBe(false);
   });
 
   it("GET /api/articles/:slug?intelligence=true rejects unauthenticated requests with 401", async () => {
@@ -285,6 +287,128 @@ describe("SerpApi AI Intelligence Pipeline (Hermetic)", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  it("article GET exposes only has_intelligence flag; /intel serves the dossier lazily and re-caches Redis", async () => {
+    const uniqueSlug = `intel-attach-test-${Date.now()}`;
+    const createReq = createRequest("/api/articles", {
+      method: "POST",
+      headers: {Authorization: "Bearer test-secret-token"},
+      body: {
+        title: "Intelligence Attach Test",
+        slug: uniqueSlug,
+        excerpt: "Dossier fetches lazily via /intel.",
+        tags: ["Systems"],
+        published: true,
+        private: false,
+        blocks: [{type: "paragraph", text: "Article content."}],
+      },
+    });
+    const createRes = await worker.fetch(createReq, env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+
+    // Seed a valid dossier into the in-memory Blob store (Redis intentionally empty)
+    const validIntel = {
+      query: "Intelligence Attach Test",
+      ai_overview: {text: "Stored overview"},
+      organic_results: [{title: "Grounding link", link: "https://example.com"}],
+      fetchedAt: "2026-10-07T00:00:00.000000+00:00",
+    };
+    const blobPath = getIntelligenceObjectPath(created.id, env);
+    await memoryBucket().put(blobPath, JSON.stringify(validIntel), {contentType: "application/json"});
+
+    // Anonymous article GET: flag only, never the payload
+    const getRes = await worker.fetch(createRequest(`/api/articles/${uniqueSlug}`), env);
+    expect(getRes.status).toBe(200);
+    const getData = await getRes.json();
+    expect(getData.has_intelligence).toBe(true);
+    expect(getData).not.toHaveProperty("ai_intelligence");
+
+    // Lazy public dossier fetch
+    const intelRes = await worker.fetch(createRequest(`/api/articles/${uniqueSlug}/intel`), env);
+    expect(intelRes.status).toBe(200);
+    expect(await intelRes.json()).toEqual(validIntel);
+
+    // Blob hit must re-populate Redis so post-TTL views skip the Blob read
+    const redis = getRedisClient(env);
+    const reCached = await redis.get(`ai_intel:${created.id}`);
+    expect(typeof reCached === "string" ? JSON.parse(reCached) : reCached).toEqual(validIntel);
+  });
+
+  it("GET /api/articles/:slug/intel returns 404 for an invalid stored husk and never caches it", async () => {
+    const uniqueSlug = `intel-husk-test-${Date.now()}`;
+    const createReq = createRequest("/api/articles", {
+      method: "POST",
+      headers: {Authorization: "Bearer test-secret-token"},
+      body: {
+        title: "Intelligence Husk Test",
+        slug: uniqueSlug,
+        excerpt: "Empty husks must not serve.",
+        tags: ["Systems"],
+        published: true,
+        private: false,
+        blocks: [{type: "paragraph", text: "Article content."}],
+      },
+    });
+    const createRes = await worker.fetch(createReq, env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+
+    const husk = {query: "Intelligence Husk Test", organic_results: []};
+    const blobPath = getIntelligenceObjectPath(created.id, env);
+    await memoryBucket().put(blobPath, JSON.stringify(husk), {contentType: "application/json"});
+
+    const intelRes = await worker.fetch(createRequest(`/api/articles/${uniqueSlug}/intel`), env);
+    expect(intelRes.status).toBe(404);
+
+    const getRes = await worker.fetch(createRequest(`/api/articles/${uniqueSlug}`), env);
+    const getData = await getRes.json();
+    expect(getData.has_intelligence).toBe(false);
+
+    // Invalid husk must not leak into Redis either
+    const redis = getRedisClient(env);
+    expect(await redis.get(`ai_intel:${created.id}`)).toBeNull();
+  });
+
+  it("GET /api/articles/:slug/intel hides private articles from anonymous readers", async () => {
+    const uniqueSlug = `intel-private-test-${Date.now()}`;
+    const createReq = createRequest("/api/articles", {
+      method: "POST",
+      headers: {Authorization: "Bearer test-secret-token"},
+      body: {
+        title: "Intelligence Private Test",
+        slug: uniqueSlug,
+        excerpt: "Private intel gating.",
+        tags: ["Systems"],
+        published: true,
+        private: true,
+        blocks: [{type: "paragraph", text: "Article content."}],
+      },
+    });
+    const createRes = await worker.fetch(createReq, env);
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+
+    const validIntel = {
+      query: "Intelligence Private Test",
+      ai_overview: {text: "Private overview"},
+    };
+    const blobPath = getIntelligenceObjectPath(created.id, env);
+    await memoryBucket().put(blobPath, JSON.stringify(validIntel), {contentType: "application/json"});
+
+    const anonRes = await worker.fetch(createRequest(`/api/articles/${uniqueSlug}/intel`), env);
+    expect(anonRes.status).toBe(404);
+
+    // Admin still reads the dossier through the private gate
+    const adminRes = await worker.fetch(
+      createRequest(`/api/articles/${uniqueSlug}/intel`, {
+        headers: {Authorization: "Bearer test-secret-token"},
+      }),
+      env
+    );
+    expect(adminRes.status).toBe(200);
+    expect(await adminRes.json()).toEqual(validIntel);
   });
 });
 

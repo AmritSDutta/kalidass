@@ -1,13 +1,14 @@
-import {useEffect, useMemo, useState, type CSSProperties, type ReactNode} from "react";
+import {useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode} from "react";
 import Layout from "@theme/Layout";
 import Link from "@docusaurus/Link";
 import {useLocation} from "@docusaurus/router";
 import StoryBody, {headingSlug} from "@site/src/components/StoryBody";
 import VideoEmbed from "@site/src/components/VideoEmbed";
-import {evaluateQuality, getArticle} from "@site/src/lib/api";
+import {evaluateQuality, getArticle, getArticleIntelligence} from "@site/src/lib/api";
 import {useAuth} from "@site/src/lib/auth";
 import {formatDate} from "@site/src/lib/media";
-import type {Article, QualityEvalResult} from "@site/src/lib/types";
+import type {Article, QualityEvalResult, AiIntelligence} from "@site/src/lib/types";
+import {IntelligencePanel} from "@site/src/components/IntelligencePanel/IntelligencePanel";
 import styles from "./StoryPage.module.css";
 
 interface HeadingItem {
@@ -26,6 +27,15 @@ export default function StoryPage(): ReactNode {
   const [evalResult, setEvalResult] = useState<QualityEvalResult | null>(null);
   const [evaluating, setEvaluating] = useState<boolean>(false);
   const [evalError, setEvalError] = useState<string>("");
+
+  // Tab navigation state for left reading column
+  const [activeTab, setActiveTab] = useState<"article" | "intel">("article");
+  const [intelligence, setIntelligence] = useState<AiIntelligence | null>(null);
+  const [loadingIntel, setLoadingIntel] = useState<boolean>(false);
+  const [intelError, setIntelError] = useState<string | null>(null);
+  const articleTabRef = useRef<HTMLButtonElement>(null);
+  const intelTabRef = useRef<HTMLButtonElement>(null);
+  const intelRequested = useRef<boolean>(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -158,6 +168,58 @@ export default function StoryPage(): ReactNode {
     }
   };
 
+  const handleFetchIntelligence = async (forceRefresh: boolean = false) => {
+    if (!slug) return;
+    setLoadingIntel(true);
+    setIntelError(null);
+    try {
+      const full = await getArticle(slug, true, forceRefresh);
+      if (full.ai_intelligence) {
+        setIntelligence(full.ai_intelligence);
+        setArticle((prev) => (prev ? {...prev, ai_intelligence: full.ai_intelligence} : null));
+      } else {
+        setIntelError("No intelligence dossier returned.");
+      }
+    } catch (err) {
+      setIntelError(err instanceof Error ? err.message : "Failed to fetch intelligence.");
+    } finally {
+      setLoadingIntel(false);
+    }
+  };
+
+  // Lazy public fetch: the dossier loads once, on first AI Intel tab activation.
+  const loadIntelligenceOnce = () => {
+    if (intelRequested.current || !slug) return;
+    intelRequested.current = true;
+    setLoadingIntel(true);
+    getArticleIntelligence(slug)
+      .then((intel) => {
+        setIntelligence(intel);
+        setArticle((prev) => (prev ? {...prev, ai_intelligence: intel} : null));
+      })
+      // 404 simply means no dossier is compiled; readers see the Unfetched notice.
+      .catch(() => undefined)
+      .finally(() => setLoadingIntel(false));
+  };
+
+  const switchTab = (tab: "article" | "intel") => {
+    setActiveTab(tab);
+    if (tab === "intel") {
+      loadIntelligenceOnce();
+    }
+    (tab === "article" ? articleTabRef : intelTabRef).current?.focus();
+  };
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      switchTab("intel");
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      switchTab("article");
+    }
+  };
+
   return (
     <Layout title={article.title} description={article.excerpt}>
       <main
@@ -205,19 +267,74 @@ export default function StoryPage(): ReactNode {
 
         <div className={styles.layoutWrap}>
           <div className={styles.layout}>
-            {/* Left 80% Main Reading Pane */}
+            {/* Left 80% Main Reading Pane with 2 Tabs */}
             <article className={styles.article}>
-              {article.aiGenerated ? (
-                <div className={styles.aiBanner} role="note">
-                  <span className={styles.aiBannerIcon}>AI</span>
-                  Ai generated content, verify before applying in real life
+              {/* Tab Navigation: Article (Default) vs AI Intel */}
+              <div className={styles.tabBar} role="tablist" aria-label="Article views" onKeyDown={handleTabKeyDown}>
+                <button
+                  ref={articleTabRef}
+                  type="button"
+                  role="tab"
+                  id="story-tab-article"
+                  aria-controls="story-panel-article"
+                  aria-selected={activeTab === "article"}
+                  tabIndex={activeTab === "article" ? 0 : -1}
+                  className={`${styles.tabBtn} ${activeTab === "article" ? styles.tabBtnActive : ""}`}
+                  onClick={() => switchTab("article")}
+                >
+                  Article
+                </button>
+                <button
+                  ref={intelTabRef}
+                  type="button"
+                  role="tab"
+                  id="story-tab-intel"
+                  aria-controls="story-panel-intel"
+                  aria-selected={activeTab === "intel"}
+                  tabIndex={activeTab === "intel" ? 0 : -1}
+                  className={`${styles.tabBtn} ${activeTab === "intel" ? styles.tabBtnActive : ""}`}
+                  onClick={() => switchTab("intel")}
+                >
+                  AI Intel
+                  {(intelligence || article.has_intelligence) && (
+                    <span className={styles.tabBadge} title="Intelligence dossier available">
+                      ✓
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {activeTab === "article" ? (
+                <div role="tabpanel" id="story-panel-article" aria-labelledby="story-tab-article">
+                  {article.aiGenerated ? (
+                    <div className={styles.aiBanner} role="note">
+                      <span className={styles.aiBannerIcon}>AI</span>
+                      Ai generated content, verify before applying in real life
+                    </div>
+                  ) : null}
+                  <p className={styles.deck}>{article.excerpt}</p>
+                  {article.videoUrl ? (
+                    <VideoEmbed url={article.videoUrl} title={article.title} />
+                  ) : null}
+                  <StoryBody article={article} />
                 </div>
-              ) : null}
-              <p className={styles.deck}>{article.excerpt}</p>
-              {article.videoUrl ? (
-                <VideoEmbed url={article.videoUrl} title={article.title} />
-              ) : null}
-              <StoryBody article={article} />
+              ) : (
+                <div
+                  className={styles.intelTabWrap}
+                  role="tabpanel"
+                  id="story-panel-intel"
+                  aria-labelledby="story-tab-intel"
+                >
+                  <IntelligencePanel
+                    intelligence={intelligence || article.ai_intelligence || null}
+                    onFetch={canEdit ? handleFetchIntelligence : undefined}
+                    loading={loadingIntel}
+                    error={intelError}
+                    readOnly={!canEdit}
+                  />
+                </div>
+              )}
+
               <div className={styles.footer}>
                 <Link to="/magazine" className={styles.footerLink}>
                   ← All briefs

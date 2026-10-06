@@ -4,7 +4,7 @@ import {getMemoryObject, memoryBucket} from "./memory.js";
 import {seedArticles} from "./seed.js";
 import {runQualityEvaluation, extractArticleText} from "./eval/index.js";
 import {generateArticle} from "./generator/index.js";
-import {getOrGenerateArticleIntelligence} from "./intelligence/service.js";
+import {getOrGenerateArticleIntelligence, peekArticleIntelligence} from "./intelligence/service.js";
 
 // Cloudflare Workers fetch guard: ensures @upstash/blob requests carry Content-Length
 const nativeFetch = globalThis.fetch;
@@ -862,6 +862,31 @@ export default {
         return json(article, 201, origin);
       }
 
+      // Public read-only intelligence sub-resource (lazy-fetched by the AI Intel tab).
+      // Never spawns a Box; mirrors the article GET draft/private gating.
+      const intelMatch = url.pathname.match(/^\/api\/articles\/([^/]+)\/intel$/);
+      if (intelMatch && request.method === "GET") {
+        const key = decodeURIComponent(intelMatch[1]);
+        const index = await ensureSeed(bucket, env);
+        const meta = index.find((item) => item.id === key || item.slug === key);
+        if (!meta) return json({error: "Article not found"}, 404, origin);
+
+        if (meta.published === false || meta.private === true) {
+          const user = await getAuthUser(request, env);
+          if (!user) return json({error: "Article not found"}, 404, origin);
+          const isOwner =
+            Boolean(meta.authorEmail) &&
+            meta.authorEmail.toLowerCase() === user.email.toLowerCase();
+          if (user.role !== "admin" && !isOwner) {
+            return json({error: "Article not found"}, 404, origin);
+          }
+        }
+
+        const intel = await peekArticleIntelligence(meta.id, env, {bucket, readJson});
+        if (!intel) return json({error: "No intelligence compiled for this article"}, 404, origin);
+        return json(intel, 200, origin);
+      }
+
       const articleMatch = url.pathname.match(/^\/api\/articles\/([^/]+)$/);
       if (articleMatch) {
         const key = decodeURIComponent(articleMatch[1]);
@@ -915,14 +940,20 @@ export default {
               console.error("[Intelligence Error]:", intelErr);
               return json({
                 error: "Failed to fetch article intelligence. Please try again later.",
-                details: intelErr.message,
               }, 500, origin);
             }
           }
 
-          // Normal response strictly strips any internal ai_intelligence field
-          const {ai_intelligence, ...cleanArticle} = article;
-          return json(cleanArticle, 200, origin);
+          // Public readers lazy-fetch the dossier via /intel; expose only a
+          // lightweight existence flag so the tab badge renders without the payload.
+          const cachedIntel = article.ai_intelligence ||
+            (await peekArticleIntelligence(meta.id, env, {bucket, readJson}));
+
+          return json(
+            {...article, has_intelligence: Boolean(cachedIntel)},
+            200,
+            origin
+          );
         }
 
         if (request.method === "PUT") {

@@ -49,6 +49,8 @@ export type Article = ArticleSummary & {
   blocks: Block[];
   createdAt?: string;
   ai_intelligence?: AiIntelligence | null;
+  /** Server flag: a stored dossier exists (fetched lazily via /intel). */
+  has_intelligence?: boolean;
 };
 
 export type ArticleDraft = {
@@ -156,34 +158,14 @@ export interface AiSearchInsightResponse {
   search_metadata?: unknown;
 }
 
-export interface AiIntelligenceTrendPoint {
-  date?: string;
-  timestamp?: string;
-  values?: Array<{
-    query?: string;
-    value?: string | number;
-    extracted_value?: number;
-  }>;
-  value?: string | number;
-  extracted_value?: number;
-  formatted_value?: string;
-}
-
-export interface AiIntelligenceRegionInterest {
-  location?: string;
-  value?: string | number;
-  extracted_value?: number;
-}
-
-
-export interface AiIntelligenceQueryTopic {
-  query?: string;
-  topic?: {
-    title?: string;
-    type?: string;
-  };
-  value?: string | number;
-  extracted_value?: number;
+export interface AiIntelligenceReference {
+  index?: number;
+  title?: string;
+  link?: string;
+  snippet?: string;
+  source?: string;
+  source_icon?: string;
+  thumbnail?: string;
 }
 
 export interface AiIntelligence {
@@ -192,10 +174,18 @@ export interface AiIntelligence {
     text?: string;
     snippet?: string;
     expanded?: {
-      text_blocks?: Array<{type?: string; text?: string}>;
-      references?: Array<{title?: string; link?: string; source?: string}>;
+      text_blocks?: Array<{
+        type?: string;
+        snippet?: string;
+        text?: string;
+        snippet_highlighted_words?: string[];
+        snippet_links?: Array<{text: string; link: string}>;
+        list?: Array<{snippet: string; reference_indexes?: number[]}>;
+        reference_indexes?: number[];
+      }>;
+      references?: AiIntelligenceReference[];
     };
-    references?: Array<{title?: string; link?: string; source?: string}>;
+    references?: AiIntelligenceReference[];
   } | null;
   knowledge_graph?: {
     title?: string;
@@ -230,11 +220,6 @@ export interface AiIntelligence {
     location?: string;
     via?: string;
   }>;
-  twitter_results?: Array<{
-    tweet?: string;
-    link?: string;
-    snippet?: string;
-  }>;
   discussions_and_forums?: Array<{
     title?: string;
     link?: string;
@@ -245,20 +230,6 @@ export interface AiIntelligence {
     snippet?: string;
     link?: string;
   }>;
-  trends?: {
-    interest_over_time?: {
-      timeline_data?: AiIntelligenceTrendPoint[];
-    } | Array<AiIntelligenceTrendPoint | number> | null;
-    interest_by_region?: Array<AiIntelligenceRegionInterest> | null;
-    related_queries?: {
-      top?: AiIntelligenceQueryTopic[];
-      rising?: AiIntelligenceQueryTopic[];
-    };
-    related_topics?: {
-      top?: AiIntelligenceQueryTopic[];
-      rising?: AiIntelligenceQueryTopic[];
-    };
-  } | null;
   news?: Array<{
     title?: string;
     source?: string;

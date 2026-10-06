@@ -6,6 +6,7 @@ import type {
   AuthUser,
   GenerateArticleRequest,
   GenerateArticleResponse,
+  AiIntelligence,
   AiSearchInsightResponse,
   QualityEvalRequest,
   QualityEvalResult,
@@ -105,6 +106,11 @@ export function getArticle(
   if (refresh) params.set("refresh", "true");
   const query = params.toString() ? `?${params.toString()}` : "";
   return request<Article>(`/api/articles/${encodeURIComponent(idOrSlug)}${query}`);
+}
+
+// Public read-only dossier fetch (lazy): called when the AI Intel tab activates.
+export function getArticleIntelligence(idOrSlug: string) {
+  return request<AiIntelligence>(`/api/articles/${encodeURIComponent(idOrSlug)}/intel`);
 }
 
 export function createArticle(draft: ArticleDraft) {

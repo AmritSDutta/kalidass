@@ -21,24 +21,6 @@ const mockIntel: AiIntelligence = {
       "Inventors": "Jacobs et al.",
     },
   },
-  trends: {
-    interest_over_time: {
-      timeline_data: [
-        {date: "Sep 2026", extracted_value: 85},
-        {date: "Oct 2026", extracted_value: 98},
-      ],
-    },
-    interest_by_region: [
-      {location: "California", extracted_value: 100},
-      {location: "Karnataka", extracted_value: 92},
-    ],
-    related_queries: {
-      rising: [{query: "sparse moe routing latency", value: "+150%"}],
-    },
-    related_topics: {
-      top: [{topic: {title: "Neural Routing", type: "Topic"}}],
-    },
-  },
   inline_videos: [
     {title: "Explaining MoE Systems", link: "https://youtube.com/watch?v=123", channel: "DeepTech", duration: "12:30"},
   ],
@@ -71,7 +53,7 @@ describe("IntelligencePanel component (Hermetic)", () => {
     expect(handleFetch).toHaveBeenCalledWith(false);
   });
 
-  it("renders loaded intelligence block with all sections and Trends metrics", () => {
+  it("renders loaded intelligence block with all sections", () => {
     const handleFetch = vi.fn();
     render(<IntelligencePanel intelligence={mockIntel} onFetch={handleFetch} loading={false} />);
 
@@ -81,18 +63,14 @@ describe("IntelligencePanel component (Hermetic)", () => {
     expect(screen.getByText(/Cited Sources:/i)).toBeTruthy();
     expect(screen.getByText(/Attention Paper/i)).toBeTruthy();
 
-    // Knowledge Graph
-    expect(screen.getByText(/Knowledge Graph: Mixture of Experts/i)).toBeTruthy();
-    expect(screen.getByText(/Conditional Computation/i)).toBeTruthy();
+    // Knowledge Graph header renders collapsed (sections are lazy on expand)
+    const kgBtn = screen.getByRole("button", {name: /Knowledge Graph: Mixture of Experts/i});
+    expect(kgBtn.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByText(/Conditional Computation/i)).toBeNull();
 
-    // Trends data (Finding R2)
-    expect(screen.getByText(/Google Trends & Velocity Data/i)).toBeTruthy();
-    expect(screen.getByText(/Interest Over Time/i)).toBeTruthy();
-    expect(screen.getByText(/Oct 2026: 98/i)).toBeTruthy();
-    expect(screen.getByText(/Interest by Region/i)).toBeTruthy();
-    expect(screen.getByText(/California: 100/i)).toBeTruthy();
-    expect(screen.getByText(/sparse moe routing latency/i)).toBeTruthy();
-    expect(screen.getByText(/Neural Routing/i)).toBeTruthy();
+    // Expanding mounts the section content
+    fireEvent.click(kgBtn);
+    expect(screen.getByText(/Conditional Computation/i)).toBeTruthy();
 
     // Accordion items with count
     expect(screen.getByText(/Inline Video References \(1\)/i)).toBeTruthy();

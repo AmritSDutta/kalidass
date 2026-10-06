@@ -89,7 +89,6 @@ def main():
     news = google.get("news_results") or google.get("top_stories") or []
     shopping = google.get("shopping_results") or google.get("inline_shopping") or []
     jobs = google.get("jobs_results") or []
-    twitter = google.get("twitter_results") or []
     discussions = google.get("discussions_and_forums") or []
 
     log(
@@ -113,6 +112,17 @@ def main():
         merged["expanded"] = extra.get("ai_overview") or extra
         ai_overview = merged
 
+    # 3. Strip re-query metadata: serpapi_link can embed account credentials
+    #    and page_token/serpapi_link are never rendered by the panel.
+    for block in (ai_overview, kg, answer_box):
+        if isinstance(block, dict):
+            block.pop("serpapi_link", None)
+            block.pop("page_token", None)
+    expanded = ai_overview.get("expanded") if isinstance(ai_overview, dict) else None
+    if isinstance(expanded, dict):
+        expanded.pop("serpapi_link", None)
+        expanded.pop("page_token", None)
+
     intelligence = {
         "query": q,
         "ai_overview": ai_overview if ai_overview else None,
@@ -121,10 +131,8 @@ def main():
         "inline_videos": videos,
         "books_shopping": shopping[:8] if isinstance(shopping, list) else [],
         "jobs_results": jobs[:6] if isinstance(jobs, list) else [],
-        "twitter_results": twitter,
         "discussions_and_forums": discussions,
         "people_also_ask": paa if isinstance(paa, list) else [],
-        "trends": {},
         "news": news[:5] if isinstance(news, list) else [],
         "organic_results": [
             {

@@ -32,13 +32,48 @@ export function isValidIntelligencePayload(intel) {
   if (!intel || typeof intel !== "object") return false;
   if (!intel.query || typeof intel.query !== "string") return false;
 
-  const hasOverview = Boolean(intel.ai_overview && (intel.ai_overview.text || intel.ai_overview.snippet));
+  const hasOverview = Boolean(
+    intel.ai_overview && (
+      intel.ai_overview.text ||
+      intel.ai_overview.snippet ||
+      (intel.ai_overview.expanded && Array.isArray(intel.ai_overview.expanded.text_blocks) && intel.ai_overview.expanded.text_blocks.length > 0)
+    )
+  );
   const hasOrganic = Array.isArray(intel.organic_results) && intel.organic_results.length > 0;
   const hasKG = Boolean(intel.knowledge_graph && intel.knowledge_graph.title);
   const hasVideos = Array.isArray(intel.inline_videos) && intel.inline_videos.length > 0;
   const hasPAA = Array.isArray(intel.people_also_ask) && intel.people_also_ask.length > 0;
 
   return hasOverview || hasOrganic || hasKG || hasVideos || hasPAA;
+}
+
+/**
+ * Read-only intelligence lookup for public reader responses: Redis -> Blob.
+ * Never spawns a Box; re-populates Redis on Blob hits so views after the
+ * Redis TTL expiry don't pay a Blob read forever.
+ *
+ * @param {string} articleId
+ * @param {any} env
+ * @param {{bucket: any, readJson: (bucket: any, path: string, fallback?: any) => Promise<any>}} storage
+ * @returns {Promise<any>}
+ */
+export async function peekArticleIntelligence(articleId, env, storage) {
+  const redis = getRedisClient(env);
+  const cacheKey = `ai_intel:${articleId}`;
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return typeof cached === "string" ? JSON.parse(cached) : cached;
+    }
+    const inBlob = await storage.readJson(storage.bucket, getIntelligenceObjectPath(articleId, env), null);
+    if (inBlob && isValidIntelligencePayload(inBlob)) {
+      await redis.set(cacheKey, JSON.stringify(inBlob), {ex: 86400});
+      return inBlob;
+    }
+  } catch (err) {
+    console.warn("[Intel Peek Error]:", err?.message);
+  }
+  return null;
 }
 
 /**
