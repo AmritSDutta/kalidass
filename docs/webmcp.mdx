@@ -20,9 +20,15 @@ flowchart LR
         Registry["WebMCP Registry (document / navigator / window .modelContext)"]
         SearchTool["searchArticles({ query, tag })"]
         ReadTool["readArticle({ slug })"]
+        StoryTools["StoryWebMcp tools (story-scoped)"]
+        Shared["webmcpShared.ts (types + getBrowserStorySlug)"]
         Docusaurus -->|Mounts on Page Load| Registry
         Registry --> SearchTool
         Registry --> ReadTool
+        Registry --> StoryTools
+        StoryTools -->|"lazy /intel dossier fetch"| StoryTools
+        SearchTool --> Shared
+        StoryTools --> Shared
     end
     subgraph Agent["Browser AI Agent / Extension"]
         Discover["1. Discovers tools in modelContext"]
@@ -95,7 +101,33 @@ Gets the direct canonical reading URL, path, and summary metadata for a specific
 
 ---
 
-## 3. Testing with WebMCP Inspector Extension
+## 3. Story-Scoped Tools (`storyWebMcp.ts`)
+
+Four additional tools are registered by the `StoryWebMcp` class (`blog_frontend/src/client-modules/storyWebMcp.ts`). They resolve the active story from an explicit `slug` argument or, by default, from the current `/story/:slug` route (`getBrowserStorySlug`), and the intelligence dossier is lazy-fetched from `/api/articles/:slug/intel` only when the article carries the `has_intelligence` flag.
+
+All four return a **discriminated availability union**: `{ available: true, ...data }` on success, or `{ available: false, error | reason }` — `error` distinguishes *no story context* (`"Tool only available on a story page (/story/:slug)."`) from *lookup failures* (`"Story lookup failed for '<slug>'"`), while `reason` reports section-level absences (e.g. `"No video embeds or links in this story."`).
+
+### `getStoryAiOverview`
+Returns the Google AI Overview text and cited research sources for the current story.
+* **Input Schema / Parameters**: `slug` *(string, optional)* — defaults to the active story on `/story/:slug`.
+* **Returns**: `{ available, query, text, snippet, references: [{ title, link, snippet, source }] }`. Expanded text blocks are flattened (per-block `snippet || text`) and references prefer `expanded.references` over the top-level list — mirroring `IntelligencePanel`.
+
+### `getStoryCitations`
+Extracts empirical references and attribution quotes from the article body.
+* **Detection**: `quote` blocks carrying a `cite`, plus any quotes appearing under headings matching `/reference|attribution|sources/i`.
+* **Returns**: `{ available, count, citations: [{ index, text, cite }] }`.
+
+### `getStoryVideoLinks`
+Returns the hero (`article.videoUrl`) and inline body video blocks.
+* **Returns**: `{ available, count, videos: [{ url, title?, caption?, source: "hero" | "body" }] }`.
+
+### `getPeopleAlsoAsk`
+Returns "People Also Ask" questions and answer snippets from the intelligence dossier.
+* **Returns**: `{ available, count, questions: [{ question, snippet, link }] }`.
+
+---
+
+## 4. Testing with WebMCP Inspector Extension
 
 Kalidass Journal is validated with the **WebMCP – Model Context Tool Inspector** extension (by Google Chrome Labs / W3C Web ML CG):
 
@@ -105,13 +137,13 @@ Kalidass Journal is validated with the **WebMCP – Model Context Tool Inspector
    - Open the **WebMCP Inspector** side panel.
 3. **Hard-Refresh Page**:
    - Press `Ctrl + Shift + R` (or `F5`) on `https://kalidass.amrit.fyi` or `http://localhost:3000`.
-   - The inspector will automatically list `searchArticles` and `readArticle` along with their interactive schema forms.
+   - The inspector will automatically list all six tools — `searchArticles`, `readArticle`, `getStoryAiOverview`, `getStoryCitations`, `getStoryVideoLinks`, and `getPeopleAlsoAsk` — along with their interactive schema forms.
 4. **Execute & Test with Gemini**:
    - Test manual JSON inputs directly in the inspector or attach a Gemini API key to run autonomous multi-step agent queries.
 
 ---
 
-## 4. Testing in Browser DevTools Console
+## 5. Testing in Browser DevTools Console
 
 Open DevTools Console (`F12` or `Ctrl + Shift + I`):
 
@@ -127,14 +159,20 @@ console.log("Search Results:", results);
 // 3. Read an article (returns canonical URL and summary metadata)
 const article = await window.modelContext.tools.readArticle.execute({ slug: "attention-as-routing" });
 console.log("Article Metadata & URL:", article);
+
+// 4. Story-scoped tool (on /story/:slug; lazy-fetches the intel dossier)
+const overview = await window.modelContext.tools.getStoryAiOverview.execute({});
+console.log("AI Overview:", overview);
 ```
 
 ---
 
-## 5. Implementation Details
+## 6. Implementation Details
 
-- **Source Code**: `blog_frontend/src/client-modules/webmcp.ts`
-- **Registration**: Registered in `blog_frontend/docusaurus.config.ts` via `clientModules: ["./src/client-modules/api-base.ts", "./src/client-modules/webmcp.ts"]`.
+- **Source Code**: `blog_frontend/src/client-modules/webmcp.ts` (registry + core tools), `storyWebMcp.ts` (story-scoped tools), `webmcpShared.ts` (shared `WebMcpTool`/`ModelContextRegistry` types, global declarations, and `getBrowserStorySlug`).
+- **Acyclic Module Graph**: both `webmcp.ts` and `storyWebMcp.ts` import shared pieces from `webmcpShared.ts`, keeping the dependency direction strictly `webmcp → storyWebMcp` (no cycles).
+- **Registration**: Registered in `blog_frontend/docusaurus.config.ts` via `clientModules: ["./src/client-modules/api-base.ts", "./src/client-modules/webmcp.ts"]`; `StoryWebMcp` tools are registered by `initWebMcp()` on load.
 - **Triple Global Sync**: Exposes tools via `document.modelContext`, `navigator.modelContext`, and `window.modelContext`.
 - **Dual Schema Specification**: Provides standard `inputSchema` (JSON Schema) and `parameters` for universal parser compatibility.
+- **Lazy Dossier Resolution**: story tools only hit `/api/articles/:slug/intel` when `has_intelligence` is set and no dossier is already embedded; intel-fetch failures degrade to `available: false` section reasons.
 - **SSR Safety**: All browser global access is guarded with `ExecutionEnvironment.canUseDOM` to ensure hermetic static site pre-rendering.

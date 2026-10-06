@@ -40,10 +40,10 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 - **Dynamic Route**: The dynamic path `/story/:slug*` is registered via `kalidassPlugin.contentLoaded` using `actions.addRoute` in `docusaurus.config.ts`.
 - **Slug Resolution**: The article slug is extracted from `location.pathname` and fetched via `getArticle(slug)`.
 - **Hero Header**: Full-width veil overlay with cover image, topic kicker tag, headline, subtitle, and author byline.
-- **Reader View Tabs**: The story header provides three interactive reading perspectives:
-  - **Article**: Standard full-text essay reading experience rendered by `StoryBody`.
-  - **AI Intelligence**: Live web search grounding dossier rendered by `IntelligencePanel`. Displays Google AI Overviews, Knowledge Graph entities, People Also Ask questions, organic citations, and videos. The dossier is lazy-fetched from `/api/articles/:slug/intel` when the tab is clicked, with an authorized refresh action for authors/admins.
-  - **Article Heuristics**: Right-sidebar or tabbed audit inspecting AI generation probability, technical rigor score, and content safety flags. Authenticated callers can trigger live re-evaluations.
+- **Reader View Tabs**: The left reading column provides a two-tab ARIA `tablist` (keyboard-navigable via arrow keys, roving tabindex):
+  - **Article (default)**: Standard full-text essay reading experience rendered by `StoryBody`.
+  - **AI Intel**: Live web search grounding dossier rendered by `IntelligencePanel`. Displays Google AI Overviews, Knowledge Graph entities, People Also Ask questions, organic citations, and videos. The dossier is lazy-fetched from `/api/articles/:slug/intel` on first tab activation (the tab badge is driven by the article's `has_intelligence` flag), with an authorized Fetch/Force Refresh action for authors/admins.
+- **Article Heuristics Sidebar**: Right-sidebar audit inspecting AI generation probability, technical rigor score, and content safety flags. Authenticated callers can trigger live re-evaluations.
 - **Navigation Footer**: Direct link back to the main index (`← All briefs`).
 - **Authorization Gated Editorial Link (`Edit in studio →`)**:
   - The `Edit in studio →` link is strictly gated via `canEdit = isAuthenticated && (isAdmin || (authorEmail && userEmail === authorEmail))`.
@@ -54,9 +54,11 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 ## IntelligencePanel Component (`src/components/IntelligencePanel/`)
 
 The `IntelligencePanel` component renders deep search context compiled by SerpApi:
-- **AI Overview**: Summarized search thesis with citation links and expanded reference cards.
+- **AI Overview**: Summarized search thesis with citation links and expanded reference cards (favicons load lazily).
 - **Knowledge Graph**: Entity metadata, attributes, official sites, and authoritative descriptions.
 - **People Also Ask**: Expandable accordion questions reflecting searcher inquiries.
 - **Inline Videos & Organic Sources**: Direct links and snippets to related technical literature and video tutorials.
+- **News, Books, Jobs & Forums**: Additional SERP sections rendered as accordion grids when present in the dossier.
+- **Lazy Sections**: Only the AI Overview accordion defaults open; every other section renders its content on expand.
 - **Cache & Compilation Status**: Surfaced status chips indicate whether data was served from Redis cache, Blob persistence, or freshly compiled.
 

@@ -15,15 +15,21 @@ Kalidass Journal incorporates a **100% hermetic automated test suite** powered b
 flowchart TD
   subgraph TestRunner["Vitest Runner (worker/vitest.config.js)"]
     HeuristicSuite["eval_heuristic.test.js - 5 tests"]
-    MemorySuite["memory_store.test.js - 3 tests"]
-    SchemaSuite["schemas.test.js - 4 tests"]
-    WorkerApiSuite["worker_api.test.js - 6 tests"]
+    MemorySuite["memory_store.test.js - 4 tests"]
+    SchemaSuite["schemas.test.js - 5 tests"]
+    WorkerApiSuite["worker_api.test.js - 9 tests"]
+    ConcurrencySuite["concurrency.test.js - 2 tests"]
+    IntelligenceSuite["intelligence.test.js - 12 tests"]
+    WebMcpSuite["webmcp.test.js - 9 tests"]
+    PromptsSuite["prompts.test.js - 7 tests"]
   end
   subgraph SystemUnderTest["Worker Engine Under Test"]
     HeuristicEngine["eval/heuristic.js (Regex Word Boundaries)"]
     MemoryAdapter["memory.js (memoryBucket & getMemoryObject)"]
     SchemaNormalizer["generator/schemas.js (sanitizeArticleDraft)"]
-    WorkerRouter["index.js (fetch dispatcher, auth, CRUD)"]
+    WorkerRouter["index.js (fetch dispatcher, auth, CRUD, /intel)"]
+    IntelService["intelligence/service.js (peek & generate cascade)"]
+    RedisAdapters["redis/ (Upstash + memory adapters)"]
   end
   subgraph MockEnv["Mock Runtime Context"]
     MockConfig["env.ADMIN_TOKEN - test-secret-token"]
@@ -35,6 +41,8 @@ flowchart TD
   SchemaSuite --> SchemaNormalizer
   WorkerApiSuite --> MockEnv
   MockEnv --> WorkerRouter
+  IntelligenceSuite --> IntelService
+  IntelligenceSuite --> RedisAdapters
 ```
 
 ---
@@ -51,6 +59,9 @@ The test files reside inside `worker/test/` and are organized by functional doma
       <Tree.File name="schemas.test.js" highlight />
       <Tree.File name="worker_api.test.js" highlight />
       <Tree.File name="concurrency.test.js" highlight />
+      <Tree.File name="intelligence.test.js" highlight />
+      <Tree.File name="webmcp.test.js" highlight />
+      <Tree.File name="prompts.test.js" highlight />
     </Tree.Folder>
     <Tree.File name="vitest.config.js" highlight />
     <Tree.File name="package.json" />
@@ -126,32 +137,82 @@ Verifies atomic read-modify-write synchronization and async mutex serialization:
 
 ---
 
-## 4. Running Tests Locally
+### Suite 6: SerpApi Intelligence Pipeline (`intelligence.test.js`)
+
+Verifies the Redis package contract and the intelligence service cascade against the Worker:
+
+| Test Case | Description | Expected Outcome |
+| :--- | :--- | :--- |
+| **Redis Key Prefix Contract** | `formatRedisKey` enforces the idempotent `kalidass:` root prefix; the memory adapter round-trips values and honors TTL expiry. | Keys always resolve to `kalidass:ai_intel:<id>`; expired entries return `null`. |
+| **Service Orchestration** | Double cache miss invokes the Box runner and populates both Redis and Blob; subsequent calls hit caches; `refresh=true` bypasses both. | Generated dossier cached in both tiers; husks never persisted. |
+| **Husk Rejection** | Runner returns `{error, organic_results: []}`. | `getOrGenerateArticleIntelligence` rejects; nothing cached in Blob or Redis. |
+| **Lazy `/intel` Contract** | Valid dossier in Blob (Redis empty): anonymous `GET /api/articles/:slug` returns `has_intelligence: true` without the payload; `GET /:slug/intel` serves the dossier and re-populates Redis. | Flag-only article GET; `/intel` returns payload; `kalidass:ai_intel:<id>` re-cached. |
+| **Husk on `/intel`** | Invalid husk stored in Blob. | `/intel` returns `404`; article GET reports `has_intelligence: false`; husk never enters Redis. |
+| **Private Article Gating** | Private article with stored dossier. | Anonymous `/intel` → `404`; admin `/intel` → `200` with dossier. |
+| **Auth Gates** | `?intelligence=true` without token (`401`) and non-owner authenticated author (`403`, minted RS256 Auth0-style JWT with mocked JWKS). | Compilation pass restricted to owner/admin. |
+
+---
+
+### Suite 7: WebMCP Path & Route Gating (`webmcp.test.js`)
+
+Verifies WebMCP slug extraction and route-context isolation:
+
+| Test Case | Description | Expected Outcome |
+| :--- | :--- | :--- |
+| **Slug Extraction** | Parses `/story/:slug` paths; rejects non-story paths (issues page, home, admin, history). | Slug returned or `null`. |
+| **searchArticles Gating** | On `/story/:slug` returns only the active article; on `/magazine` searches globally (max 5) — including queries containing `story/`. | 1-item isolated array vs. bounded global results. |
+| **readArticle Gating** | Off-route without `slug` throws `"Argument 'slug' is required"`; explicit slug returns metadata; on `/story/:slug` empty args auto-resolve and explicit different slugs win. | Route-aware slug resolution with as-is off-route behavior. |
+
+---
+
+### Suite 8: Generator Prompts (`prompts.test.js`)
+
+Verifies Upstash Box generator prompt construction for `/api/generate`:
+
+| Test Case | Description | Expected Outcome |
+| :--- | :--- | :--- |
+| **Query Building** | `getCurrentYear` and `buildSearchQuery` combine verbatim topic and angle. | Clean current-year-aware query strings. |
+| **System & User Prompts** | `buildSystemPrompt` / `buildUserPrompt` embed IEEE/Elsevier grounding, developer pragmatism, and the non-negotiable thesis angle. | Structural directives present in both prompts. |
+| **Agent Scripts** | `buildPythonAgentScript` / `buildNodeAgentScript` embed Tavily `time_range: year`, SerpApi as-of grounding, and infographic styling directives. | Grounding tokens present in both scripts. |
+
+---
+
+## 4. Frontend jsdom Suite (`blog_frontend`)
+
+The Docusaurus UI ships its own hermetic Vitest/jsdom suite (`npm.cmd test` in `blog_frontend/`, 4 files / 29 tests):
+
+| Test File | Covers |
+| :--- | :--- |
+| `src/components/__tests__/StoryBody.test.tsx` | Block rendering across the 5-variant `Block` union. |
+| `src/components/__tests__/ArticleCard.test.tsx` | Card interactivity, AI banner, author row. |
+| `src/client-modules/__tests__/webmcp.registry.test.ts` | Registry auto-registration of all 6 tools, story-route isolation, `StoryWebMcp` tools (lazy dossier fetch, degradation reasons, explicit slug, lookup-failure discrimination). |
+| `src/components/__tests__/IntelligencePanel.test.tsx` | Accordion laziness (content renders on expand), section rendering, Force Refresh wiring. |
+
+---
+
+## 5. Running Tests Locally
 
 ```bash
-# Execute full test suite once
+# Execute full worker test suite once
 npm.cmd --prefix worker test
 
 # Run tests in interactive watch mode during development
 npm.cmd --prefix worker run test:watch
+
+# Execute the frontend jsdom suite
+npm.cmd --prefix blog_frontend test
 ```
 
-Execution output:
+Execution output (worker):
 ```text
- ✓ test/memory_store.test.js (3 tests) 6ms
- ✓ test/schemas.test.js (4 tests) 8ms
- ✓ test/eval_heuristic.test.js (5 tests) 7ms
- ✓ test/worker_api.test.js (6 tests) 27ms
- ✓ test/concurrency.test.js (2 tests) 32ms
-
- Test Files  5 passed (5)
-      Tests  20 passed (20)
-   Duration  303ms
+ Test Files  8 passed (8)
+      Tests  53 passed (53)
+   Duration  ~650ms
 ```
 
 ---
 
-## 5. Guidelines for Authoring New Tests
+## 6. Guidelines for Authoring New Tests
 
 1. **Strictly Hermetic**: Never make unmocked outbound HTTP calls. Use mock `env` bindings or local adapters.
 2. **In-Memory Storage Mode**: Always leave `env.UPSTASH_BLOB_TOKEN` unset in unit tests to activate `memoryBucket`.

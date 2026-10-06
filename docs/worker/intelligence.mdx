@@ -78,11 +78,12 @@ The intelligence module is structured into isolated, testable modules within the
 ### Key Responsibilities
 
 1. **`box_runner.js`**: Spawns an ephemeral Upstash Box (`runtime: "python"`, `size: "small"`, `timeout: 120_000`) with hypervisor-injected `attachHeaders` for `serpapi.com`. Writes the synthesized Python script and executes it with a 90-second timeout. Always terminates the container on completion or failure.
-2. **`python_script.js`**: Builds the self-contained Python extraction script (`buildIntelligenceScript`). Queries Google Search via SerpApi to extract AI Overviews, Knowledge Graph, People Also Ask (PAA), inline videos, and organic search results.
+2. **`python_script.js`**: Builds the self-contained Python extraction script (`buildIntelligenceScript`). Queries Google Search via SerpApi to extract AI Overviews, Knowledge Graph, People Also Ask (PAA), inline videos, and organic search results. Strips re-query metadata (`serpapi_link`, `page_token`) from persisted blocks so account credentials embedded in mirrored SerpApi links can never reach public readers.
 3. **`service.js`**: Orchestrates storage, deduplication, and verification:
    - In-flight promise locks (`_intelInflightLocks`) prevent concurrent client requests from spawning duplicate Box containers for the same article.
    - Validation via `isValidIntelligencePayload` ensures empty or corrupt payloads are rejected before persistence.
    - Dual-tier resolution: checks Upstash Redis first, falls back to Upstash Blob (`kalidass/intelligence/{id}.json`), and populates the cache on blob hits.
+   - `peekArticleIntelligence()` provides the read-only Redis → Blob → re-cache cascade (24h TTL, key `kalidass:ai_intel:<id>`) behind the public `/intel` route — it never spawns a Box or joins in-flight generation locks.
 4. **`redis/`**: Uniform Redis interface abstraction providing `@upstash/redis` connectivity in production and an in-memory Map adapter for local development.
 
 ---
@@ -100,6 +101,10 @@ The compiled intelligence dossier conforms to the `AiIntelligence` interface def
 | `people_also_ask` | `Array<{ question, snippet, link }>` | Related questions and accordion answers from searchers. |
 | `inline_videos` | `Array<{ title, link, channel, duration }>` | Video clips and presentations relevant to the thesis topic. |
 | `organic_results` | `Array<{ title, link, snippet }>` | Top organic web citations and research publications. |
+| `news` | `Array<{ title, source, date, link }>` | Top news stories and dispatches (capped at 5). |
+| `books_shopping` | `Array<{ title, price, source, link }>` | Curated books and literature results (capped at 8). |
+| `jobs_results` | `Array<{ title, company_name, location, via }>` | Industry opportunity listings (capped at 6). |
+| `discussions_and_forums` | `Array<{ title, link, forum }>` | Community discussions and forum threads. |
 | `fetchedAt` | `string` | ISO timestamp of the extraction run. |
 
 ---
