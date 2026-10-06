@@ -5,6 +5,18 @@ import {seedArticles} from "./seed.js";
 import {runQualityEvaluation, extractArticleText} from "./eval/index.js";
 import {generateArticle} from "./generator/index.js";
 import {getOrGenerateArticleIntelligence, peekArticleIntelligence} from "./intelligence/service.js";
+import {
+  getRedisClient,
+  getCachedPublicFeed,
+  setCachedPublicFeed,
+  getCachedArticle,
+  setCachedArticle,
+  invalidateArticleCaches,
+  invalidateAllArticleCaches,
+  matchesEtag,
+  ensureFeaturedDecided,
+  computeFeedEtag,
+} from "./redis/index.js";
 
 // Cloudflare Workers fetch guard: ensures @upstash/blob requests carry Content-Length
 const nativeFetch = globalThis.fetch;
@@ -187,10 +199,10 @@ function getArticleObject(id, env) {
   return `${getRootPrefix(env)}/articles/${id}.json`;
 }
 
-function json(data, status = 200, origin = "*") {
+function json(data, status = 200, origin = "*", extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: corsHeaders(origin, {"content-type": "application/json; charset=utf-8"}),
+    headers: corsHeaders(origin, {"content-type": "application/json; charset=utf-8", ...extraHeaders}),
   });
 }
 
@@ -568,19 +580,50 @@ export default {
       }
 
       if (url.pathname === "/api/articles" && request.method === "GET") {
-        const index = await ensureSeed(bucket, env);
         const rawStatus = url.searchParams.get("status");
 
-        // Public feed: only public published articles
+        // Public feed: only public published articles (Redis accelerated with 3h TTL & deterministic featured story)
         if (!rawStatus) {
+          const redis = getRedisClient(env);
+          const ifNoneMatch = request.headers.get("if-none-match");
+
+          const cached = await getCachedPublicFeed(redis);
+          if (cached) {
+            if (ifNoneMatch && cached.etag && matchesEtag(ifNoneMatch, cached.etag)) {
+              return new Response(null, {
+                status: 304,
+                headers: corsHeaders(origin, {
+                  etag: cached.etag,
+                  "cache-control": "public, max-age=60, stale-while-revalidate=300",
+                }),
+              });
+            }
+            return json(cached.feed, 200, origin, {
+              etag: cached.etag || "",
+              "cache-control": "public, max-age=60, stale-while-revalidate=300",
+            });
+          }
+
+          const index = await ensureSeed(bucket, env);
           const items = index
             .filter((item) => item.published !== false && item.private !== true)
             .sort(
               (a, b) =>
                 new Date(b.publishedAt || b.updatedAt) - new Date(a.publishedAt || a.updatedAt)
             );
-          return json(items, 200, origin);
+
+          const decidedItems = ensureFeaturedDecided(items);
+          const saved = await setCachedPublicFeed(redis, decidedItems);
+          const finalFeed = saved?.feed || decidedItems;
+          const finalEtag = saved?.etag || computeFeedEtag(decidedItems);
+
+          return json(finalFeed, 200, origin, {
+            etag: finalEtag,
+            "cache-control": "public, max-age=60, stale-while-revalidate=300",
+          });
         }
+
+        const index = await ensureSeed(bucket, env);
 
         // Privileged status queries require authentication
         const user = await getAuthUser(request, env);
@@ -681,6 +724,8 @@ export default {
         const user = await getAuthUser(request, env);
         if (!user || user.role !== "admin") return json({error: "Unauthorized"}, 401, origin);
         await putJson(bucket, getIndexPath(env), []);
+        const redis = getRedisClient(env);
+        await invalidateAllArticleCaches(redis);
         return json({ok: true, message: "Article repository reset to empty"}, 200, origin);
       }
 
@@ -692,6 +737,8 @@ export default {
         const articles = await withIndexLock(async () => {
           return await reconstructIndex(bucket, env);
         });
+        const redis = getRedisClient(env);
+        await invalidateAllArticleCaches(redis);
         return json(
           {
             ok: true,
@@ -823,6 +870,8 @@ export default {
         };
 
         const result = await generateArticle(body, env, user, storageHelpers);
+        const redis = getRedisClient(env);
+        await invalidateArticleCaches(redis, { id: result?.article?.id, slug: result?.article?.slug });
         return json(result, 201, origin);
       }
 
@@ -859,6 +908,8 @@ export default {
           await putJson(bucket, getIndexPath(env), index);
           return newArticle;
         });
+        const redis = getRedisClient(env);
+        await invalidateArticleCaches(redis, { id: article.id, slug: article.slug });
         return json(article, 201, origin);
       }
 
@@ -890,6 +941,26 @@ export default {
       const articleMatch = url.pathname.match(/^\/api\/articles\/([^/]+)$/);
       if (articleMatch) {
         const key = decodeURIComponent(articleMatch[1]);
+        const redis = getRedisClient(env);
+        const isIntelRequest = url.searchParams.get("intelligence") === "true";
+
+        if (request.method === "GET" && !isIntelRequest) {
+          const cachedArticle = await getCachedArticle(redis, key);
+          if (cachedArticle) {
+            if (cachedArticle.published === false || cachedArticle.private === true) {
+              const user = await getAuthUser(request, env);
+              if (!user) return json({error: "Article not found"}, 404, origin);
+              const isOwner =
+                Boolean(cachedArticle.authorEmail) &&
+                cachedArticle.authorEmail.toLowerCase() === user.email.toLowerCase();
+              if (user.role !== "admin" && !isOwner) {
+                return json({error: "Article not found"}, 404, origin);
+              }
+            }
+            return json(cachedArticle, 200, origin);
+          }
+        }
+
         const index = await ensureSeed(bucket, env);
         const meta = index.find((item) => item.id === key || item.slug === key);
         if (!meta) return json({error: "Article not found"}, 404, origin);
@@ -935,6 +1006,7 @@ export default {
                 },
                 {refresh}
               );
+              await invalidateArticleCaches(redis, { id: meta.id, slug: meta.slug });
               return json({...article, ai_intelligence: intelligence}, 200, origin);
             } catch (intelErr) {
               console.error("[Intelligence Error]:", intelErr);
@@ -949,8 +1021,16 @@ export default {
           const cachedIntel = article.ai_intelligence ||
             (await peekArticleIntelligence(meta.id, env, {bucket, readJson}));
 
+          const responseArticle = {
+            ...article,
+            has_intelligence: Boolean(cachedIntel),
+          };
+          if (responseArticle.published !== false && responseArticle.private !== true) {
+            await setCachedArticle(redis, responseArticle);
+          }
+
           return json(
-            {...article, has_intelligence: Boolean(cachedIntel)},
+            responseArticle,
             200,
             origin
           );
@@ -1012,6 +1092,11 @@ export default {
             );
             return article;
           });
+          await invalidateArticleCaches(redis, {
+            id: updatedArticle.id,
+            slug: updatedArticle.slug,
+            oldSlug: existing.slug,
+          });
           return json(updatedArticle, 200, origin);
         }
 
@@ -1045,6 +1130,7 @@ export default {
               index.filter((item) => item.id !== meta.id)
             );
           });
+          await invalidateArticleCaches(redis, { id: meta.id, slug: meta.slug });
           return json({ok: true}, 200, origin);
         }
       }

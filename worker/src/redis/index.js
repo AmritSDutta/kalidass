@@ -36,3 +36,5 @@ export function getRedisClient(env) {
 
   return new MemoryAdapter(formatRedisKey);
 }
+
+export * from "./cache.js";
