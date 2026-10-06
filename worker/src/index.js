@@ -549,6 +549,9 @@ export default {
       }
 
       if (url.pathname === "/api/eval/quality" && request.method === "POST") {
+        const user = await getAuthUser(request, env);
+        if (!user) return json({error: "Unauthorized"}, 401, origin);
+
         let body = {};
         try {
           body = await request.json();
@@ -686,7 +689,7 @@ export default {
           );
         } catch (err) {
           console.error("AI Search Insight error:", err);
-          return json({error: err.message || "Failed to fetch AI search insight"}, 500, origin);
+          return json({error: "Failed to fetch AI search insight"}, 500, origin);
         }
       }
 
@@ -883,8 +886,7 @@ export default {
       return json({error: "Not found"}, 404, origin);
     } catch (error) {
       console.error("Worker error:", error);
-      const message = error instanceof Error ? error.message : "Worker error";
-      return json({error: message}, 500, origin);
+      return json({error: "Internal server error"}, 500, origin);
     }
   },
 };

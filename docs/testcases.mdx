@@ -108,7 +108,7 @@ Executes requests directly against the Cloudflare Worker `fetch(request, env)` h
 | :--- | :--- | :--- | :--- |
 | **Health Check** | `GET /api/health` | None | HTTP `200` with `{ ok: true }`. |
 | **Article Collection Query** | `GET /api/articles` | None (Public) | HTTP `200` with array of published items. |
-| **Quality Evaluation API** | `POST /api/eval/quality` | None | HTTP `200` returning `local-heuristic` verdict. |
+| **Quality Evaluation API** | `POST /api/eval/quality` | Bearer (required) | HTTP `401 Unauthorized` without a token; HTTP `200` returning `local-heuristic` verdict with `Bearer test-secret-token`. |
 | **Unauthenticated Mutation Block** | `POST /api/articles` | None | HTTP `401 Unauthorized`. |
 | **Authenticated Article Creation** | `POST /api/articles` | `Bearer test-secret-token` | HTTP `201 Created` with persisted article; subsequent authorized `GET /api/articles/:slug` returns HTTP `200`. |
 | **Unknown Path Resolution** | `GET /api/unknown-route` | None | HTTP `404 Not Found`. |

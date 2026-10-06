@@ -111,7 +111,7 @@ kalidass/
 
 ## 6. Data Contracts & Operational Flags
 
-- **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/generate` (autonomous Upstash Box article synthesis), `/api/auth/me` (user profile handshake), `/api/eval/quality` (Article Heuristics: AI detection, accuracy, engagement, and safety check with pluggable Jev/Clef/heuristic providers), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
+- **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/generate` (autonomous Upstash Box article synthesis), `/api/auth/me` (user profile handshake), `/api/eval/quality` (Article Heuristics, Bearer auth required: AI detection, accuracy, engagement, and safety check with pluggable Jev/Clef/heuristic providers), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
 - **Testing**: Hermetic Vitest suite (`worker/test/*.test.js`) + `npm.cmd run typecheck` (frontend) + `node scripts/validate_docs.mjs docs` (Docs7), automated via `.github/workflows/ci.yml`.
 
 - **Data Models (`blog_frontend/src/lib/types.ts`)**:

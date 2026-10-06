@@ -76,6 +76,9 @@ If the primary provider encounters missing credentials or a network outage, the 
 ### Endpoint
 `POST /api/eval/quality`
 
+### Authentication
+Requires a verified caller. Send a valid Auth0 `Authorization: Bearer <jwt>` token, or the admin token as `Authorization: Bearer <ADMIN_TOKEN>` / `X-Admin-Token`. Unauthenticated requests are rejected with HTTP `401 Unauthorized`.
+
 ### Request Payload
 ```json
 {
@@ -131,7 +134,7 @@ If the primary provider encounters missing credentials or a network outage, the 
 
 1. **Pre-Submit Studio Gate**: In Studio Compose (`blog_frontend/src/pages/admin.tsx`), clicking **Save draft** or **Publish** triggers an automated quality & safety pre-check. If any safety risk exceeds $0.55$, saving is aborted and a high-visibility warning banner is rendered.
 2. **Server-Side Worker Gate**: On `POST /api/articles` and `PUT /api/articles/:id`, the Worker runs safety verification. If prohibited content is detected, the API rejects the request with HTTP `422 Unprocessable Entity`.
-3. **Reader Right Sidebar**: In `StoryPage.tsx`, readers and editors can trigger a live quality audit to inspect AI probability, technical rigor score, and safety verification badges in real time in the **Article Heuristics** card.
+3. **Reader Right Sidebar**: In `StoryPage.tsx`, signed-in readers and editors can trigger a live quality audit (the endpoint requires authentication) to inspect AI probability, technical rigor score, and safety verification badges in real time in the **Article Heuristics** card. Stored evaluations remain visible to all readers.
 4. **Resilient Cascading Engine**: If API keys are missing or a third-party service fails, the Worker cascades to the local heuristic engine without throwing 500 errors.
 
 ---

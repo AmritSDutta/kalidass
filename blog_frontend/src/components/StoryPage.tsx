@@ -279,7 +279,7 @@ export default function StoryPage(): ReactNode {
                         <p className={styles.evalSummaryText}>{evalResult.summary}</p>
                       ) : null}
                     </div>
-                  ) : (
+                  ) : isAuthenticated ? (
                     <button
                       type="button"
                       className={styles.auditBtn}
@@ -287,6 +287,8 @@ export default function StoryPage(): ReactNode {
                       onClick={handleRunAudit}>
                       {evaluating ? "Evaluating heuristics..." : "⚡ Run Quality Audit"}
                     </button>
+                  ) : (
+                    <p className={styles.auditSub}>Sign in to run a live quality audit.</p>
                   )}
                   {evalError ? <p className={styles.evalError}>{evalError}</p> : null}
                 </div>

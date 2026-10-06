@@ -36,17 +36,28 @@ describe("Worker REST API (Hermetic Integration)", () => {
     expect(Array.isArray(data)).toBe(true);
   });
 
-  it("POST /api/eval/quality evaluates technical content safely without external APIs", async () => {
+  it("POST /api/eval/quality requires auth and evaluates technical content safely without external APIs", async () => {
+    const payload = {
+      title: "Deterministic Edge Computing",
+      subtitle: "Memory safety in serverless runtimes",
+      excerpt: "Field analysis of isolate execution performance.",
+      blocks: [
+        {type: "paragraph", text: "Cloudflare Workers run on V8 isolates with zero cold-start overhead."},
+      ],
+    };
+
+    // Unauthenticated callers are rejected
+    const unauthRes = await worker.fetch(
+      createRequest("/api/eval/quality", {method: "POST", body: payload}),
+      env
+    );
+    expect(unauthRes.status).toBe(401);
+
+    // Authenticated callers evaluate successfully
     const req = createRequest("/api/eval/quality", {
       method: "POST",
-      body: {
-        title: "Deterministic Edge Computing",
-        subtitle: "Memory safety in serverless runtimes",
-        excerpt: "Field analysis of isolate execution performance.",
-        blocks: [
-          {type: "paragraph", text: "Cloudflare Workers run on V8 isolates with zero cold-start overhead."},
-        ],
-      },
+      headers: {Authorization: "Bearer test-secret-token"},
+      body: payload,
     });
     const res = await worker.fetch(req, env);
     expect(res.status).toBe(200);

@@ -264,7 +264,7 @@ curl -X POST https://kalidass.amrit.fyi/api/articles \
 
 ## 9. Article Heuristics (Quality & Safety Evaluation)
 
-Kalidass Journal integrates automated editorial quality assessment and content safety guardrails powered by pluggable providers (TypeSafe Jev, Cloudflare Clef, and local deterministic heuristics) at `POST /api/eval/quality`:
+Kalidass Journal integrates automated editorial quality assessment and content safety guardrails powered by pluggable providers (TypeSafe Jev, Cloudflare Clef, and local deterministic heuristics) at the authenticated `POST /api/eval/quality` endpoint (Bearer token required):
 
 - **AI Writing Detection (`noul` primitive)**: Computes probability of synthetic AI generation vs. human composition.
 - **Technical Accuracy & Rigor (`score` primitive)**: Analyzes systems architecture depth and technical precision ($1.0 - 5.0$).
