@@ -14,6 +14,7 @@ export function buildIntelligenceScript(params) {
 import json
 import os
 import sys
+import time
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -24,28 +25,10 @@ MAIN_QUERY = ${queryStr}
 TITLE = ${titleStr}
 API_KEY = ${apiKeyStr}
 
-SERP_KEYS = [
-    "ai_overview",
-    "answer_box",
-    "knowledge_graph",
-    "organic_results",
-    "related_questions",
-    "related_searches",
-    "top_stories",
-    "news_results",
-    "inline_videos",
-    "inline_images",
-    "inline_shopping",
-    "shopping_results",
-    "jobs_results",
-    "twitter_results",
-    "discussions_and_forums",
-    "perspectives",
-    "top_insights",
-    "things_to_know",
-]
+def log(msg):
+    print(f"[Box Intel] {msg}", file=sys.stderr, flush=True)
 
-def search(params):
+def search(params, timeout=35, max_retries=1):
     query = {k: v for k, v in params.items() if v is not None and v != ""}
     api_key = os.environ.get("SERPAPI_API_KEY") or os.environ.get("SERPAPI_KEY") or API_KEY
     if api_key:
@@ -55,117 +38,94 @@ def search(params):
     if api_key:
         headers["X-Api-Key"] = api_key
         headers["Authorization"] = f"Bearer {api_key}"
-    req = urllib.request.Request(url, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=40) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
+
+    for attempt in range(max_retries + 1):
+        req = urllib.request.Request(url, headers=headers)
         try:
-            return json.loads(body)
-        except Exception:
-            return {"error": body, "_http_status": exc.code}
-    except Exception as e:
-        return {"error": str(e)}
-
-def pick_serp_blocks(google):
-    out = {}
-    for key in SERP_KEYS:
-        if key in google:
-            out[key] = google[key]
-    return out
-
-def expand_ai_overview(google):
-    overview = google.get("ai_overview") or {}
-    token = overview.get("page_token")
-    if not token:
-        return overview
-    extra = search({"engine": "google_ai_overview", "page_token": token})
-    merged = dict(overview)
-    merged["expanded"] = extra.get("ai_overview") or extra
-    return merged
-
-def fetch_trends(q):
-    packs = {}
-    for data_type in ("TIMESERIES", "GEO_MAP_0", "RELATED_QUERIES", "RELATED_TOPICS"):
-        params = {
-            "engine": "google_trends",
-            "q": q,
-            "data_type": data_type,
-            "hl": "en",
-            "date": "today 12-m",
-        }
-        res = search(params)
-        if not res.get("error"):
-            packs[data_type] = res
-    return packs
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            try:
+                return json.loads(body)
+            except Exception:
+                return {"error": body, "_http_status": exc.code}
+        except Exception as e:
+            if attempt < max_retries:
+                log(f"Warning: search attempt {attempt + 1} failed ({e}). Retrying in 1.5s...")
+                time.sleep(1.5)
+                continue
+            return {"error": str(e)}
 
 def main():
+    start_total = time.time()
     q = MAIN_QUERY
-    print(f"Fetching SERP intelligence for: {q}", file=sys.stderr)
+    log(f"Starting single-pass SERP extraction for: {TITLE}")
+    log(f"Search Query: '{q}'")
 
-    # 1. Main Google Search
-    google = search({"engine": "google", "q": q, "gl": "us", "hl": "en", "num": 10})
+    api_key = os.environ.get("SERPAPI_API_KEY") or os.environ.get("SERPAPI_KEY") or API_KEY
+    has_key = bool(api_key and len(api_key) > 5)
+    log(f"Auth check: Attached proxy headers active; API key parameter resolved: {has_key}")
 
-    # Finding 1 Validation: fail early if SerpApi rejected or returned zero results due to error
+    # 1. Single primary call to SerpApi Google search engine
+    t0 = time.time()
+    log("Calling SerpApi Google Search engine (single unified request for all keys)...")
+    google = search({"engine": "google", "q": q, "gl": "us", "hl": "en", "num": 10}, timeout=35)
+    t_search = time.time() - t0
+
     if google.get("error"):
-        print(f"SERP API Error: {google.get('error')}", file=sys.stderr)
+        log(f"FATAL: SerpApi returned error: {google.get('error')}")
         sys.exit(1)
 
+    log(f"SerpApi Google search completed in {t_search:.2f}s (HTTP 200).")
+
+    # Extract all SERP blocks from the single response
     organic = google.get("organic_results") or []
-    if not organic and not google.get("ai_overview") and not google.get("knowledge_graph"):
-        print("SERP search returned empty payload without organic, AI overview or KG results.", file=sys.stderr)
+    ai_overview = google.get("ai_overview")
+    kg = google.get("knowledge_graph")
+    answer_box = google.get("answer_box")
+    paa = google.get("related_questions") or []
+    videos = google.get("inline_videos") or []
+    news = google.get("news_results") or google.get("top_stories") or []
+    shopping = google.get("shopping_results") or google.get("inline_shopping") or []
+    jobs = google.get("jobs_results") or []
+    twitter = google.get("twitter_results") or []
+    discussions = google.get("discussions_and_forums") or []
+
+    log(
+        f"Keys extracted: organic={len(organic)}, ai_overview={bool(ai_overview)}, "
+        f"kg={bool(kg)}, answer_box={bool(answer_box)}, paa={len(paa)}, videos={len(videos)}, "
+        f"news={len(news)}, shopping={len(shopping)}, jobs={len(jobs)}, discussions={len(discussions)}"
+    )
+
+    if not organic and not ai_overview and not kg:
+        log("ERROR: Google search returned empty results without organic, AI overview or KG.")
         sys.exit(1)
 
-    blocks = pick_serp_blocks(google)
-
-    # 2. Expanded AI Overview
-    ai_overview = expand_ai_overview(google)
-
-    # 3. People Also Ask (dedicated high-yield engine fallback)
-    paa_res = google.get("related_questions")
-    if not paa_res:
-        paa_search = search({"engine": "google_related_questions", "q": q, "gl": "us", "hl": "en"})
-        paa_res = paa_search.get("related_questions") or []
-
-    # 4. Books Shopping List (via google_shopping_light)
-    books_query = f"{TITLE} books"
-    books_res = search({"engine": "google_shopping_light", "q": books_query, "gl": "us", "hl": "en"})
-    shopping_books = books_res.get("shopping_results") or []
-
-    # 5. Job Opportunities (via google_jobs)
-    jobs_res = google.get("jobs_results")
-    if not jobs_res:
-        jobs_search = search({"engine": "google_jobs", "q": q, "gl": "us", "hl": "en"})
-        jobs_res = jobs_search.get("jobs_results") or []
-
-    # 6. Trends & Graph Velocity
-    trends = fetch_trends(q)
-
-    # 7. News Light
-    news_res = google.get("news_results") or google.get("top_stories")
-    if not news_res:
-        news_search = search({"engine": "google_news_light", "q": q, "gl": "us", "hl": "en"})
-        news_res = news_search.get("news_results") or []
+    # 2. Expand AI Overview only if a page_token is present
+    if ai_overview and isinstance(ai_overview, dict) and ai_overview.get("page_token"):
+        token = ai_overview.get("page_token")
+        log("Expanding AI overview via page token...")
+        t_exp = time.time()
+        extra = search({"engine": "google_ai_overview", "page_token": token}, timeout=10)
+        log(f"Expanded AI overview completed in {time.time() - t_exp:.2f}s.")
+        merged = dict(ai_overview)
+        merged["expanded"] = extra.get("ai_overview") or extra
+        ai_overview = merged
 
     intelligence = {
         "query": q,
         "ai_overview": ai_overview if ai_overview else None,
-        "knowledge_graph": google.get("knowledge_graph"),
-        "answer_box": google.get("answer_box"),
-        "inline_videos": google.get("inline_videos") or [],
-        "books_shopping": shopping_books[:8] if isinstance(shopping_books, list) else [],
-        "jobs_results": jobs_res[:6] if isinstance(jobs_res, list) else [],
-        "twitter_results": google.get("twitter_results") or [],
-        "discussions_and_forums": google.get("discussions_and_forums") or google.get("perspectives") or [],
-        "people_also_ask": paa_res if isinstance(paa_res, list) else [],
-        "trends": {
-            "interest_over_time": trends.get("TIMESERIES", {}).get("interest_over_time"),
-            "interest_by_region": trends.get("GEO_MAP_0", {}).get("interest_by_region"),
-            "related_queries": trends.get("RELATED_QUERIES", {}).get("related_queries"),
-            "related_topics": trends.get("RELATED_TOPICS", {}).get("related_topics"),
-        },
-        "news": news_res[:5] if isinstance(news_res, list) else [],
+        "knowledge_graph": kg,
+        "answer_box": answer_box,
+        "inline_videos": videos,
+        "books_shopping": shopping[:8] if isinstance(shopping, list) else [],
+        "jobs_results": jobs[:6] if isinstance(jobs, list) else [],
+        "twitter_results": twitter,
+        "discussions_and_forums": discussions,
+        "people_also_ask": paa if isinstance(paa, list) else [],
+        "trends": {},
+        "news": news[:5] if isinstance(news, list) else [],
         "organic_results": [
             {
                 "title": r.get("title", ""),
@@ -181,9 +141,12 @@ def main():
     try:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(intelligence, f, indent=2)
-        print(f"Intelligence successfully written to {output_path}", file=sys.stderr)
-    except Exception:
-        # Fallback dump to stdout
+        total_time = time.time() - start_total
+        file_size = os.path.getsize(output_path)
+        log(f"Intelligence successfully written to {output_path} ({file_size} bytes).")
+        log(f"Total Box execution time: {total_time:.2f}s. Exiting cleanly with code 0.")
+    except Exception as f_err:
+        log(f"Error saving to disk ({f_err}), emitting stdout fallback...")
         print("---OUTPUT_START---")
         print(json.dumps(intelligence))
         print("---OUTPUT_END---")

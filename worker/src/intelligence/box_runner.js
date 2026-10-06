@@ -23,6 +23,10 @@ export async function runBoxIntelligence(params, env) {
       "X-Api-Key": serpApiKey,
       "Authorization": `Bearer ${serpApiKey}`,
     };
+    attachHeaders["*.serpapi.com"] = {
+      "X-Api-Key": serpApiKey,
+      "Authorization": `Bearer ${serpApiKey}`,
+    };
     boxEnv.SERPAPI_API_KEY = serpApiKey;
     boxEnv.SERPAPI_KEY = serpApiKey;
   }
@@ -36,7 +40,7 @@ export async function runBoxIntelligence(params, env) {
     enableTelemetry: false,
     attachHeaders,
     env: boxEnv,
-    timeout: 90_000,
+    timeout: 120_000,
   });
 
   try {
@@ -50,15 +54,18 @@ export async function runBoxIntelligence(params, env) {
     });
 
     const command = "python /workspace/home/intelligence.py";
-    const execPromise = box.exec.command(command);
+    const execPromise = box.exec.command(command, { timeout: 90_000 });
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(
-        () => reject(new Error("Box intelligence extraction timed out after 60 seconds.")),
-        60_000
+        () => reject(new Error("Box intelligence extraction timed out after 90 seconds.")),
+        90_000
       )
     );
 
     const execResult = await Promise.race([execPromise, timeoutPromise]);
+    if (execResult && execResult.exitCode && execResult.exitCode !== 0) {
+      console.warn(`[Box] Script exit code: ${execResult.exitCode}. stderr: ${execResult.stderr}`);
+    }
 
     let output = null;
     try {
