@@ -316,6 +316,9 @@ await window.modelContext.tools.readArticle.execute({ slug: "attention-as-routin
 # Frontend static type check (mandatory before deployment)
 cd blog_frontend && npm.cmd run typecheck
 
+# Run hermetic frontend UI test suite (jsdom, zero network, 100% mocked)
+cd blog_frontend && npm.cmd test
+
 # Run hermetic Worker Vitest test suite (zero network, 100% mocked)
 cd worker && npm.cmd test
 
@@ -330,28 +333,25 @@ Automated verification runs on every push and pull request via [GitHub Actions C
 
 ---
 
-## 13. Architecture Evaluation & Quality Scorecard
+## 13. Architecture Notes & Known Limitations
 
-### Overall Rating: **9.1 / 10** (Production-Ready)
+An honest assessment for contributors evaluating this codebase.
 
-| Dimension | Score | Analysis |
-| :--- | :---: | :--- |
-| **Architecture & Ergonomics** | **9.3 / 10** | Clean decoupling of static SSG shell (Docusaurus) and edge REST API (Cloudflare Worker + Upstash Blob). Zero database servers to maintain. |
-| **Data Modeling** | **9.2 / 10** | Polymorphic block union (`Block`) provides structured content without CMS vendor lock-in. |
-| **Developer Experience** | **8.8 / 10** | Fast local multi-terminal / unified startup, Webpack dev proxy for zero-CORS dev workflow, and strict TypeScript checking. |
-| **Security & Automation** | **9.2 / 10** | Bearer auth, Cloudflare Access Zero Trust proxy support, hypervisor secret isolation via `attachHeaders`, and structured machine-to-machine AI agent publishing. |
-| **Documentation Quality** | **9.6 / 10** | Unified Docs7 documentation suite (26 verified MDX pages, valid Mermaid diagrams, strict frontmatter, portable validator). |
-| **Testing & CI/CD** | **9.0 / 10** | 100% hermetic Worker Vitest test suite covering evaluation heuristics, in-memory store, draft schemas, and REST routes, automated via GitHub Actions CI. |
+### Strengths
+1. **Edge-Native Zero-Maintenance Storage**: Upstash Blob with a configurable root bucket eliminates database migrations; the in-memory fallback keeps local dev dependency-free.
+2. **Polymorphic Content Pipeline**: The 5-variant `Block` union renders cleanly across web and API clients without raw HTML parsing.
+3. **Agent-Native Publishing**: Standardized `POST /api/articles` payload and WebMCP in-browser tools let AI agents draft and read content through stable contracts.
+4. **Validated Documentation**: The Docs7 suite is machine-validated in CI, keeping docs synchronized with code.
 
-### Core Architectural Advantages
-1. **Edge-Native Zero-Maintenance Storage**: Using Upstash Blob with a configurable root bucket (`kalidass/*`) eliminates database migrations while delivering low-latency global reads.
-2. **Polymorphic Content Pipeline**: Structured JSON blocks render cleanly across web and API clients without raw HTML parsing.
-3. **Autonomous Agent Ready**: Standardized `POST /api/articles` payload enables AI agents and automated pipelines to draft and publish articles directly.
-4. **Single-Source Docs7 Architecture**: Complete documentation consolidated at the root with live validation ensures documentation stays in sync with code.
+### Known Limitations
+1. **Worker is untyped JavaScript**: The frontend is strict TypeScript, but the Worker (the security-critical surface) relies on JSDoc annotations only.
+2. **Whole-index read-modify-write**: Article listing loads and rewrites the full JSON index per mutation (guarded by `withIndexLock`); fine at personal-journal scale, a ceiling at high traffic.
+3. **Frontend tests are component-level only**: No end-to-end browser or visual regression tests; coverage focuses on render contracts of core components and the WebMCP registry.
+4. **Windows build limitation**: `npm run build` fails locally due to the `/story/:slug*` route colon; production builds run on Linux CI.
+5. **Single-region Worker**: No multi-region replication or caching layer for the API.
 
-### Roadmap to 10/10
-- **Worker Integration Tests (Completed)**: Hermetic Vitest test suites covering Worker endpoints, evaluation heuristics, and storage.
-- **Index Concurrency Control (Completed)**: In-isolate async mutex queue (`withIndexLock`) guaranteeing zero lost updates and slug uniqueness under high-concurrency parallel writes.
-- **Automated CI Workflow (Completed)**: GitHub Actions CI running `typecheck`, Docs7 validation, and Vitest suite on all pushes/PRs.
-- **Dynamic SSG Fallback (Next Milestone)**: Introduce pre-rendered static routes or custom 404 rewrite fallback for local Windows builds.
+### Roadmap
+- **Dynamic SSG Fallback**: Pre-rendered static routes or a custom 404 rewrite fallback for local Windows builds.
+- **Worker Type Safety**: Migrate `worker/src` to TypeScript or add `checkJs` typechecking in CI.
+- **E2E Smoke Tests**: Browser-level publish/read flow against the memory store.
 

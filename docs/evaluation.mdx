@@ -1,26 +1,11 @@
 ---
 title: Architecture Evaluation
-description: Engineering quality assessment, architectural score breakdown, design advantages, and production hardening roadmap.
+description: Honest engineering assessment covering architectural strengths, known limitations, and the hardening roadmap.
 ---
 
 # Architecture Evaluation
 
-This document provides a technical evaluation of the Kalidass Journal architecture, scoring its design across six engineering dimensions, outlining core architectural advantages, and defining the roadmap toward 10/10 production maturity.
-
-## System Scorecard
-
-### Overall Rating: **9.1 / 10** (Production-Ready)
-
-| Dimension | Score | Analysis |
-| :--- | :---: | :--- |
-| **Architecture & Ergonomics** | **9.3 / 10** | Clean decoupling of static SSG shell (Docusaurus) and edge REST API (Cloudflare Worker + Upstash Blob). Zero database servers to maintain. |
-| **Data Modeling** | **9.2 / 10** | Polymorphic block union (`Block`) provides structured content without CMS vendor lock-in. |
-| **Developer Experience** | **8.8 / 10** | Fast local multi-terminal / unified startup, Webpack dev proxy for zero-CORS dev workflow, and strict TypeScript checking. |
-| **Security & Automation** | **9.2 / 10** | Bearer auth, Cloudflare Access Zero Trust proxy support, hypervisor secret isolation via `attachHeaders`, and structured machine-to-machine AI agent publishing. |
-| **Documentation Quality** | **9.6 / 10** | Unified Docs7 documentation suite (26 verified MDX pages, valid Mermaid diagrams, strict frontmatter, portable validator). |
-| **Testing & CI/CD** | **9.0 / 10** | 100% hermetic Worker Vitest test suite covering evaluation heuristics, in-memory store, draft schemas, and REST routes, automated via GitHub Actions CI. |
-
----
+This document provides a technical assessment of the Kalidass Journal architecture: what the design does well, where its known limitations lie, and the roadmap for hardening it. It deliberately avoids self-assigned scores — see the limitations below for the areas that would actually benefit from investment.
 
 ## Architectural Strengths
 
@@ -38,31 +23,40 @@ Complete documentation is consolidated at the root with live validation, ensurin
 
 ---
 
-## Roadmap to 10/10
+## Known Limitations
+
+1. **Worker is untyped JavaScript**: The frontend is strict TypeScript, but the Worker — the security-critical surface — relies on JSDoc annotations only; type errors surface at runtime, not compile time.
+2. **Whole-index read-modify-write**: Article listing loads and rewrites the full JSON index per mutation. The `withIndexLock` async mutex prevents lost updates and slug collisions, but the pattern itself caps write throughput and is a ceiling at high traffic.
+3. **No end-to-end tests**: Coverage is component-level (frontend jsdom suite) and unit-level (Worker Vitest suite); there is no browser E2E publish/read flow or visual regression testing.
+4. **Windows build limitation**: `npm run build` fails locally because the dynamic `/story/:slug*` route contains `:`, which is illegal in Windows filenames; production builds run on Linux CI.
+5. **Single-region Worker**: No multi-region replication or response caching layer for the API.
+
+---
+
+## Hardening Roadmap
+
+Already shipped: hermetic Worker Vitest suites (`worker/test/`), index concurrency control via `withIndexLock` across all mutations, GitHub Actions CI (typecheck, frontend UI tests, Worker tests, Docs7 validation), and the component-level frontend jsdom suite (`blog_frontend/src/**/*.test.{ts,tsx}`).
 
 ```mermaid
 flowchart LR
-  subgraph Stage1["Testing"]
-    WorkerTests["Worker Unit Tests (Vitest)"]
-    E2ETests["E2E Reader Tests (Playwright)"]
+  subgraph Stage1["Type Safety"]
+    WorkerTypes["Worker TypeScript Migration"]
+    CheckJs["checkJs CI Gate"]
   end
-  subgraph Stage2["Concurrency"]
-    ETags["ETag Optimistic Locking"]
-    AtomicIndex["Durable Index Updates"]
+  subgraph Stage2["Testing"]
+    E2ETests["E2E Publish/Read Flow (Playwright)"]
+    VisualTests["Visual Regression"]
   end
-  subgraph Stage3["Build Automation"]
+  subgraph Stage3["Build"]
     SSGFallback["Dynamic Route Pre-rendering"]
-    CIWorkflow["Automated GitHub Actions CI"]
   end
   Stage1 --> Stage2
   Stage2 --> Stage3
 ```
 
-1. **Worker Integration Tests (Completed)**:
-   - Vitest test suites added for Worker endpoints, evaluation heuristics, schemas, and in-memory storage (`npm.cmd --prefix worker test`).
-2. **Index Concurrency Control (Completed)**:
-   - Async mutex serialization (`withIndexLock`) implemented across all index mutations (`POST`, `PUT`, `DELETE`, and generator), preventing lost updates and slug collisions under parallel load.
-3. **Automated CI Workflow (Completed)**:
-   - GitHub Actions CI (`.github/workflows/ci.yml`) runs `typecheck`, Docs7 validation, and the hermetic Vitest suite on every push and pull request.
-4. **Dynamic SSG Fallback (Next Milestone)**:
-   - Introduce pre-rendered static routes or custom 404 rewrite fallback for local Windows builds.
+1. **Worker Type Safety (Next Milestone)**:
+   - Migrate `worker/src` to TypeScript, or enable `checkJs` with JSDoc typechecking as a CI gate.
+2. **E2E Smoke Tests (Next Milestone)**:
+   - Browser-level publish/read flow (Playwright) against the in-memory store.
+3. **Dynamic SSG Fallback (Next Milestone)**:
+   - Pre-rendered static routes or a custom 404 rewrite fallback for local Windows builds.

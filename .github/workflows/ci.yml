@@ -29,6 +29,9 @@ jobs:
       - name: Frontend Static Typecheck
         run: npm --prefix blog_frontend run typecheck
 
+      - name: Frontend Hermetic UI Test Suite
+        run: npm --prefix blog_frontend test
+
       - name: Worker Hermetic Vitest Test Suite
         run: npm --prefix worker test
 

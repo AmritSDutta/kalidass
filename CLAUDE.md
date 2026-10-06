@@ -71,6 +71,7 @@ kalidass/
 ### Frontend (`blog_frontend/`)
 - **Package Manager**: Use `npm` (`package-lock.json` committed, Node `>=20.0`).
 - **Typecheck**: `npm run typecheck` (in Windows PowerShell: `npm.cmd run typecheck`).
+- **UI Tests**: `npm test` (hermetic jsdom/Vitest suite; in Windows PowerShell: `npm.cmd test`).
 - **Dev Server**: `npm run start` (serves `0.0.0.0:3000`, proxies `/api` to `127.0.0.1:8787`).
 - **Cache Clean**: `npm run clear`
 
@@ -112,7 +113,7 @@ kalidass/
 ## 6. Data Contracts & Operational Flags
 
 - **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/generate` (autonomous Upstash Box article synthesis), `/api/auth/me` (user profile handshake), `/api/eval/quality` (Article Heuristics, Bearer auth required: AI detection, accuracy, engagement, and safety check with pluggable Jev/Clef/heuristic providers), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
-- **Testing**: Hermetic Vitest suite (`worker/test/*.test.js`) + `npm.cmd run typecheck` (frontend) + `node scripts/validate_docs.mjs docs` (Docs7), automated via `.github/workflows/ci.yml`.
+- **Testing**: Hermetic Vitest suites — `worker/test/*.test.js` (Worker) and `blog_frontend/src/**/*.test.{ts,tsx}` (jsdom UI: StoryBody, ArticleCard, WebMCP registry) + `npm.cmd run typecheck` (frontend) + `node scripts/validate_docs.mjs docs` (Docs7), automated via `.github/workflows/ci.yml`.
 
 - **Data Models (`blog_frontend/src/lib/types.ts`)**:
   - `Block`: 5-variant union (`paragraph`, `heading`, `quote`, `image`, `video`).
