@@ -473,62 +473,121 @@ export default function GenerateArticlePage(): ReactNode {
               </button>
             </form>
 
-            {/* Stepper indicator */}
-            {busy && (
-              <div className={styles.progressCard}>
-                <div className={styles.progressTitle}>
-                  <span className={styles.spinner} />
-                  Container Lifecycle ({runtime.toUpperCase()})
+          </div>
+
+          {/* Container Lifecycle & Live Container Status */}
+          <div className={styles.card}>
+            <div className={styles.lifecycleHeader}>
+              <h2 style={{margin: 0}}>Container Lifecycle ({runtime.toUpperCase()})</h2>
+              {busy ? (
+                <span className={`${styles.statusBadge} ${styles.statusBadgeRunning}`}>
+                  <span className={styles.spinner} style={{width: 10, height: 10}} />
+                  Provisioning & Running
+                </span>
+              ) : generatedArticle ? (
+                <span className={`${styles.statusBadge} ${styles.statusBadgeSuccess}`}>
+                  ✓ Terminated & Destroyed
+                </span>
+              ) : (
+                <span className={`${styles.statusBadge} ${styles.statusBadgeStandby}`}>
+                  ○ Standby
+                </span>
+              )}
+            </div>
+
+            <p style={{fontSize: "0.9rem", color: "var(--ink-secondary)", lineHeight: "1.6", marginTop: 0}}>
+              {busy
+                ? `Executing isolated ${runtime === "python" ? "Python 3.11" : "Node.js 20"} custom agent inside ephemeral Upstash Box sandbox.`
+                : generatedArticle
+                ? `Container run completed. Sandbox strictly deallocated with zero orphaned billing.`
+                : `Ready to provision ephemeral ${runtime === "python" ? "Python 3.11" : "Node.js 20"} sandbox on Upstash Box upon generation.`}
+            </p>
+
+            <div className={styles.stepList} style={{marginTop: "1.2rem"}}>
+              <div
+                className={`${styles.stepItem} ${
+                  generatedArticle || currentStep > 1
+                    ? styles.stepDone
+                    : currentStep === 1
+                    ? styles.stepActive
+                    : ""
+                }`}>
+                {generatedArticle || currentStep > 1 ? "✓" : currentStep === 1 ? <span className={styles.spinner} style={{width: 12, height: 12}} /> : "○"} 1. Upstash Box Provisioning ({runtime === "python" ? "Python 3.11" : "Node.js 20"} + attachHeaders)
+              </div>
+              <div
+                className={`${styles.stepItem} ${
+                  generatedArticle || currentStep > 2
+                    ? styles.stepDone
+                    : currentStep === 2
+                    ? styles.stepActive
+                    : ""
+                }`}>
+                {generatedArticle || currentStep > 2 ? "✓" : currentStep === 2 ? <span className={styles.spinner} style={{width: 12, height: 12}} /> : "○"} 2. Custom Agent Research (Tavily/SerpApi) & LLM Synthesis & Infographic
+              </div>
+              <div
+                className={`${styles.stepItem} ${
+                  generatedArticle || currentStep > 3
+                    ? styles.stepDone
+                    : currentStep === 3
+                    ? styles.stepActive
+                    : ""
+                }`}>
+                {generatedArticle || currentStep > 3 ? "✓" : currentStep === 3 ? <span className={styles.spinner} style={{width: 12, height: 12}} /> : "○"} 3. Quality & Safety Screening (Soft-Pass)
+              </div>
+              <div
+                className={`${styles.stepItem} ${
+                  generatedArticle || currentStep >= 4
+                    ? styles.stepDone
+                    : ""
+                }`}>
+                {generatedArticle || currentStep >= 4 ? "✓" : "○"} 4. Stored as Unlisted Draft in Upstash Blob
+              </div>
+            </div>
+
+            {busy && statusMessage && (
+              <div className={styles.liveLogMessage}>
+                <strong>Live Log:</strong> {statusMessage}
+              </div>
+            )}
+
+            {generatedArticle && (
+              <div className={styles.liveStatusBox}>
+                <div className={styles.liveStatusBoxHeader}>
+                  <span>⚡ Live Container Status & Teardown</span>
+                  <span>Zero Orphaned Billing</span>
                 </div>
-                <div className={styles.stepList}>
-                  <div className={`${styles.stepItem} ${currentStep > 1 ? styles.stepDone : currentStep === 1 ? styles.stepActive : ""}`}>
-                    {currentStep > 1 ? "✓" : "•"} 1. Upstash Box Provisioning ({runtime === "python" ? "Python 3.11" : "Node.js 20"} + attachHeaders)
+                <div className={styles.liveStatusGrid}>
+                  <div className={styles.liveStatusItem}>
+                    <span className={styles.liveStatusKey}>Container Status</span>
+                    <span className={styles.liveStatusVal} style={{color: "#10b981"}}>
+                      Terminated & Destroyed
+                    </span>
                   </div>
-                  <div className={`${styles.stepItem} ${currentStep > 2 ? styles.stepDone : currentStep === 2 ? styles.stepActive : ""}`}>
-                    {currentStep > 2 ? "✓" : "•"} 2. Custom Agent Research (Tavily/SerpApi) & Gemini/Ollama & gpt-image-1 Infographic
+                  <div className={styles.liveStatusItem}>
+                    <span className={styles.liveStatusKey}>Runtime</span>
+                    <span className={styles.liveStatusVal}>
+                      {runtime === "python" ? "Python 3.11" : "Node.js 20"}
+                    </span>
                   </div>
-                  <div className={`${styles.stepItem} ${currentStep > 3 ? styles.stepDone : currentStep === 3 ? styles.stepActive : ""}`}>
-                    {currentStep > 3 ? "✓" : "•"} 3. Quality & Safety Screening (Soft-Pass)
+                  <div className={styles.liveStatusItem}>
+                    <span className={styles.liveStatusKey}>Sandbox Platform</span>
+                    <span className={styles.liveStatusVal}>Upstash Box (Ephemeral)</span>
                   </div>
-                  <div className={`${styles.stepItem} ${currentStep >= 4 ? styles.stepDone : ""}`}>
-                    {currentStep >= 4 ? "✓" : "•"} 4. Stored as Unlisted Draft in Upstash Blob
+                  <div className={styles.liveStatusItem}>
+                    <span className={styles.liveStatusKey}>Outbound Auth</span>
+                    <span className={styles.liveStatusVal}>attachHeaders (In-hypervisor)</span>
+                  </div>
+                  <div className={styles.liveStatusItem}>
+                    <span className={styles.liveStatusKey}>Article Artifact</span>
+                    <span className={styles.liveStatusVal}>{generatedArticle.blocks.length} blocks generated</span>
+                  </div>
+                  <div className={styles.liveStatusItem}>
+                    <span className={styles.liveStatusKey}>Storage Location</span>
+                    <span className={styles.liveStatusVal}>Upstash Blob (Draft)</span>
                   </div>
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Quick Info / Instructions Card */}
-          <div className={styles.card}>
-            <div className={styles.cardHead}>
-              <h2>Container Engine Specs</h2>
-            </div>
-            <p style={{fontSize: "0.92rem", color: "var(--ink-secondary)", lineHeight: "1.6"}}>
-              Each generation request dynamically spawns a secure, isolated <strong>Upstash Box</strong> container.
-            </p>
-            <ul style={{fontSize: "0.88rem", color: "var(--ink-secondary)", lineHeight: "1.7", paddingLeft: "1.2rem"}}>
-              <li>
-                <strong>Pluggable Runtime Sandbox:</strong> Runs isolated Python 3.11 or Node.js 20 scripts written directly to the in-container workspace.
-              </li>
-              <li>
-                <strong>Hybrid Search Grounding:</strong> Dynamic weighted search (80% Tavily / 20% SerpApi) with Google SGE AI Overview and organic citations.
-              </li>
-              <li>
-                <strong>Gemini & Ollama Synthesis:</strong> Structured polymorphic blocks generated with dynamic date anchoring and mandatory source attributions.
-              </li>
-              <li>
-                <strong>gpt-image-1 Technical Infographics:</strong> Automated horizontal landscape (1536x1024 WebP) infographic banner with subtle "Kalidass" watermark and zero typography clutter.
-              </li>
-              <li>
-                <strong>attachHeaders Outbound Auth:</strong> Hypervisor-level credential injection preventing ambient in-container token leakage.
-              </li>
-              <li>
-                <strong>Automatic Unlisted Drafts:</strong> Saved directly to Upstash Blob storage under your verified administrator identity.
-              </li>
-              <li>
-                <strong>Strict Container Teardown:</strong> Containers are automatically terminated and destroyed immediately upon completion.
-              </li>
-            </ul>
           </div>
         </div>
 
@@ -599,6 +658,47 @@ export default function GenerateArticlePage(): ReactNode {
             </div>
           </div>
         )}
+
+        {/* Collapsible Container Engine Specs at Bottom */}
+        <details className={styles.specsCollapse}>
+          <summary className={styles.specsSummary}>
+            <div className={styles.specsSummaryTitle}>
+              <span>⚡ Container Engine Specs</span>
+              <span style={{fontSize: "0.82rem", fontWeight: 400, color: "var(--ink-secondary)"}}>
+                (Upstash Box Architecture & Runtime Invariants)
+              </span>
+            </div>
+            <span className={styles.specsSummaryIcon}>▶</span>
+          </summary>
+          <div className={styles.specsBody}>
+            <p style={{fontSize: "0.92rem", color: "var(--ink-secondary)", lineHeight: "1.6", marginTop: 0}}>
+              Each generation request dynamically spawns a secure, isolated <strong>Upstash Box</strong> container.
+            </p>
+            <ul style={{fontSize: "0.88rem", color: "var(--ink-secondary)", lineHeight: "1.7", paddingLeft: "1.2rem"}}>
+              <li>
+                <strong>Pluggable Runtime Sandbox:</strong> Runs isolated Python 3.11 or Node.js 20 scripts written directly to the in-container workspace.
+              </li>
+              <li>
+                <strong>Hybrid Search Grounding:</strong> Dynamic weighted search (80% Tavily / 20% SerpApi) with Google SGE AI Overview and organic citations.
+              </li>
+              <li>
+                <strong>Gemini & Ollama Synthesis:</strong> Structured polymorphic blocks generated with dynamic date anchoring and mandatory source attributions.
+              </li>
+              <li>
+                <strong>gpt-image-1 Technical Infographics:</strong> Automated horizontal landscape (1536x1024 WebP) infographic banner with subtle "Kalidass" watermark and zero typography clutter.
+              </li>
+              <li>
+                <strong>attachHeaders Outbound Auth:</strong> Hypervisor-level credential injection preventing ambient in-container token leakage.
+              </li>
+              <li>
+                <strong>Automatic Unlisted Drafts:</strong> Saved directly to Upstash Blob storage under your verified administrator identity.
+              </li>
+              <li>
+                <strong>Strict Container Teardown:</strong> Containers are automatically terminated and destroyed immediately upon completion.
+              </li>
+            </ul>
+          </div>
+        </details>
       </main>
     </Layout>
   );

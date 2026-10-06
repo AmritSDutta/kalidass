@@ -546,3 +546,164 @@
   margin-top: 0.2rem;
   font-size: 0.78rem;
 }
+
+/* Container Lifecycle & Live Status */
+.lifecycleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.statusBadgeStandby {
+  background: var(--paper-hover, rgba(255, 255, 255, 0.05));
+  border-color: var(--border-subtle);
+  color: var(--ink-secondary);
+}
+
+.statusBadgeRunning {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: var(--chroma-neel);
+}
+
+.statusBadgeSuccess {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: var(--chroma-emerald, #10b981);
+}
+
+.liveStatusBox {
+  margin-top: 1.5rem;
+  padding: 1.2rem;
+  background: rgba(16, 185, 129, 0.04);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 12px;
+}
+
+.liveStatusBoxHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--chroma-emerald, #10b981);
+  margin-bottom: 0.8rem;
+}
+
+.liveStatusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.8rem;
+}
+
+.liveStatusItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--paper);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.liveStatusKey {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--ink-muted, #888);
+}
+
+.liveStatusVal {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.liveLogMessage {
+  margin-top: 1rem;
+  padding: 0.65rem 0.9rem;
+  background: rgba(99, 102, 241, 0.06);
+  border-left: 3px solid var(--chroma-neel);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--chroma-neel);
+  line-height: 1.5;
+}
+
+/* Collapsible Container Engine Specs at Bottom */
+.specsCollapse {
+  margin-top: 2.5rem;
+  background: var(--paper);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 1.4rem 1.8rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.specsCollapse[open] {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: var(--shadow-md);
+}
+
+.specsSummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.specsSummary::-webkit-details-marker {
+  display: none;
+}
+
+.specsSummaryTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.specsSummaryIcon {
+  font-size: 0.85rem;
+  color: var(--chroma-neel);
+  transition: transform 0.2s;
+}
+
+.specsCollapse[open] .specsSummaryIcon {
+  transform: rotate(90deg);
+}
+
+.specsBody {
+  margin-top: 1.2rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--border-subtle);
+}
+

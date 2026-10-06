@@ -350,10 +350,10 @@ function AdminInner(): ReactNode {
       setDraftEval(saved.evaluation || currentEval || null);
       setTagInput((saved.tags || []).join(", "));
       setStatus(
-        editingId
-          ? "Brief updated in blob storage."
-          : publish
-            ? "Brief published to Upstash Blob."
+        publish
+          ? "Brief published to Upstash Blob."
+          : editingId
+            ? "Brief updated in blob storage."
             : "Brief saved as draft."
       );
       refresh();
@@ -517,20 +517,39 @@ function AdminInner(): ReactNode {
                   New article
                 </button>
                 {editingId ? (
-                  <button
-                    type="button"
-                    className={styles.primary}
-                    onClick={() => save(draft.published ?? true)}
-                    disabled={busy}>
-                    {busy ? "Saving..." : "Update"}
-                  </button>
+                  draft.published ? (
+                    <button
+                      type="button"
+                      className={styles.primary}
+                      onClick={() => save(true)}
+                      disabled={busy}>
+                      {busy ? "Saving..." : "Update"}
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.ghost}
+                        onClick={() => save(false)}
+                        disabled={busy}>
+                        {busy ? "Saving..." : "Save draft"}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.primary}
+                        onClick={() => save(true)}
+                        disabled={busy}>
+                        {busy ? "Publishing..." : "Publish"}
+                      </button>
+                    </>
+                  )
                 ) : (
                   <>
                     <button type="button" className={styles.ghost} onClick={() => save(false)} disabled={busy}>
                       {busy ? "Saving..." : "Save draft"}
                     </button>
                     <button type="button" className={styles.primary} onClick={() => save(true)} disabled={busy}>
-                      {busy ? "Saving..." : "Publish"}
+                      {busy ? "Publishing..." : "Publish"}
                     </button>
                   </>
                 )}
@@ -796,6 +815,59 @@ function AdminInner(): ReactNode {
                   ) : null}
                 </div>
               ))}
+
+              <div className={styles.formFooterActions}>
+                <button type="button" className={styles.ghost} onClick={startNew} disabled={busy}>
+                  New article
+                </button>
+                <div style={{display: "flex", gap: "0.6rem", flexWrap: "wrap"}}>
+                  {editingId ? (
+                    draft.published ? (
+                      <button
+                        type="button"
+                        className={styles.primary}
+                        onClick={() => save(true)}
+                        disabled={busy}>
+                        {busy ? "Saving..." : "Update"}
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className={styles.ghost}
+                          onClick={() => save(false)}
+                          disabled={busy}>
+                          {busy ? "Saving..." : "Save draft"}
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.primary}
+                          onClick={() => save(true)}
+                          disabled={busy}>
+                          {busy ? "Publishing..." : "Publish"}
+                        </button>
+                      </>
+                    )
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.ghost}
+                        onClick={() => save(false)}
+                        disabled={busy}>
+                        {busy ? "Saving..." : "Save draft"}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.primary}
+                        onClick={() => save(true)}
+                        disabled={busy}>
+                        {busy ? "Publishing..." : "Publish"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
             </form>
 
             {/* Right 20% Heading Analysis & Heuristics Panel */}
