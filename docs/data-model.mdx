@@ -119,3 +119,77 @@ export type AuthUser = {
 - **`published`**: When `false`, the article is saved as a draft. It is excluded from public API responses and direct GET queries return `404` unless authenticated with the Bearer token.
 - **`private`**: Defaults to `true` (unlisted). When `true`, the article is excluded from public feeds (`/` and `/magazine`) and is readable only by its author or an admin; anonymous requests to the direct `/story/:slug` URL return `404`. Set to `false` in Studio to feature publicly.
 - **`aiGenerated`**: Defaults to `false`. When enabled, renders an `AI` tag chip on cards and story headers.
+
+## Article Intelligence Schema (`AiIntelligence`)
+
+Search grounding context returned by `/api/articles/:slug/intel`:
+
+```typescript
+export interface AiIntelligence {
+  query: string;
+  ai_overview?: {
+    text?: string;
+    snippet?: string;
+    expanded?: {
+      text_blocks?: Array<{
+        type?: string;
+        text?: string;
+        snippet?: string;
+        reference_indexes?: number[];
+      }>;
+      references?: AiIntelligenceReference[];
+    };
+    references?: AiIntelligenceReference[];
+  } | null;
+  knowledge_graph?: {
+    title?: string;
+    type?: string;
+    description?: string;
+    website?: string;
+    attributes?: Record<string, string | number | boolean>;
+  } | null;
+  people_also_ask?: Array<{
+    question: string;
+    snippet?: string;
+    link?: string;
+  }>;
+  inline_videos?: Array<{
+    title?: string;
+    link?: string;
+    channel?: string;
+    duration?: string;
+  }>;
+  organic_results?: Array<{
+    title: string;
+    link: string;
+    snippet: string;
+  }>;
+  fetchedAt?: string;
+}
+```
+
+## Quality & Safety Evaluation Schema (`QualityEvalResult`)
+
+Payload returned by `POST /api/eval/quality`:
+
+```typescript
+export interface QualityEvalResult {
+  ok: boolean;
+  source: "typesafe-jev" | "cloudflare-clef" | "local-heuristic";
+  safety: {
+    violence: number;
+    sexual: number;
+    antisocial: number;
+    verdict: "safe" | "flagged" | "rejected";
+    violations: string[];
+  };
+  metrics: {
+    isAiWritten: { probability: number; label: string };
+    accuracy: { score: number; level: string; confidence: number };
+    engagement: { score: number; level: string; confidence: number };
+    editorialReadiness: { choice: string; confidence: number };
+  };
+  summary: string;
+}
+```
+

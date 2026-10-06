@@ -42,7 +42,8 @@
           "worker/wrangler",
           "worker/utilities",
           "worker/quality-eval",
-          "worker/upstash-box-generator"
+          "worker/upstash-box-generator",
+          "worker/intelligence"
         ]
       },
       {

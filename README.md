@@ -12,8 +12,8 @@ The application is structured as a **combined monorepo** consisting of a **Docus
 flowchart LR
     subgraph Client["Reader & Studio UI"]
         Reader["Reader (/story/:slug, /magazine, /)"]
-        Studio["Studio CMS (/admin)"]
-        Agent["AI Publishing Agent"]
+        Studio["Studio CMS (/admin, /generate_article)"]
+        WebMCP["In-Browser WebMCP Tools"]
     end
 
     subgraph PagesEdge["Cloudflare Pages Edge (kalidass.amrit.fyi)"]
@@ -23,26 +23,38 @@ flowchart LR
 
     subgraph PrivateWorker["Private Cloudflare Worker (workers_dev = false)"]
         Worker["Worker REST API (/api/*)"]
+        EvalEngine["Quality & Safety Engine (Jev / Clef / Heuristic)"]
     end
 
-    subgraph Storage["Persistence Layer"]
-        Blob["Upstash Blob Storage (JSON & Media)"]
+    subgraph CloudSandbox["Upstash Box Sandboxes"]
+        BoxGen["Article Generator (Node / Python)"]
+        BoxIntel["Intelligence Runner (Python + SerpApi)"]
+    end
+
+    subgraph Storage["Persistence & Caching Layer"]
+        Blob["Upstash Blob (Articles, Intelligence & Media)"]
+        Redis["Upstash Redis (Dossier & Eval Cache)"]
         Memory["In-Memory Store (Dev Fallback)"]
     end
 
     Reader -->|Browse & Read| Pages
     Pages -->|Same-Origin fetch /api/*| Proxy
     Studio -->|Bearer Auth /api/*| Proxy
-    Agent -->|POST /api/articles + Bearer| Proxy
+    WebMCP -->|Tool Calls| Pages
     Proxy ==>|env.JOURNAL_WORKER.fetch (Isolate RPC)| Worker
+    Worker --> EvalEngine
+    Worker -->|"Box.create"| BoxGen
+    Worker -->|"Box.create"| BoxIntel
     Worker -->|Persistent Mode| Blob
+    Worker -->|Cache Hits/Writes| Redis
     Worker -->|Fallback Mode| Memory
 ```
 
-- **Static Frontend**: Pre-rendered Docusaurus 3.10 + React 19 SPA served on `https://kalidass.amrit.fyi`.
+- **Static Frontend**: Pre-rendered Docusaurus 3.10 + React 19 SPA served on `https://kalidass.amrit.fyi` with contextual WebMCP tools.
 - **Pages Function Gateway**: Catch-all function (`blog_frontend/functions/api/[[route]].ts`) intercepts `/api/*` and invokes the private worker via the `JOURNAL_WORKER` Service Binding in memory.
-- **Private Worker API**: Cloudflare Worker (`workers_dev = false`, zero public exposure) handling CRUD operations (`/api/articles`), health checks (`/api/health`), media uploads (`/api/objects`), and signed Upstash browser uploads (`/api/upload`).
-- **Persistence**: Durable JSON articles and binary media blobs stored in Upstash Blob (with an in-memory fallback for local development).
+- **Private Worker API**: Cloudflare Worker (`workers_dev = false`, zero public exposure) handling CRUD operations (`/api/articles`), health checks (`/api/health`), media uploads (`/api/objects`), intelligence dossiers (`/api/articles/:slug/intel`), quality evals (`/api/eval/quality`), and signed browser uploads (`/api/upload`).
+- **Autonomous Upstash Box Sandboxes**: Ephemeral containerized runners for article synthesis (`agent.py`) and live search grounding (`intelligence.py` with SerpApi).
+- **Multi-Tier Persistence & Caching**: Durable JSON articles and media stored in Upstash Blob; intelligence dossiers and eval results cached in Upstash Redis (with in-memory fallbacks for local development).
 
 ---
 
@@ -52,8 +64,8 @@ flowchart LR
 kalidass/
 ├── blog_frontend/             # Static frontend & reader application
 │   ├── src/
-│   │   ├── client-modules/    # window.KALIDASS_API_BASE client initialization
-│   │   ├── components/        # ArticleCard, StoryBody, StoryPage, VideoEmbed
+│   │   ├── client-modules/    # api-base.ts, webmcp.ts (window.modelContext)
+│   │   ├── components/        # ArticleCard, IntelligencePanel, StoryBody, StoryPage, VideoEmbed
 │   │   ├── css/               # Neel theme, pigment tokens, and rainbow gradients
 │   │   ├── lib/               # api.ts (CRUD/uploads), media.ts, types.ts
 │   │   └── pages/             # /, /magazine, /admin, /generate_article (dynamic /story/:slug* via plugin)
@@ -66,6 +78,8 @@ kalidass/
 │   │   ├── index.js           # Main fetch handler, router, CORS, auth
 │   │   ├── eval/              # Quality & safety evaluation pipeline (heuristic, Jev, Clef)
 │   │   ├── generator/         # Upstash Box AI article generator (Python & Node harnesses)
+│   │   ├── intelligence/      # Upstash Box Python research runner & SerpApi grounding
+│   │   ├── redis/             # Redis caching adapter (Upstash Redis & memory fallback)
 │   │   ├── memory.js          # In-memory storage adapter fallback
 │   │   └── seed.js            # Seed bootstrap (empty by default)
 │   ├── package.json           # Worker dependencies
@@ -293,12 +307,30 @@ Kalidass Journal provides containerized research article synthesis powered by is
 
 ---
 
-## 11. WebMCP (In-Browser Model Context Protocol)
+## 11. Article Intelligence Engine (SerpApi & Upstash Box)
+
+Kalidass Journal integrates an automated search grounding and live intelligence compiler powered by **Upstash Box** and **SerpApi** (`worker/src/intelligence/`):
+
+- **Ephemeral Python Sandbox**: Executes a standalone research script (`intelligence.py`) inside an isolated Upstash Box container (`runtime: "python"`, `size: "small"`) to query Google Search via SerpApi.
+- **Empirical Grounding Primitives**: Extracts Google AI Overviews (with source citations and expanded text blocks), Knowledge Graph entities, People Also Ask (PAA) questions, related inline videos, and organic citations.
+- **In-Flight Concurrency Locks**: Uses module-level promise locking (`_intelInflightLocks`) to guarantee that concurrent requests for the same article never spawn duplicate Box containers.
+- **Multi-Tier Caching & Persistence**: Compiled dossiers are cached in Upstash Redis (24-hour TTL) with an in-memory Map fallback, and durably stored in Upstash Blob (`kalidass/intelligence/{id}.json`).
+- **Gated Compilation vs. Public Peek**:
+  - `GET /api/articles/:slug/intel`: Public read-only sub-resource reading from Redis/Blob without spawning containers (gated by draft/private state).
+  - `GET /api/articles/:slug?intelligence=true[&refresh=true]`: Authenticated route enabling authors and admins to compile or refresh live intelligence.
+  - `GET /api/articles/:slug`: Returns `has_intelligence: boolean` so the reader UI renders the tab badge without eagerly downloading the full payload.
+- **Interactive Reader UI (`IntelligencePanel`)**: Dynamic story header tabs ("Article", "AI Intelligence", "Article Heuristics") featuring lazy-loaded accordions, verified citations, and live status badges ("Cached", "Live", "Compiling").
+
+> Refer to [`docs/worker/intelligence.mdx`](./docs/worker/intelligence.mdx) for architecture diagrams, schema specifications, and endpoint contracts.
+
+---
+
+## 12. WebMCP (In-Browser Model Context Protocol)
 
 Kalidass Journal natively implements **WebMCP** (`document.modelContext` / `navigator.modelContext` / `window.modelContext`), enabling browser AI agents (Chrome built-in AI, Gemini Nano, OpenAI Operator, and extensions like **WebMCP – Model Context Tool Inspector**) to search and read research dispatches directly within the browser runtime without DOM scraping:
 
-- **`searchArticles({ query, tag })`**: Filter and search publication briefs by keyword or category tag (strictly bounded to at most 5 results).
-- **`readArticle({ slug })`**: Fetch the canonical reading URL, path, and summary metadata for any story.
+- **`searchArticles({ query, tag })`**: Filter and search publication briefs by keyword or category tag. On `/story/:slug`, automatically isolates and returns **only the current article**; on catalog pages, returns up to 5 matching briefs.
+- **`readArticle({ slug })`**: Fetch canonical reading URL, path, and summary metadata. On `/story/:slug`, defaults to the current story slug if omitted.
 
 ```javascript
 // Test directly in DevTools Console (F12):
@@ -310,7 +342,7 @@ await window.modelContext.tools.readArticle.execute({ slug: "attention-as-routin
 
 ---
 
-## 12. Verification & Quality Gates
+## 13. Verification & Quality Gates
 
 ```bash
 # Frontend static type check (mandatory before deployment)
@@ -333,7 +365,7 @@ Automated verification runs on every push and pull request via [GitHub Actions C
 
 ---
 
-## 13. Architecture Notes & Known Limitations
+## 14. Architecture Notes & Known Limitations
 
 An honest assessment for contributors evaluating this codebase.
 
@@ -342,13 +374,14 @@ An honest assessment for contributors evaluating this codebase.
 2. **Polymorphic Content Pipeline**: The 5-variant `Block` union renders cleanly across web and API clients without raw HTML parsing.
 3. **Agent-Native Publishing**: Standardized `POST /api/articles` payload and WebMCP in-browser tools let AI agents draft and read content through stable contracts.
 4. **Validated Documentation**: The Docs7 suite is machine-validated in CI, keeping docs synchronized with code.
+5. **Multi-Tier Edge Caching**: Upstash Redis integration caches intelligence dossiers and eval results with TTL expiration, eliminating duplicate compute.
 
 ### Known Limitations
 1. **Worker is untyped JavaScript**: The frontend is strict TypeScript, but the Worker (the security-critical surface) relies on JSDoc annotations only.
 2. **Whole-index read-modify-write**: Article listing loads and rewrites the full JSON index per mutation (guarded by `withIndexLock`); fine at personal-journal scale, a ceiling at high traffic.
 3. **Frontend tests are component-level only**: No end-to-end browser or visual regression tests; coverage focuses on render contracts of core components and the WebMCP registry.
 4. **Windows build limitation**: `npm run build` fails locally due to the `/story/:slug*` route colon; production builds run on Linux CI.
-5. **Single-region Worker**: No multi-region replication or caching layer for the API.
+5. **Single-region Worker**: Global edge storage runs across Cloudflare Workers and Upstash, but mutations serialize to a primary region.
 
 ### Roadmap
 - **Dynamic SSG Fallback**: Pre-rendered static routes or a custom 404 rewrite fallback for local Windows builds.

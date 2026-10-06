@@ -22,8 +22,8 @@ Quick-reference and operational guidance for Claude Code and AI assistants worki
 kalidass/
 ├── blog_frontend/             # Docusaurus 3.10 + React 19 UI & Reader
 │   ├── src/
-│   │   ├── client-modules/    # window.KALIDASS_API_BASE client initialization
-│   │   ├── components/        # ArticleCard, StoryBody, StoryPage, VideoEmbed
+│   │   ├── client-modules/    # api-base.ts, webmcp.ts (window.modelContext)
+│   │   ├── components/        # ArticleCard, IntelligencePanel, StoryBody, StoryPage, VideoEmbed
 │   │   ├── css/               # Neel theme, pigment tokens, and rainbow gradients
 │   │   ├── lib/               # api.ts (CRUD & uploads), config.ts, media.ts, types.ts
 │   │   └── pages/             # /, /magazine, /admin, /generate_article (dynamic /story/:slug* via plugin)
@@ -37,6 +37,8 @@ kalidass/
 │   │   ├── index.js           # Main routing, auth, and request handlers
 │   │   ├── eval/              # Heuristic, Jev, and Clef quality & safety evaluators
 │   │   ├── generator/         # Upstash Box sandbox article generator & agent runners
+│   │   ├── intelligence/      # Upstash Box Python research runner & SerpApi grounding
+│   │   ├── redis/             # Upstash Redis client & in-memory cache adapter
 │   │   ├── memory.js          # In-memory dev fallback store
 │   │   └── seed.js            # Seed bootstrap (empty by default)
 │   ├── package.json           # Worker dependencies
@@ -106,20 +108,24 @@ kalidass/
    - In `worker/src/eval/heuristic.js`, always enforce exact regex whole-word boundaries (`\b${escapedTerm}\b`). Never use `content.includes(term)` for short stems, preventing Scunthorpe false positives (e.g. `"analysis"` or `"analytics"` falsely matching `"anal"`).
 7. **Upstash Box Generator Invariants**:
    - Enforce strictly ONE image per article (`coverImage` via `gpt-image-1` 16:9 typography-free landscape infographics). No inline images.
-   - Agents must use `parse_json_safely()` to strip markdown fences and auto-normalize bare block arrays to `{title, blocks}` dictionaries before property access.
+8. **Intelligence In-Flight Concurrency Locks & Redis Cache**:
+   - `worker/src/intelligence/service.js` uses `_intelInflightLocks` to prevent duplicate Upstash Box executions for the same article. Intelligence dossiers are cached in Upstash Redis (`kalidass:intel:<id>`) with a 24h TTL and backed by Upstash Blob at `kalidass/intelligence/<id>.json`.
+9. **WebMCP Route Context Isolation**:
+   - On `/story/:slug`, `searchArticles` automatically restricts output to the current story and `readArticle` defaults to the active story slug without requiring an explicit parameter.
 
 ---
 
 ## 6. Data Contracts & Operational Flags
 
-- **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/generate` (autonomous Upstash Box article synthesis), `/api/auth/me` (user profile handshake), `/api/eval/quality` (Article Heuristics, Bearer auth required: AI detection, accuracy, engagement, and safety check with pluggable Jev/Clef/heuristic providers), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
-- **Testing**: Hermetic Vitest suites — `worker/test/*.test.js` (Worker) and `blog_frontend/src/**/*.test.{ts,tsx}` (jsdom UI: StoryBody, ArticleCard, WebMCP registry) + `npm.cmd run typecheck` (frontend) + `node scripts/validate_docs.mjs docs` (Docs7), automated via `.github/workflows/ci.yml`.
+- **Worker Endpoints** (`worker/src/index.js`): `/api/articles` (GET/POST, PUT/DELETE by id-or-slug), `/api/articles/:slug/intel` (public read-only intelligence peek from Redis/Blob cache), `/api/articles/:slug?intelligence=true` (authenticated author/admin compilation pass via Upstash Box python runner), `/api/generate` (autonomous Upstash Box article synthesis), `/api/auth/me` (user profile handshake), `/api/eval/quality` (Article Heuristics, Bearer auth required: AI detection, accuracy, engagement, and safety check with pluggable Jev/Clef/heuristic providers), `/api/objects` (media upload, Bearer), `/api/upload` (signed browser upload), `/api/blob/*`, `/api/health`, `/api/admin/reset`.
+- **Testing**: Hermetic Vitest suites — `worker/test/*.test.js` (Worker) and `blog_frontend/src/**/*.test.{ts,tsx}` (jsdom UI: StoryBody, ArticleCard, WebMCP registry, IntelligencePanel) + `npm.cmd run typecheck` (frontend) + `node scripts/validate_docs.mjs docs` (Docs7), automated via `.github/workflows/ci.yml`.
 
 - **Data Models (`blog_frontend/src/lib/types.ts`)**:
   - `Block`: 5-variant union (`paragraph`, `heading`, `quote`, `image`, `video`).
   - `ArticleDraft`: Payload for `createArticle` / `updateArticle` (omits server-generated fields: `id`, `authorEmail`, `publishedAt`, `readTime`, `createdAt`, `updatedAt`).
   - `ArticleSummary`: Used in cards, index lists, and search queries (includes immutable `authorEmail`).
-  - `Article`: Full article containing `blocks: Block[]` and server-stamped immutable `authorEmail`.
+  - `Article`: Full article containing `blocks: Block[]`, server-stamped immutable `authorEmail`, and lightweight `has_intelligence: boolean` flag.
+  - `AiIntelligence`: Search grounding dossier (`ai_overview`, `knowledge_graph`, `people_also_ask`, `organic_results`, `inline_videos`).
   - `AuthUser`: User profile `{ email, role: 'admin' | 'author', sub }`.
   - `QualityEvalResult`: Output containing `safety` (verdict, risks, violations), `metrics` (`isAiWritten`, `accuracy`, `engagement`, `editorialReadiness`), and summary.
 - **Operational & Auth Flags**:

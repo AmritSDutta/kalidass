@@ -24,6 +24,10 @@ The frontend interacts with the Cloudflare Worker API via the client library in 
 | `DELETE` | `/api/articles/:idOrSlug` | `removeArticle(id)` | **Yes** | Deletes article object from Upstash storage. Enforces ownership (`403 Forbidden` for non-owners). |
 | `POST` | `/api/upload` | Direct Upstash SDK | **Yes** | Upstash Blob direct browser upload route. Requires authenticated author or admin. |
 | `POST` | `/api/objects` | `uploadObject(file)` | **Yes** | Direct binary upload (`FormData` with `file` field) persisted to Upstash Blob. Returns `{ url, name }`. |
+| `POST` | `/api/eval/quality` | `evaluateQuality(req)` | **Yes** | Runs AI detection, accuracy, engagement, and safety evaluation. Requires Bearer token. |
+| `POST` | `/api/generate` | `generateArticle(req)` | **Yes** | Triggers containerized Upstash Box article authoring run. Requires Bearer token. |
+| `GET` | `/api/articles/:idOrSlug/intel` | `getIntel(slug)` | Conditional | Public read-only intelligence sub-resource (reads from Redis/Blob cache, never spawns Box). |
+| `GET` | `/api/articles/:idOrSlug?intelligence=true` | `getArticleWithIntel(slug)` | **Yes** | Compiles or refreshes live SerpApi search intelligence in Upstash Box. Requires author or admin. |
 
 ## Authentication
 

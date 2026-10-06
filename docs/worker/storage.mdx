@@ -96,9 +96,19 @@ All object paths in Upstash Blob are namespaced under the configurable `ROOT_BUC
 | --- | --- | --- |
 | Article index | `<rootBucket>/index.json` (e.g. `kalidass/index.json`) | `ArticleSummary[]` JSON |
 | Full article | `<rootBucket>/articles/<id>.json` | `Article` JSON |
+| Article intelligence | `<rootBucket>/intelligence/<id>.json` | `AiIntelligence` JSON |
 | Uploaded media | `<rootBucket>/media/<filename>-<unique-suffix>` | Image or video binary |
 
 The `uniquePath` template tag from `@upstash/blob` generates collision-safe media paths inside `<rootBucket>/media/`.
+
+## Multi-Tier Caching Layer (`worker/src/redis/`)
+
+In addition to durable object storage in Upstash Blob, the worker incorporates a caching tier via `getRedisClient(env)`:
+
+- **Upstash Redis Mode**: Active when `env.UPSTASH_REDIS_REST_URL` and `env.UPSTASH_REDIS_REST_TOKEN` are bound. Wraps `@upstash/redis` with support for `get`, `set` (with TTL expiry), `del`, and pattern-based key lookups.
+- **In-Memory Cache Mode**: Activated when Redis credentials are not configured (local dev fallback). Implements the same async key-value interface with in-memory TTL expiration.
+- **Intelligence Caching**: Article intelligence dossiers generated via SerpApi are stored in Redis under `kalidass:intel:<articleId>` with a 24-hour TTL, eliminating repetitive container runs. If the cache expires, reads automatically rehydrate from Upstash Blob.
+
 
 ## JSON Helpers
 
