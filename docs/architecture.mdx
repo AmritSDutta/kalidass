@@ -20,13 +20,15 @@ flowchart TD
     Proxy["Webpack Dev Proxy (:3000 to :8787)"]
     Worker["Cloudflare Worker (:8787 / Edge)"]
   end
-  subgraph Storage["Upstash Storage"]
+  subgraph Storage["Upstash Storage Tier"]
+    UpstashRedis["Upstash Redis - 3h Feed & 24h Story Cache"]
     UpstashBlob["Upstash Blob - JSON Articles & Media"]
   end
   Pages --> LibAPI
   ClientMod -. sets .-> LibAPI
   LibAPI --> Proxy
   Proxy --> Worker
+  Worker --> UpstashRedis
   Worker --> UpstashBlob
 ```
 

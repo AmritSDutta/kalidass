@@ -103,11 +103,40 @@ The `uniquePath` template tag from `@upstash/blob` generates collision-safe medi
 
 ## Multi-Tier Caching Layer (`worker/src/redis/`)
 
-In addition to durable object storage in Upstash Blob, the worker incorporates a caching tier via `getRedisClient(env)`:
+In addition to durable object storage in Upstash Blob, the worker incorporates an edge caching tier via `getRedisClient(env)` and `worker/src/redis/cache.js`:
 
-- **Upstash Redis Mode**: Active when `env.UPSTASH_REDIS_REST_URL` and `env.UPSTASH_REDIS_REST_TOKEN` are bound. Wraps `@upstash/redis` with support for `get`, `set` (with TTL expiry), `del`, and pattern-based key lookups.
-- **In-Memory Cache Mode**: Activated when Redis credentials are not configured (local dev fallback). Implements the same async key-value interface with in-memory TTL expiration.
-- **Intelligence Caching**: Article intelligence dossiers generated via SerpApi are stored in Redis under `kalidass:intel:<articleId>` with a 24-hour TTL, eliminating repetitive container runs. If the cache expires, reads automatically rehydrate from Upstash Blob.
+- **Upstash Redis Mode**: Active when `env.UPSTASH_REDIS_REST_URL` and `env.UPSTASH_REDIS_REST_TOKEN` are bound. Wraps `@upstash/redis` with support for `get`, `set` (with TTL expiry), and `del`.
+- **In-Memory Cache Mode**: Activated when Redis credentials are not configured (local dev and hermetic unit tests). Implements the same async key-value interface with in-memory TTL expiration.
+- **Master Key Prefix**: Every Redis key is automatically namespaced under the idempotent `kalidass:` root prefix.
+
+### Cache Key Namespaces & TTLs
+
+| Redis Key Pattern | TTL | Data Type | Purpose |
+| :--- | :--- | :--- | :--- |
+| `kalidass:feed:public` | 3 hours (10,800s) | `ArticleSummary[]` | Cached public feed with deterministic featured story stamped |
+| `kalidass:feed:etag` | 3 hours (10,800s) | `string` (hex digest) | Full-feed SHA-256 ETag hash for client revalidation |
+| `kalidass:article:<id>` | 24 hours (86,400s) | `Article` JSON | Cached public article payload for fast reader delivery |
+| `kalidass:slug:<slug>` | 24 hours (86,400s) | `string` (article ID) | Slug-to-ID pointer for fast URL resolution |
+| `kalidass:ai_intel:<id>` | 24 hours (86,400s) | `AiIntelligence` JSON | Cached SerpApi search dossier |
+
+### Feed Delivery & RFC 7232 ETag Revalidation
+
+When a client queries `GET /api/articles` without status parameters:
+1. **Cache Lookup**: The worker queries `kalidass:feed:public` and `kalidass:feed:etag`.
+2. **ETag Revalidation**: If the client provides an `If-None-Match` header, `matchesEtag(clientHeader, etag)` validates the validator. It strips weak prefixes (`W/`) and splits comma-separated header lists per RFC 7232. On a match, the worker returns `304 Not Modified` with an empty body and `etag` header.
+3. **Full-Feed Folding**: The feed ETag is computed by hashing the count, lead ID, lead timestamp, and every article's ID and timestamp (`items.map(i => `${i.id}:${i.updatedAt || i.publishedAt}`).join("|")`). This guarantees that editing a non-lead article invalidates the ETag, eliminating stale 304 responses.
+4. **Deterministic Featured Stamping**: `ensureFeaturedDecided(items)` guarantees that exactly one lead story is marked `featured: true`. If no story is marked, the top story is stamped. If writing to Redis fails, stamping still occurs in-memory to prevent hero layout flicker.
+
+### Story Caching & Isolation Policy
+
+Public story reads (`GET /api/articles/:idOrSlug`) query `kalidass:article:<id>` or `kalidass:slug:<slug>`:
+- **Public-Only Gating**: Only published public articles (`published === true && !private`) are written to Redis. Views of drafts or private articles by owners and admins bypass the shared Redis cache completely, preventing unlisted data leakage.
+- **Dynamic Intel Invalidation**: When an author or admin compiles intelligence via `?intelligence=true`, the worker invalidates `kalidass:article:<id>`. This unfreezes the `has_intelligence` flag on subsequent cached public reads.
+
+### Mutation Invalidation Protocol
+
+- **`invalidateAllArticleCaches(redis)`**: Purges `kalidass:feed:public` and `kalidass:feed:etag` on new article creation.
+- **`invalidateArticleCache(redis, article)`**: Purges `kalidass:article:<id>`, `kalidass:slug:<slug>`, and all public feed keys when an article is updated, deleted, or republished.
 
 
 ## JSON Helpers

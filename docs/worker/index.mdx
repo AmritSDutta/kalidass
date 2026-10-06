@@ -10,6 +10,7 @@ The Kalidass Journal Worker is a lightweight Cloudflare Worker that serves as th
 ## Responsibilities
 
 - **Article API**: Create, read, update, and delete article objects stored as JSON in Upstash Blob.
+- **Multi-User Edge Caching**: Serve public feeds (3h TTL, full-feed ETag 304 revalidation) and public stories (24h TTL) from Upstash Redis.
 - **Upload Signing**: Delegate direct browser-to-Upstash uploads via the `@upstash/blob` `uploadHandler`.
 - **Fallback Upload**: Accept `FormData` file uploads when the direct upload route is unavailable.
 - **CORS Negotiation**: Respond to `OPTIONS` preflight requests and add access-control headers to all responses.
@@ -22,6 +23,7 @@ The Kalidass Journal Worker is a lightweight Cloudflare Worker that serves as th
 | --- | --- |
 | **Runtime** | Cloudflare Workers (ES Module format) |
 | **Storage** | `@upstash/blob@0.0.6-canary.20260914173111` |
+| **Caching** | `@upstash/redis` (with in-memory fallback) |
 | **Dev Server** | `wrangler ^4.37.0` |
 | **Compatibility** | `nodejs_compat` flag, `compatibility_date = 2026-09-01` |
 
@@ -31,6 +33,10 @@ The Kalidass Journal Worker is a lightweight Cloudflare Worker that serves as th
   <Tree.Folder name="worker" defaultOpen>
     <Tree.Folder name="src" defaultOpen>
       <Tree.File name="index.js" highlight />
+      <Tree.Folder name="redis" defaultOpen>
+        <Tree.File name="cache.js" highlight />
+        <Tree.File name="index.js" />
+      </Tree.Folder>
       <Tree.File name="memory.js" highlight />
       <Tree.File name="seed.js" highlight />
     </Tree.Folder>

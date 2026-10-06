@@ -10,7 +10,8 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 ## Home Page (`src/pages/index.tsx`, `/`)
 
 - **Hero & Publication Header**: Displays the publication tagline *"Field notes from the neural heart."*, live system indicators, and primary navigation actions.
-- **Dedicated Featured Story (`Lead Dispatch`)**: A visually distinct featured section with generous top spacing (`margin-top: 4.5rem;`) and a section divider. Renders the lead story (`articles.find(a => a.featured) || articles[0]`) using the featured card variant.
+- **Dedicated Featured Story (`Lead Dispatch`)**: A visually distinct featured section with generous top spacing (`margin-top: 4.5rem;`) and a section divider. Renders the lead story (`articles.find(a => a.featured) || articles[0]`) using the featured card variant. Deterministic lead selection (`ensureFeaturedDecided`) guarantees exactly one story is stamped `featured: true` so the hero never flickers.
+- **3-Hour Edge Delivery & ETag Revalidation**: Home page article feeds are served from Upstash Redis (`kalidass:feed:public`) under a 3-hour TTL (10,800s). Full-feed SHA-256 ETag folding enables returning clients to revalidate via `If-None-Match`, receiving instantaneous `304 Not Modified` responses with zero Blob reads.
 - **In This Cycle**: The next 3 articles are arranged in a 3-column responsive grid with tag chips, author avatars, and read times.
 - **Index List**: All remaining articles are presented as streamlined row entries linking to `/story/:slug` with their primary tag.
 - **Error Handling**: Network and API errors are caught and surfaced in a dedicated notification banner with troubleshooting hints.
@@ -38,7 +39,7 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 ## Story Reader (`src/components/StoryPage.tsx`, `/story/:slug*`)
 
 - **Dynamic Route**: The dynamic path `/story/:slug*` is registered via `kalidassPlugin.contentLoaded` using `actions.addRoute` in `docusaurus.config.ts`.
-- **Slug Resolution**: The article slug is extracted from `location.pathname` and fetched via `getArticle(slug)`.
+- **Slug Resolution**: The article slug is extracted from `location.pathname` and fetched via `getArticle(slug)`. Public articles resolve from the 24-hour Upstash Redis story cache (`kalidass:article:<id>` / `kalidass:slug:<slug>`) for near-zero latency edge delivery.
 - **Hero Header**: Full-width veil overlay with cover image, topic kicker tag, headline, subtitle, and author byline.
 - **Reader View Tabs**: The left reading column provides a two-tab ARIA `tablist` (keyboard-navigable via arrow keys, roving tabindex):
   - **Article (default)**: Standard full-text essay reading experience rendered by `StoryBody`.

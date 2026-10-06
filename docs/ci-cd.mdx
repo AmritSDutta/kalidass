@@ -58,13 +58,17 @@ Every CI execution runs through three automated quality gates:
 ### Gate 2: Hermetic Worker Vitest Suite
 - **Command**: `npm --prefix worker test`
 - **Engine**: Vitest in isolated Node.js environment.
-- **Scope**: 20 hermetic test cases across 5 test suites:
+- **Scope**: 68 hermetic test cases across 9 test suites:
   - Safety heuristics & word-boundary Scunthorpe defense (`test/eval_heuristic.test.js`).
   - In-memory storage adapter mechanics (`test/memory_store.test.js`).
   - Draft normalization and schema sanitization (`test/schemas.test.js`).
   - Worker REST API endpoint contracts & auth guards (`test/worker_api.test.js`).
   - Concurrency & race conditions — async index mutex (`test/concurrency.test.js`).
-- **Invariant**: 100% mocked and hermetic with zero external network calls and sub-second execution (~300ms).
+  - SerpApi search intelligence pipeline & cascade (`test/intelligence.test.js`).
+  - WebMCP route isolation & slug resolution (`test/webmcp.test.js`).
+  - Box generator prompt construction & grounding (`test/prompts.test.js`).
+  - Upstash Redis multi-user feed delivery, 3h ETag revalidation & story cache (`test/redis_cache.test.js`).
+- **Invariant**: 100% mocked and hermetic with zero external network calls and sub-second execution (~750ms).
 
 ### Gate 3: Portable Docs7 Documentation Validator
 - **Command**: `node scripts/validate_docs.mjs docs`

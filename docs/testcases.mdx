@@ -22,6 +22,7 @@ flowchart TD
     IntelligenceSuite["intelligence.test.js - 12 tests"]
     WebMcpSuite["webmcp.test.js - 9 tests"]
     PromptsSuite["prompts.test.js - 7 tests"]
+    RedisSuite["redis_cache.test.js - 15 tests"]
   end
   subgraph SystemUnderTest["Worker Engine Under Test"]
     HeuristicEngine["eval/heuristic.js (Regex Word Boundaries)"]
@@ -43,6 +44,7 @@ flowchart TD
   MockEnv --> WorkerRouter
   IntelligenceSuite --> IntelService
   IntelligenceSuite --> RedisAdapters
+  RedisSuite --> RedisAdapters
 ```
 
 ---
@@ -62,6 +64,7 @@ The test files reside inside `worker/test/` and are organized by functional doma
       <Tree.File name="intelligence.test.js" highlight />
       <Tree.File name="webmcp.test.js" highlight />
       <Tree.File name="prompts.test.js" highlight />
+      <Tree.File name="redis_cache.test.js" highlight />
     </Tree.Folder>
     <Tree.File name="vitest.config.js" highlight />
     <Tree.File name="package.json" />
@@ -177,6 +180,23 @@ Verifies Upstash Box generator prompt construction for `/api/generate`:
 
 ---
 
+### Suite 9: Upstash Redis Multi-User Feed & Story Delivery (`redis_cache.test.js`)
+
+Verifies the Redis feed and story delivery tier, 3-hour caching, RFC 7232 ETag validation, and deterministic lead assignment (`worker/src/redis/cache.js`):
+
+| Test Case | Description | Expected Outcome |
+| :--- | :--- | :--- |
+| **3-Hour Feed Cache** | Caches the public article feed under `kalidass:feed:public` with a 3-hour TTL (10,800s). | Subsequent reads hit Redis; returns HTTP `200` with `ETag` and `X-Cache: HIT`. |
+| **Full-Feed ETag Hashing** | Hashes count, lead ID, lead timestamp, and every article ID + updated timestamp. | Non-lead edits re-derive a new ETag hash, preventing stale `304` responses. |
+| **RFC 7232 If-None-Match** | Compares incoming `If-None-Match` header using `matchesEtag`. | Returns HTTP `304 Not Modified` with empty body on weak (`W/"..."`) or comma-separated matches. |
+| **Deterministic Featured Decision** | Ensures exactly one lead story is marked `featured: true` via `ensureFeaturedDecided`. | Explicitly flagged story or top story becomes featured; falls back locally if Redis write fails. |
+| **24-Hour Public Story Cache** | Caches full article JSON under `kalidass:article:<id>` and slug pointers under `kalidass:slug:<slug>`. | Fast-path GET resolves directly from Redis cache without Blob lookups. |
+| **Draft & Private Cache Exclusion** | Owner and admin views of unpublished drafts bypass Redis caching. | Unpublished articles are never written to shared Redis storage. |
+| **Dynamic Intel Invalidation** | When `?intelligence=true` finishes compiling search intelligence, purges `kalidass:article:<id>`. | Unfreezes `has_intelligence: true` badge on subsequent article reads. |
+| **Mutation Invalidation Protocol** | Article creation, update, and deletion calls `invalidateAllArticleCaches` and `invalidateArticleCache`. | Purges feed keys (`kalidass:feed:*`) and article/slug keys across mutations. |
+
+---
+
 ## 4. Frontend jsdom Suite (`blog_frontend`)
 
 The Docusaurus UI ships its own hermetic Vitest/jsdom suite (`npm.cmd test` in `blog_frontend/`, 4 files / 29 tests):
@@ -205,9 +225,9 @@ npm.cmd --prefix blog_frontend test
 
 Execution output (worker):
 ```text
- Test Files  8 passed (8)
-      Tests  53 passed (53)
-   Duration  ~650ms
+ Test Files  9 passed (9)
+      Tests  68 passed (68)
+   Duration  ~750ms
 ```
 
 ---
