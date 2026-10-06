@@ -253,9 +253,7 @@ export default function StoryPage(): ReactNode {
                     {article.aiGenerated ? (
                       <>
                         {" · "}
-                        <span className={styles.aiTag}>
-                          Ai generated content, verify before applying in real life
-                        </span>
+                        <span className={styles.aiTag}>AI</span>
                       </>
                     ) : null}
                   </span>
@@ -317,6 +315,12 @@ export default function StoryPage(): ReactNode {
                     <VideoEmbed url={article.videoUrl} title={article.title} />
                   ) : null}
                   <StoryBody article={article} />
+                  {article.aiGenerated ? (
+                    <div className={`${styles.aiBanner} ${styles.aiBannerBottom}`} role="note">
+                      <span className={styles.aiBannerIcon}>AI</span>
+                      Ai generated content, verify before applying in real life
+                    </div>
+                  ) : null}
                 </div>
               ) : (
                 <div

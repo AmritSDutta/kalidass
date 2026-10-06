@@ -116,10 +116,19 @@
 }
 
 .byline .aiTag {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--chroma-kesari);
+  background: rgba(249, 115, 22, 0.1);
   color: var(--chroma-kesari);
-  border-color: var(--chroma-kesari);
-  font-size: 0.7rem;
+  border-radius: 999px;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .aiTag {
@@ -147,6 +156,10 @@
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--ink-soft);
+}
+
+.aiBannerBottom {
+  margin: 2rem 0 0;
 }
 
 .aiBannerIcon {
