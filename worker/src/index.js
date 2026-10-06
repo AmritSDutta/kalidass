@@ -4,6 +4,7 @@ import {getMemoryObject, memoryBucket} from "./memory.js";
 import {seedArticles} from "./seed.js";
 import {runQualityEvaluation, extractArticleText} from "./eval/index.js";
 import {generateArticle} from "./generator/index.js";
+import {getOrGenerateArticleIntelligence} from "./intelligence/service.js";
 
 // Cloudflare Workers fetch guard: ensures @upstash/blob requests carry Content-Length
 const nativeFetch = globalThis.fetch;
@@ -793,7 +794,41 @@ export default {
             article = seedArticles.find((item) => item.id === meta.id || item.slug === meta.slug) || null;
           }
           if (!article) return json({error: "Article not found"}, 404, origin);
-          return json(article, 200, origin);
+
+          // Dedicated intelligence block retrieval (omitted from normal reader responses)
+          if (url.searchParams.get("intelligence") === "true") {
+            const user = await getAuthUser(request, env);
+            if (!user) return json({error: "Unauthorized: Authentication required to view SERP intelligence"}, 401, origin);
+            const isOwner =
+              Boolean(meta.authorEmail) &&
+              meta.authorEmail.toLowerCase() === user.email.toLowerCase();
+            if (user.role !== "admin" && !isOwner) {
+              return json({error: "Forbidden: You can only view intelligence for your own articles"}, 403, origin);
+            }
+
+            const refresh = url.searchParams.get("refresh") === "true";
+
+            try {
+              const intelligence = await getOrGenerateArticleIntelligence(
+                article,
+                env,
+                {
+                  bucket,
+                  readJson,
+                  putJson,
+                },
+                {refresh}
+              );
+              return json({...article, ai_intelligence: intelligence}, 200, origin);
+            } catch (intelErr) {
+              console.error("[Intelligence Error]:", intelErr);
+              return json({error: "Failed to fetch article intelligence. Please try again later."}, 500, origin);
+            }
+          }
+
+          // Normal response strictly strips any internal ai_intelligence field
+          const {ai_intelligence, ...cleanArticle} = article;
+          return json(cleanArticle, 200, origin);
         }
 
         if (request.method === "PUT") {

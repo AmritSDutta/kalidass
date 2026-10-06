@@ -13,7 +13,8 @@ import {
 } from "@site/src/lib/api";
 import {useAuth} from "@site/src/lib/auth";
 import {emptyDraft, formatDate} from "@site/src/lib/media";
-import type {Article, ArticleDraft, ArticleSummary, Block, QualityEvalResult} from "@site/src/lib/types";
+import type {Article, ArticleDraft, ArticleSummary, Block, QualityEvalResult, AiIntelligence} from "@site/src/lib/types";
+import {IntelligencePanel} from "@site/src/components/IntelligencePanel/IntelligencePanel";
 import styles from "./admin.module.css";
 
 const ACCENTS = ["#6366f1", "#f97316", "#06b6d4", "#10b981", "#f43f5e", "#eab308"];
@@ -92,6 +93,29 @@ function AdminInner(): ReactNode {
   const [draftEval, setDraftEval] = useState<QualityEvalResult | null>(null);
   const [evaluatingDraft, setEvaluatingDraft] = useState<boolean>(false);
   const [safetyAlert, setSafetyAlert] = useState<string>("");
+  const [intelligence, setIntelligence] = useState<AiIntelligence | null>(null);
+  const [loadingIntel, setLoadingIntel] = useState<boolean>(false);
+  const [intelError, setIntelError] = useState<string | null>(null);
+
+  const fetchArticleIntelligence = async (forceRefresh: boolean = false) => {
+    const targetIdOrSlug = editingId || draft.slug;
+    if (!targetIdOrSlug) return;
+    setLoadingIntel(true);
+    setIntelError(null);
+    try {
+      const full = await getArticle(targetIdOrSlug, true, forceRefresh);
+      if (full.ai_intelligence) {
+        setIntelligence(full.ai_intelligence);
+      } else {
+        setIntelError("No intelligence block generated.");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch intelligence.";
+      setIntelError(message);
+    } finally {
+      setLoadingIntel(false);
+    }
+  };
 
   const refresh = () => {
     const current = MODES.find((m) => m.key === mode);
@@ -144,6 +168,8 @@ function AdminInner(): ReactNode {
         setDraft(fromArticle(article));
         setTagInput((article.tags || []).join(", "));
         setDraftEval(article.evaluation || null);
+        setIntelligence(null);
+        setIntelError(null);
       })
       .catch(() => setStatus("Could not load that story."));
   }, [editSlug, isAuthenticated]);
@@ -377,6 +403,8 @@ function AdminInner(): ReactNode {
     setDraftEval(null);
     setTagInput("");
     setStatus("");
+    setIntelligence(null);
+    setIntelError(null);
   };
 
   const load = async (slug: string) => {
@@ -386,6 +414,8 @@ function AdminInner(): ReactNode {
       setDraft(fromArticle(article));
       setTagInput((article.tags || []).join(", "));
       setDraftEval(article.evaluation || null);
+      setIntelligence(null);
+      setIntelError(null);
       setStatus(`Editing ${article.title}`);
       setMode("compose");
     } catch (err) {
@@ -815,6 +845,15 @@ function AdminInner(): ReactNode {
                   ) : null}
                 </div>
               ))}
+
+              {editingId ? (
+                <IntelligencePanel
+                  intelligence={intelligence}
+                  onFetch={fetchArticleIntelligence}
+                  loading={loadingIntel}
+                  error={intelError}
+                />
+              ) : null}
 
               <div className={styles.formFooterActions}>
                 <button type="button" className={styles.ghost} onClick={startNew} disabled={busy}>

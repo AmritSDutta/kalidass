@@ -48,6 +48,7 @@ export type ArticleSummary = {
 export type Article = ArticleSummary & {
   blocks: Block[];
   createdAt?: string;
+  ai_intelligence?: AiIntelligence | null;
 };
 
 export type ArticleDraft = {
@@ -154,5 +155,123 @@ export interface AiSearchInsightResponse {
   }>;
   search_metadata?: unknown;
 }
+
+export interface AiIntelligenceTrendPoint {
+  date?: string;
+  timestamp?: string;
+  values?: Array<{
+    query?: string;
+    value?: string | number;
+    extracted_value?: number;
+  }>;
+  value?: string | number;
+  extracted_value?: number;
+  formatted_value?: string;
+}
+
+export interface AiIntelligenceRegionInterest {
+  location?: string;
+  value?: string | number;
+  extracted_value?: number;
+}
+
+
+export interface AiIntelligenceQueryTopic {
+  query?: string;
+  topic?: {
+    title?: string;
+    type?: string;
+  };
+  value?: string | number;
+  extracted_value?: number;
+}
+
+export interface AiIntelligence {
+  query: string;
+  ai_overview?: {
+    text?: string;
+    snippet?: string;
+    expanded?: {
+      text_blocks?: Array<{type?: string; text?: string}>;
+      references?: Array<{title?: string; link?: string; source?: string}>;
+    };
+    references?: Array<{title?: string; link?: string; source?: string}>;
+  } | null;
+  knowledge_graph?: {
+    title?: string;
+    type?: string;
+    description?: string;
+    website?: string;
+    attributes?: Record<string, string | number | boolean>;
+  } | null;
+  answer_box?: {
+    type?: string;
+    title?: string;
+    answer?: string;
+    snippet?: string;
+    link?: string;
+  } | null;
+  inline_videos?: Array<{
+    title?: string;
+    link?: string;
+    channel?: string;
+    duration?: string;
+  }>;
+  books_shopping?: Array<{
+    title?: string;
+    price?: string;
+    source?: string;
+    link?: string;
+    thumbnail?: string;
+  }>;
+  jobs_results?: Array<{
+    title?: string;
+    company_name?: string;
+    location?: string;
+    via?: string;
+  }>;
+  twitter_results?: Array<{
+    tweet?: string;
+    link?: string;
+    snippet?: string;
+  }>;
+  discussions_and_forums?: Array<{
+    title?: string;
+    link?: string;
+    forum?: string;
+  }>;
+  people_also_ask?: Array<{
+    question: string;
+    snippet?: string;
+    link?: string;
+  }>;
+  trends?: {
+    interest_over_time?: {
+      timeline_data?: AiIntelligenceTrendPoint[];
+    } | Array<AiIntelligenceTrendPoint | number> | null;
+    interest_by_region?: Array<AiIntelligenceRegionInterest> | null;
+    related_queries?: {
+      top?: AiIntelligenceQueryTopic[];
+      rising?: AiIntelligenceQueryTopic[];
+    };
+    related_topics?: {
+      top?: AiIntelligenceQueryTopic[];
+      rising?: AiIntelligenceQueryTopic[];
+    };
+  } | null;
+  news?: Array<{
+    title?: string;
+    source?: string;
+    date?: string;
+    link?: string;
+  }>;
+  organic_results?: Array<{
+    title: string;
+    link: string;
+    snippet: string;
+  }>;
+  fetchedAt?: string;
+}
+
 
 

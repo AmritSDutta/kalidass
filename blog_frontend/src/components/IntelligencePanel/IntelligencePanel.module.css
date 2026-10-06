@@ -1,0 +1,240 @@
+.container {
+  margin-top: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated, rgba(255, 255, 255, 0.03));
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: var(--bg-surface-subtle, rgba(0, 0, 0, 0.15));
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: var(--chroma-neel, #6366f1);
+  color: #fff;
+}
+
+.cachedBadge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-dim, #a1a1aa);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+
+.fetchButton {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.84rem;
+  background: var(--chroma-neel, #6366f1);
+  color: #ffffff;
+  transition: opacity 0.15s ease;
+}
+
+.fetchButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ghostButton {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.82rem;
+  background: transparent;
+  color: var(--text-secondary, #d4d4d8);
+  transition: background 0.15s ease;
+}
+
+.ghostButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ghostButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.unfetchedNotice {
+  padding: 1.5rem 0;
+  text-align: center;
+  color: var(--text-muted, #71717a);
+  font-size: 0.92rem;
+}
+
+.section {
+  border-radius: 8px;
+  background: var(--bg-surface-card, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--border-subtle);
+  padding: 1rem;
+}
+
+.sectionHeaderClickable {
+  background: none;
+  border: none;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+}
+
+.sectionTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary, #d4d4d8);
+}
+
+.overviewText {
+  margin-top: 0.75rem;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text-primary, #f4f4f5);
+  white-space: pre-wrap;
+}
+
+.citationsList {
+  margin: 0.4rem 0 0 1.2rem;
+  padding: 0;
+  font-size: 0.84rem;
+}
+
+.citationsList li {
+  margin-bottom: 0.3rem;
+}
+
+.citationsList a {
+  color: var(--chroma-neel, #818cf8);
+  text-decoration: none;
+}
+
+.citationsList a:hover {
+  text-decoration: underline;
+}
+
+.attributesGrid {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.attrItem {
+  font-size: 0.82rem;
+}
+
+.attrKey {
+  font-weight: 600;
+  color: var(--text-dim, #a1a1aa);
+}
+
+.attrVal {
+  color: var(--text-primary, #fafafa);
+}
+
+.trendsContainer {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tagWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.trendTag {
+  font-size: 0.78rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #c7d2fe;
+}
+
+.grid {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.card {
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.86rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.card a {
+  color: var(--chroma-neel, #818cf8);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.card a:hover {
+  text-decoration: underline;
+}
+
+.cardMeta {
+  font-size: 0.78rem;
+  color: var(--text-dim, #71717a);
+}
+
+.errorNotice {
+  padding: 0.75rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 0.85rem;
+}

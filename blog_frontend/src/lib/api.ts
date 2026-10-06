@@ -95,8 +95,16 @@ export function listArticles(status?: "draft" | "published" | "all") {
   return request<ArticleSummary[]>(`/api/articles${query}`);
 }
 
-export function getArticle(idOrSlug: string) {
-  return request<Article>(`/api/articles/${encodeURIComponent(idOrSlug)}`);
+export function getArticle(
+  idOrSlug: string,
+  includeIntelligence: boolean = false,
+  refresh: boolean = false
+) {
+  const params = new URLSearchParams();
+  if (includeIntelligence) params.set("intelligence", "true");
+  if (refresh) params.set("refresh", "true");
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return request<Article>(`/api/articles/${encodeURIComponent(idOrSlug)}${query}`);
 }
 
 export function createArticle(draft: ArticleDraft) {
