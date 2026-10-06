@@ -256,7 +256,8 @@ async function run() {
 \${topicDesc}
 
 STYLE & COLOR PALETTE:
-- ultra clean pictorial colorful infographic for modern systems engineering and computing research
+- ultra clean pictorial colorful infographic with whitish background for modern systems engineering and computing research
+- BACKGROUND: Clean, elegant whitish background (light off-white, light silver-gray, or soft alabaster white canvas) providing crisp contrast for colorful infographic elements
 - COLOR PALETTE: MILDER, VIBRANT COLOR SHADES. Harmonious balance combining milder, muted matte foundation shades (soft slate, gentle charcoal, titanium, subtle deep indigo) with vibrant, luminous accent color highlights (electric indigo, radiant cyan, warm amber, vibrant violet, and emerald)
 - gentle, balanced contrast that is soothing and elegant, strictly avoiding harsh over-saturated neons or dark murky clutter
 - STRICTLY NO TEXT, NO WORDS, NO LABELS, NO LETTERS, NO TYPOGRAPHY anywhere in the image (except the subtle watermark below)

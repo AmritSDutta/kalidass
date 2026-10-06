@@ -37,11 +37,11 @@ describe("ArticleCard rendering (Hermetic)", () => {
 
   it("shows the AI-generated warning tag only when aiGenerated is true", () => {
     const {unmount} = render(<ArticleCard article={{...base, aiGenerated: true}} />);
-    expect(screen.getByText(/Ai generated content/i)).toBeTruthy();
+    expect(screen.getByText("AI")).toBeTruthy();
     unmount();
 
     render(<ArticleCard article={base} />);
-    expect(screen.queryByText(/Ai generated content/i)).toBeNull();
+    expect(screen.queryByText("AI")).toBeNull();
   });
 
   it("falls back to a letter avatar and default role when author fields are missing", () => {

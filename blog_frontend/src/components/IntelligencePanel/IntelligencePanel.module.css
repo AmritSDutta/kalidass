@@ -121,14 +121,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-secondary, #d4d4d8);
+  color: var(--ink-soft, #d4d4d8);
 }
 
 .overviewText {
   margin-top: 0.75rem;
   font-size: 0.92rem;
   line-height: 1.6;
-  color: var(--text-primary, #f4f4f5);
+  color: var(--ink, #f4f4f5);
   white-space: pre-wrap;
 }
 
@@ -167,11 +167,11 @@
 
 .attrKey {
   font-weight: 600;
-  color: var(--text-dim, #a1a1aa);
+  color: var(--ink-mute, #a1a1aa);
 }
 
 .attrVal {
-  color: var(--text-primary, #fafafa);
+  color: var(--ink, #fafafa);
 }
 
 .grid {
@@ -235,7 +235,7 @@
 .aiParagraph {
   font-size: 0.92rem;
   line-height: 1.6;
-  color: var(--text-primary, #f4f4f5);
+  color: var(--ink, #f4f4f5);
   margin: 0;
 }
 
@@ -250,7 +250,7 @@
 .aiListItem {
   font-size: 0.88rem;
   line-height: 1.55;
-  color: var(--text-primary, #e4e4e7);
+  color: var(--ink, #e4e4e7);
 }
 
 .aiLinks {
@@ -377,8 +377,81 @@
 
 .organicSnippet {
   font-size: 0.85rem;
-  color: var(--text-secondary, #d4d4d8);
+  color: var(--ink-soft, #d4d4d8);
   line-height: 1.5;
   margin: 0;
 }
+
+/* Light Mode Overrides: Enforce high contrast and dark typography */
+[data-theme="light"] .container {
+  background: var(--paper-solid, #ffffff);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+}
+
+[data-theme="light"] .header {
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .cachedBadge {
+  color: #475569;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .ghostButton {
+  color: #334155;
+  border-color: rgba(0, 0, 0, 0.16);
+}
+
+[data-theme="light"] .ghostButton:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .section {
+  background: #f8fafc;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .sectionTitle {
+  color: #334155;
+}
+
+[data-theme="light"] .overviewText,
+[data-theme="light"] .aiParagraph,
+[data-theme="light"] .aiListItem,
+[data-theme="light"] .attrVal {
+  color: #0f172a;
+}
+
+[data-theme="light"] .attrKey,
+[data-theme="light"] .cardMeta,
+[data-theme="light"] .referenceSource,
+[data-theme="light"] .referenceSnippet {
+  color: #64748b;
+}
+
+[data-theme="light"] .attributesGrid,
+[data-theme="light"] .card,
+[data-theme="light"] .referenceCard,
+[data-theme="light"] .organicCard {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .organicSnippet {
+  color: #334155;
+}
+
+[data-theme="light"] .aiLinkBadge {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.2);
+  color: #4f46e5;
+}
+
+[data-theme="light"] .aiLinkBadge:hover {
+  background: rgba(99, 102, 241, 0.15);
+  color: #4338ca;
+}
+
 

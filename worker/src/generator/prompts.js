@@ -84,7 +84,7 @@ EDITORIAL & ACADEMIC STANDARDS:
 OUTPUT FORMAT REQUIREMENTS:
 You MUST respond with a single valid JSON Object adhering strictly to this schema:
 {
-  "title": "A crisp, authoritative, evocative title",
+  "title": "A crisp, authoritative, evocative title (STRICTLY MAXIMUM 4 WORDS)",
   "subtitle": "A one-sentence distillation of the thesis",
   "excerpt": "2-3 beginner-friendly sentences capturing the core intuitive motivation, practical takeaway, and technical architecture",
   "tags": ["Systems", "Architecture", "Evals"],
@@ -104,6 +104,7 @@ CRITICAL SCHEMA INVARIANTS:
 3. Allowed block types in "blocks" are strictly: "heading", "paragraph", and "quote".
 4. Do NOT output any image blocks in "blocks" — exactly ONE cover image is generated separately for the article.
 5. The final blocks must conclude with {"type": "heading", "text": "References & Empirical Attributions"} and a {"type": "quote", "text": "...", "cite": "..."} citing empirical papers/sources.
+6. Title Word Limit Invariant: The "title" MUST be strictly 4 words or fewer (maximum 4 words; e.g. "Attention as Routing", "Sparse MoE Plumbing", "Speculative Edge Execution"). Never exceed 4 words.
 
 Always output strictly valid JSON conforming to the requested schema.`;
 
@@ -138,6 +139,7 @@ STRUCTURAL & EDITORIAL REQUIREMENTS:
 2. Elaborated Technical Depth: Subsequent paragraph blocks must be dense, detailed, and substantive (3-5 comprehensive sentences each), explaining exact mechanisms, runtime dynamics, memory/concurrency trade-offs, and causality.
 3. IEEE & Elsevier Rigor + Developer Pragmatism: Adhere to IEEE/Elsevier academic precision, taxonomy, and citations while keeping the narrative directly actionable and developer-friendly.
 4. Non-Negotiable Angle Enforcement: If a thesis angle is specified, ensure every single aspect, framework, and constraint in it is deeply explored and featured as the central thesis of the article.
+5. Title Word Limit Invariant: The "title" MUST be strictly 4 words or fewer (maximum 4 words). Do not use long descriptive titles.
 
 Ensure the response contains only the structured JSON Object { "title": ..., "subtitle": ..., "excerpt": ..., "tags": [...], "accent": "...", "blocks": [...] } with full references and attributions. Do NOT output a bare JSON array.`;
 

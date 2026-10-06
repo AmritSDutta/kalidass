@@ -65,6 +65,10 @@ describe("Generator Prompts & Non-Negotiable Angle (Hermetic)", () => {
     // Non-negotiable thesis angle invariant
     expect(sysPrompt).toContain("MANDATORY THESIS ANGLE & DIRECTIVES INVARIANT");
     expect(sysPrompt).toContain("STRICT NON-NEGOTIABLE INVARIANT");
+
+    // Title word limit invariant
+    expect(sysPrompt).toContain("Title Word Limit Invariant");
+    expect(sysPrompt).toContain("STRICTLY MAXIMUM 4 WORDS");
   });
 
   it("buildUserPrompt incorporates critical non-negotiable thesis angle and structural directives", () => {
@@ -82,6 +86,8 @@ describe("Generator Prompts & Non-Negotiable Angle (Hermetic)", () => {
     expect(userPrompt).toContain("Elaborated Technical Depth");
     expect(userPrompt).toContain("IEEE & Elsevier Rigor + Developer Pragmatism");
     expect(userPrompt).toContain("Non-Negotiable Angle Enforcement");
+    expect(userPrompt).toContain("Title Word Limit Invariant");
+    expect(userPrompt).toContain("strictly 4 words or fewer");
     expect(userPrompt).toContain("Approximately 12 structured blocks");
   });
 
@@ -106,8 +112,9 @@ describe("Generator Prompts & Non-Negotiable Angle (Hermetic)", () => {
     expect(script).toContain("NON-NEGOTIABLE INVARIANT");
     expect(script).toContain("Do not allow search citations to override or dilute");
 
-    // Milder vibrant infographic styling
+    // Milder vibrant infographic styling with whitish background
     expect(script).toContain("MILDER, VIBRANT COLOR SHADES");
+    expect(script).toContain("whitish background");
     expect(script).toContain("IEEE / Elsevier");
   });
 
@@ -132,8 +139,9 @@ describe("Generator Prompts & Non-Negotiable Angle (Hermetic)", () => {
     expect(script).toContain("NON-NEGOTIABLE INVARIANT");
     expect(script).toContain("Do not allow search citations to override or dilute");
 
-    // Milder vibrant infographic styling
+    // Milder vibrant infographic styling with whitish background
     expect(script).toContain("MILDER, VIBRANT COLOR SHADES");
+    expect(script).toContain("whitish background");
     expect(script).toContain("IEEE / Elsevier");
   });
 });

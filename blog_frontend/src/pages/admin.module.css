@@ -952,3 +952,56 @@
   }
 }
 
+.intelSidebarSection {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.intelStatusBox {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.intelStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--chroma-marakata, #10b981);
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+}
+
+.intelDetails {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.intelSummaryToggle {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--chroma-neel);
+  user-select: none;
+  font-weight: 600;
+  padding: 0.2rem 0;
+}
+
+.intelSummaryToggle:hover {
+  text-decoration: underline;
+}
+
+.intelDrawer {
+  margin-top: 0.75rem;
+}
+

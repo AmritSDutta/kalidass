@@ -846,15 +846,6 @@ function AdminInner(): ReactNode {
                 </div>
               ))}
 
-              {editingId ? (
-                <IntelligencePanel
-                  intelligence={intelligence}
-                  onFetch={fetchArticleIntelligence}
-                  loading={loadingIntel}
-                  error={intelError}
-                />
-              ) : null}
-
               <div className={styles.formFooterActions}>
                 <button type="button" className={styles.ghost} onClick={startNew} disabled={busy}>
                   New article
@@ -1053,6 +1044,49 @@ function AdminInner(): ReactNode {
                     </div>
                   </div>
                 </div>
+
+                {editingId ? (
+                  <div className={styles.intelSidebarSection}>
+                    <div className={styles.auditHeader}>
+                      <span className={styles.analysisKicker}>Search Grounding</span>
+                      <h4>AI Intelligence</h4>
+                    </div>
+                    <p className={styles.auditDesc}>
+                      Google Search & SerpApi intelligence extraction (AI Overviews, Knowledge Graph, PAA).
+                    </p>
+                    <button
+                      type="button"
+                      className={styles.auditBtn}
+                      onClick={() => fetchArticleIntelligence(Boolean(intelligence))}
+                      disabled={loadingIntel}>
+                      {loadingIntel
+                        ? "Compiling Intel..."
+                        : intelligence
+                        ? "↻ Refresh AI Intel"
+                        : "⚡ Compile AI Intel"}
+                    </button>
+                    {intelError ? <p className={styles.evalError}>{intelError}</p> : null}
+                    {intelligence ? (
+                      <div className={styles.intelStatusBox}>
+                        <span className={styles.intelStatusBadge}>
+                          ✓ Intel compiled ({intelligence.organic_results?.length || 0} sources)
+                        </span>
+                        <details className={styles.intelDetails}>
+                          <summary className={styles.intelSummaryToggle}>View Compiled Dossier</summary>
+                          <div className={styles.intelDrawer}>
+                            <IntelligencePanel
+                              intelligence={intelligence}
+                              onFetch={fetchArticleIntelligence}
+                              loading={loadingIntel}
+                              error={intelError}
+                              readOnly={false}
+                            />
+                          </div>
+                        </details>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </aside>
           </div>
