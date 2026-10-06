@@ -22,7 +22,7 @@ Send a JSON `ArticleDraft`. For the requested mode use exactly these three flags
 ```
 
 - `published: false` → **draft**: hidden everywhere, direct `GET /api/articles/:slug` returns 404 without the Bearer token, `publishedAt` stays `""` until first publish.
-- `private: true` → **unlisted** once published: excluded from the public feed (`/`, `/magazine`) but readable via the direct `/story/:slug` link.
+- `private: true` → **unlisted** once published: excluded from the public feed (`/`, `/magazine`) and readable only by its author or an admin (anonymous direct `/story/:slug` requests return `404`).
 - `aiGenerated: true` → renders the `AI` chip on cards and story byline.
 
 ### Full payload format

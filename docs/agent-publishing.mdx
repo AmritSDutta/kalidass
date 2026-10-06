@@ -50,7 +50,7 @@ Send a JSON `ArticleDraft` payload. For automated agent submissions, explicitly 
 ```
 
 - `published: false`: Creates a **draft**. The article is hidden from all public feeds; direct `GET /api/articles/:slug` requests return `404` unless the Bearer token is provided. `publishedAt` remains empty until the first publication.
-- `private: true`: Marks the article as **unlisted** once published. It will not appear in the `/` home index or `/magazine` grid, but can be viewed by anyone with the direct `/story/:slug` URL.
+- `private: true`: Marks the article as **unlisted** once published. It will not appear in the `/` home index or `/magazine` grid, and it can only be read by its author or an admin — anonymous requests to the direct `/story/:slug` URL return `404`.
 - `aiGenerated: true`: Displays the badge `AI` on article cards and reader bylines.
 
 ### Full Payload Schema

@@ -45,6 +45,23 @@
   color: var(--ink-mute);
 }
 
+.quoteRef {
+  font-size: clamp(0.95rem, 1.5vw, 1.05rem);
+  font-style: normal;
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+
+.refLines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.refLine {
+  margin: 0;
+}
+
 .image {
   margin: 2.2rem 0;
 }

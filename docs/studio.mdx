@@ -52,7 +52,7 @@ The primary writing environment:
   - **Accent Swatch**: 6-color swatch picker matching the publication pigment tokens (`ACCENTS`).
   - **Featured Flag**: Highlights the story in the dedicated homepage Featured section.
 - **Visibility Toggles**:
-  - **Private (Unlisted)**: Defaults to checked (`true`). Excludes the article from `/` and `/magazine` public feeds while keeping direct `/story/:slug` links active.
+  - **Private (Unlisted)**: Defaults to checked (`true`). Excludes the article from `/` and `/magazine` public feeds and restricts direct `/story/:slug` reads to the author or an admin (anonymous requests return `404`).
   - **AI Generated**: Defaults to unchecked (`false`). Displays the `AI` badge on cards and headers when enabled.
 - **Block Editor**: Dynamic block list supporting `paragraph`, `heading`, `quote`, `image`, and `video` blocks with re-ordering, updating, and removal capabilities.
 

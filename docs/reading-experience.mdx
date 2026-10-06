@@ -32,7 +32,7 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 
 - **Interactive Card**: The entire card functions as a clickable navigation link tinted by the `--card-accent` CSS variable.
 - **Media Header**: Displays the article's `coverImage` asset. If absent, renders a patterned CSS fallback background.
-- **Meta Chips**: Displays primary tag chips and an `AI` indicator badge if `aiGenerated: true`.
+- **Meta Chips**: Displays primary tag chips and, if `aiGenerated: true`, an AI-content warning (`"Ai generated content, verify before applying in real life"`) on cards, plus a full-width notice banner in the reader.
 - **Author Row**: Displays the author's avatar image or first initial, alongside publication date and estimated read time.
 
 ## Story Reader (`src/components/StoryPage.tsx`, `/story/:slug*`)

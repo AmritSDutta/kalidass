@@ -772,7 +772,7 @@ export default {
         if (!meta) return json({error: "Article not found"}, 404, origin);
 
         if (request.method === "GET") {
-          if (meta.published === false) {
+          if (meta.published === false || meta.private === true) {
             const user = await getAuthUser(request, env);
             if (!user) return json({error: "Article not found"}, 404, origin);
             const isOwner =

@@ -205,6 +205,12 @@ export default function StoryPage(): ReactNode {
           <div className={styles.layout}>
             {/* Left 80% Main Reading Pane */}
             <article className={styles.article}>
+              {article.aiGenerated ? (
+                <div className={styles.aiBanner} role="note">
+                  <span className={styles.aiBannerIcon}>AI</span>
+                  Ai generated content, verify before applying in real life
+                </div>
+              ) : null}
               <p className={styles.deck}>{article.excerpt}</p>
               {article.videoUrl ? (
                 <VideoEmbed url={article.videoUrl} title={article.title} />
@@ -226,9 +232,9 @@ export default function StoryPage(): ReactNode {
             <aside className={styles.sidebar}>
               <div className={styles.analysisCard}>
                 <div className={styles.auditCard}>
-                  <div className={styles.auditHeader}>
+                  <div className={styles.analysisHeader}>
                     <span className={styles.analysisKicker}>Article Heuristics</span>
-                    <p className={styles.tocTitle}>Quality & Safety Audit</p>
+                    <h3>Quality & Safety Audit</h3>
                   </div>
 
                   {evalResult ? (

@@ -118,6 +118,11 @@ describe("Worker REST API (Hermetic Integration)", () => {
     expect(getRes.status).toBe(200);
     const getData = await getRes.json();
     expect(getData.title).toBe("Hermetic Verified Article");
+
+    // Anonymous access to the draft/private article is denied (404, no existence leak)
+    const anonGet = createRequest(`/api/articles/${uniqueSlug}`);
+    const anonRes = await worker.fetch(anonGet, env);
+    expect(anonRes.status).toBe(404);
   });
 
   it("returns 404 for unknown endpoints", async () => {

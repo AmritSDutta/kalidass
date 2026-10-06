@@ -31,9 +31,27 @@ export default function StoryBody({article}: Props): ReactNode {
           );
         }
         if (block.type === "quote") {
+          const prev = (article.blocks || [])[index - 1];
+          const isReferences =
+            prev?.type === "heading" && /reference|attribution/i.test(prev.text);
+          const lines = String(block.text || "")
+            .split(/\r?\n/)
+            .filter((line) => line.trim());
           return (
-            <blockquote key={index} className={styles.quote}>
-              <p>{block.text}</p>
+            <blockquote
+              key={index}
+              className={isReferences ? `${styles.quote} ${styles.quoteRef}` : styles.quote}>
+              {isReferences ? (
+                <div className={styles.refLines}>
+                  {lines.map((line, li) => (
+                    <p key={li} className={styles.refLine}>
+                      {line}
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <p>{block.text}</p>
+              )}
               {block.cite ? <cite>{block.cite}</cite> : null}
             </blockquote>
           );

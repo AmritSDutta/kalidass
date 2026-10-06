@@ -40,7 +40,11 @@ export default function ArticleCard({article, featured, compact}: Props): ReactN
           <span>{formatDate(article.publishedAt)}</span>
           <span>·</span>
           <span>{article.readTime} min</span>
-          {article.aiGenerated ? <span className={styles.aiTag}>AI</span> : null}
+          {article.aiGenerated ? (
+            <span className={styles.aiTag}>
+              Ai generated content, verify before applying in real life
+            </span>
+          ) : null}
         </p>
         <h3>{article.title}</h3>
         <p className={styles.excerpt}>{article.subtitle || article.excerpt}</p>

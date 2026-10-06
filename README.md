@@ -97,7 +97,7 @@ kalidass/
 
 ### Publication Flags
 - `published`: When `false`, saved as a draft (requires Bearer authentication; unauthenticated queries return `404`).
-- `private`: Defaults to `true` (unlisted). Accessible via direct `/story/:slug` URL, but excluded from public `/` and `/magazine` feeds.
+- `private`: Defaults to `true` (unlisted). Excluded from public `/` and `/magazine` feeds, and readable only by its author or an admin (anonymous `/story/:slug` requests return `404`).
 - `aiGenerated`: When `true`, renders the `AI` badge across cards and reader headers.
 
 ### Content Blocks (`src/lib/types.ts`)

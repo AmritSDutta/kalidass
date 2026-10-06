@@ -123,7 +123,7 @@ kalidass/
   - `QualityEvalResult`: Output containing `safety` (verdict, risks, violations), `metrics` (`isAiWritten`, `accuracy`, `engagement`, `editorialReadiness`), and summary.
 - **Operational & Auth Flags**:
   - `published`: `false` = draft (requires Bearer token; unauthenticated requests receive `404`; non-admin authors only see their own drafts).
-  - `private`: `true` = unlisted (hidden from public `/` and `/magazine`, accessible via direct link; authors only see their own private items in studio).
+  - `private`: `true` = unlisted (hidden from public `/` and `/magazine`; readable only by the author or an admin — anonymous `GET /api/articles/:slug` returns `404`; authors only see their own private items in studio).
   - `aiGenerated`: `true` = renders `AI` badge on cards and reader headers.
   - `authorEmail`: Immutable author email stamped server-side by worker from verified Auth0 JWT credentials.
   - `Role Isolation`: Authors can create, edit, and delete only their own articles; Super-Admin (`ADMIN_TOKEN` or `ADMIN_EMAILS`) has full global access. Mutation attempts on other users' articles return `403 Forbidden`.

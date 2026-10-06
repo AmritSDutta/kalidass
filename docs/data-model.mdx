@@ -81,7 +81,7 @@ Used in index feeds, search results, and Studio summary listings:
 - `readTime: string` — Formatted read time estimated from content word count.
 - `featured?: boolean` — Flags article as the lead cover story.
 - `published?: boolean` — `false` for drafts, `true` for live articles.
-- `private?: boolean` — `true` for unlisted articles (accessible only via direct link).
+- `private?: boolean` — `true` for unlisted articles (readable only by the author or an admin).
 - `aiGenerated?: boolean` — Displays the `AI` badge across cards and headers.
 - `userId?: string` — Auth0 subject identifier or system user ID.
 - `updatedAt?: string` — ISO timestamp of last modification.
@@ -117,5 +117,5 @@ export type AuthUser = {
 ## Core Operational Flags
 
 - **`published`**: When `false`, the article is saved as a draft. It is excluded from public API responses and direct GET queries return `404` unless authenticated with the Bearer token.
-- **`private`**: Defaults to `true` (unlisted). When `true`, the article is excluded from public feeds (`/` and `/magazine`), but is publicly readable by anyone with the direct `/story/:slug` URL without authentication. Set to `false` in Studio to feature publicly.
+- **`private`**: Defaults to `true` (unlisted). When `true`, the article is excluded from public feeds (`/` and `/magazine`) and is readable only by its author or an admin; anonymous requests to the direct `/story/:slug` URL return `404`. Set to `false` in Studio to feature publicly.
 - **`aiGenerated`**: Defaults to `false`. When enabled, renders an `AI` tag chip on cards and story headers.
