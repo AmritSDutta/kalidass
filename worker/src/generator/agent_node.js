@@ -1,4 +1,4 @@
-import {buildSystemPrompt, buildUserPrompt} from "./prompts.js";
+import {buildSystemPrompt, buildUserPrompt, buildSearchQuery, getCurrentDateFormatted} from "./prompts.js";
 
 /**
  * Builds the Node.js in-box research agent script.
@@ -11,7 +11,8 @@ import {buildSystemPrompt, buildUserPrompt} from "./prompts.js";
 export function buildNodeAgentScript(request, env) {
   const systemPrompt = JSON.stringify(buildSystemPrompt(request));
   const userPrompt = JSON.stringify(buildUserPrompt(request));
-  const searchTopic = JSON.stringify(request.topic || "systems research");
+  const searchTopic = JSON.stringify(buildSearchQuery(request));
+  const currentDateFormatted = JSON.stringify(getCurrentDateFormatted());
   const rawWeight = parseFloat(env.TAVILY_SEARCH_WEIGHT || "80");
   const tavilyWeight = rawWeight <= 1.0 ? rawWeight * 100 : rawWeight;
   const geminiModelName = JSON.stringify(request.model || env.GEMINI_MODEL || "gemini-3.1-flash-lite");
@@ -51,6 +52,7 @@ async function searchTavily(query) {
         query,
         search_depth: "advanced",
         include_answer: true,
+        time_range: "year",
         max_results: 5
       })
     });
@@ -70,9 +72,11 @@ async function searchTavily(query) {
 
 async function searchSerpApi(query) {
   try {
+    const currentDate = ${currentDateFormatted};
+    const dateQuery = query + ", as of " + currentDate;
     const url = new URL("https://serpapi.com/search.json");
     url.searchParams.set("engine", "google");
-    url.searchParams.set("q", query);
+    url.searchParams.set("q", dateQuery);
     const res = await fetch(url.toString(), {
       headers: { "Accept": "application/json" }
     });
@@ -127,7 +131,12 @@ async function run() {
       citations.map(c => "- " + c.title + ": " + c.description + " (" + c.url + ")").join("\\n");
   }
 
-  const finalUserPrompt = usrPrompt + searchContext;
+  const finalUserPrompt = usrPrompt + searchContext +
+    "\\n\\n" +
+    "MANDATORY REMINDER:\\n" +
+    "The user's thesis angle and architectural focus specified above is a NON-NEGOTIABLE INVARIANT. " +
+    "Fulfill and prioritize all constraints, frameworks, and questions in the thesis angle. " +
+    "Do not allow search citations to override or dilute the user's explicit intent.";
 
   // 2. Primary: Google Gemini API
   let generatedJson = null;
@@ -211,7 +220,7 @@ async function run() {
       coverImage: "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png",
       videoUrl: "",
       author: {
-        name: "Neural Agent (Upstash Box)",
+        name: "Neural Author",
         role: "Systems Research Agent",
         avatar: "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png"
       },
@@ -238,21 +247,23 @@ async function run() {
 
   // 5. OpenAI gpt-image-1 Technical Infographic Generation (strictly single cover image)
   try {
-    const title = (generatedJson && typeof generatedJson === "object" && generatedJson.title) || ${JSON.stringify(request.topic || "Systems Architecture")};
+    const title = (generatedJson && typeof generatedJson === "object" && generatedJson.title) || "";
     const excerpt = (generatedJson && typeof generatedJson === "object" && generatedJson.excerpt) || "";
-    const topicDesc = (title + (excerpt ? " — " + excerpt : "")).slice(0, 300);
+    const userContext = ${JSON.stringify([request.topic, request.angle].filter(Boolean).join(" — ") || "Systems Architecture")};
+    const topicDesc = (title ? (title + (excerpt ? " — " + excerpt : "")) : userContext).slice(0, 300);
 
     const infographicPrompt = \`Create a modern PREMIUM horizontal landscape infographic on:
 \${topicDesc}
 
-STYLE:
+STYLE & COLOR PALETTE:
 - ultra clean pictorial colorful infographic for modern systems engineering and computing research
+- COLOR PALETTE: MILDER, VIBRANT COLOR SHADES. Harmonious balance combining milder, muted matte foundation shades (soft slate, gentle charcoal, titanium, subtle deep indigo) with vibrant, luminous accent color highlights (electric indigo, radiant cyan, warm amber, vibrant violet, and emerald)
+- gentle, balanced contrast that is soothing and elegant, strictly avoiding harsh over-saturated neons or dark murky clutter
 - STRICTLY NO TEXT, NO WORDS, NO LABELS, NO LETTERS, NO TYPOGRAPHY anywhere in the image (except the subtle watermark below)
 - 100% visual and pictorial depiction using high-tech diagrams, architecture blocks, nodes, data conduits, neural pathways, memory hierarchy schematics, and geometric illustrations only
 - wide horizontal landscape composition (16:9 banner)
 - balanced systems architecture blocks arranged horizontally
-- sleek editorial engineering companion design with calm soothing colors and vivid accent highlights
-- looks like premium IEEE / ACM editorial systems poster
+- looks like a premium IEEE / Elsevier editorial systems publication companion poster
 - minimal clutter, mathematically precise framing
 
 SAFETY & ETHICS:

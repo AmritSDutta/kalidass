@@ -1,4 +1,4 @@
-import {buildSystemPrompt, buildUserPrompt} from "./prompts.js";
+import {buildSystemPrompt, buildUserPrompt, buildSearchQuery, getCurrentDateFormatted} from "./prompts.js";
 
 /**
  * Builds the Python in-box research agent script.
@@ -11,7 +11,8 @@ import {buildSystemPrompt, buildUserPrompt} from "./prompts.js";
 export function buildPythonAgentScript(request, env) {
   const systemPrompt = JSON.stringify(buildSystemPrompt(request));
   const userPrompt = JSON.stringify(buildUserPrompt(request));
-  const searchTopic = JSON.stringify(request.topic || "systems research");
+  const searchTopic = JSON.stringify(buildSearchQuery(request));
+  const currentDateFormatted = JSON.stringify(getCurrentDateFormatted());
   const rawWeight = parseFloat(env.TAVILY_SEARCH_WEIGHT || "80");
   const tavilyWeight = rawWeight <= 1.0 ? rawWeight * 100 : rawWeight;
   const geminiModelName = JSON.stringify(request.model || env.GEMINI_MODEL || "gemini-3.1-flash-lite");
@@ -84,6 +85,7 @@ def search_tavily(query):
         "query": query,
         "search_depth": "advanced",
         "include_answer": True,
+        "time_range": "year",
         "max_results": 5
     }
     data = http_post_json(url, payload)
@@ -96,7 +98,9 @@ def search_tavily(query):
 
 def search_serpapi(query):
     # attachHeaders injects X-Api-Key for serpapi.com, or queries with engine=google
-    url = f"https://serpapi.com/search.json?engine=google&q={urllib.parse.quote(query)}"
+    current_date = ${currentDateFormatted}
+    date_query = f"{query}, as of {current_date}"
+    url = f"https://serpapi.com/search.json?engine=google&q={urllib.parse.quote(date_query)}"
     data = http_get_json(url)
     results = []
     if data:
@@ -142,7 +146,14 @@ def main():
             [f"- {c['title']}: {c['description']} ({c['url']})" for c in citations]
         )
 
-    final_user_prompt = usr_prompt + search_context
+    final_user_prompt = (
+        f"{usr_prompt}"
+        f"{search_context}\\n\\n"
+        "MANDATORY REMINDER:\\n"
+        "The user's thesis angle and architectural focus specified above is a NON-NEGOTIABLE INVARIANT. "
+        "Fulfill and prioritize all constraints, frameworks, and questions in the thesis angle. "
+        "Do not allow search citations to override or dilute the user's explicit intent."
+    )
 
     # 2. Primary Synthesis: Google Gemini API (headers injected via attachHeaders)
     gemini_model = ${geminiModelName}
@@ -213,7 +224,7 @@ def main():
             "coverImage": "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png",
             "videoUrl": "",
             "author": {
-                "name": "Neural Agent (Upstash Box)",
+                "name": "Neural Author",
                 "role": "Systems Research Agent",
                 "avatar": "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png"
             },
@@ -241,20 +252,22 @@ def main():
     try:
         title = generated_json.get("title", "") if isinstance(generated_json, dict) else ""
         excerpt = generated_json.get("excerpt", "") if isinstance(generated_json, dict) else ""
-        topic_desc = f"{title} — {excerpt}" if excerpt else str(title or ${JSON.stringify(request.topic || "Systems Architecture")})
+        user_context = ${JSON.stringify([request.topic, request.angle].filter(Boolean).join(" — ") || "Systems Architecture")}
+        topic_desc = f"{title} — {excerpt}" if excerpt else str(title or user_context)
         topic_desc = topic_desc[:300]
 
         infographic_prompt = (
             f"Create a modern PREMIUM horizontal landscape infographic on:\\n"
             f"{topic_desc}\\n\\n"
-            f"STYLE:\\n"
+            f"STYLE & COLOR PALETTE:\\n"
             f"- ultra clean pictorial colorful infographic for modern systems engineering and computing research\\n"
+            f"- COLOR PALETTE: MILDER, VIBRANT COLOR SHADES. Harmonious balance combining milder, muted matte foundation shades (soft slate, gentle charcoal, titanium, subtle deep indigo) with vibrant, luminous accent color highlights (electric indigo, radiant cyan, warm amber, vibrant violet, and emerald)\\n"
+            f"- gentle, balanced contrast that is soothing and elegant, strictly avoiding harsh over-saturated neons or dark murky clutter\\n"
             f"- STRICTLY NO TEXT, NO WORDS, NO LABELS, NO LETTERS, NO TYPOGRAPHY anywhere in the image (except the subtle watermark below)\\n"
             f"- 100% visual and pictorial depiction using high-tech diagrams, architecture blocks, nodes, data conduits, neural pathways, memory hierarchy schematics, and geometric illustrations only\\n"
             f"- wide horizontal landscape composition (16:9 banner)\\n"
             f"- balanced systems architecture blocks arranged horizontally\\n"
-            f"- sleek editorial engineering companion design with calm soothing colors and vivid accent highlights\\n"
-            f"- looks like premium IEEE / ACM editorial systems poster\\n"
+            f"- looks like a premium IEEE / Elsevier editorial systems publication companion poster\\n"
             f"- minimal clutter, mathematically precise framing\\n\\n"
             f"SAFETY & ETHICS:\\n"
             f"- strictly professional, dignified, and universally positive\\n"

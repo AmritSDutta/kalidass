@@ -49,12 +49,12 @@ export const GeneratedArticleSchema = z.object({
   videoUrl: z.string().default(""),
   author: z
     .object({
-      name: z.string().default("Neural Agent (Upstash Box)"),
+      name: z.string().default("Neural Author"),
       role: z.string().default("Systems Research Agent"),
       avatar: z.string().default("https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png"),
     })
     .default({
-      name: "Neural Agent (Upstash Box)",
+      name: "Neural Author",
       role: "Systems Research Agent",
       avatar: "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png",
     }),
@@ -147,7 +147,7 @@ export function sanitizeArticleDraft(raw, request = {}) {
     ).trim(),
     videoUrl: String(data?.videoUrl || "").trim(),
     author: {
-      name: String(data?.author?.name || "Neural Agent (Upstash Box)").trim(),
+      name: String(data?.author?.name || "Neural Author").trim(),
       role: String(data?.author?.role || "Systems Research Agent").trim(),
       avatar: String(data?.author?.avatar || "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png").trim(),
     },

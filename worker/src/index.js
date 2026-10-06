@@ -642,7 +642,13 @@ export default {
         try {
           const serpUrl = new URL("https://serpapi.com/search.json");
           serpUrl.searchParams.set("engine", "google");
-          serpUrl.searchParams.set("q", query.trim());
+          const currentDate = new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+          serpUrl.searchParams.set("q", `${query.trim()}, as of ${currentDate}`);
           serpUrl.searchParams.set("api_key", serpApiKey);
 
           const serpRes = await fetch(serpUrl.toString());

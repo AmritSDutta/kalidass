@@ -63,19 +63,26 @@ Articles are immediately evaluated by the quality/safety pipeline and saved dire
 - `aiGenerated: true` (AI Attribution Badge)
 - `authorEmail`: Stamped with the administrator's identity.
 
-### D. OpenAI gpt-image-1 Technical Infographics (Single Cover Image Invariant)
+### D. OpenAI gpt-image-1 Technical Infographics (Milder, Vibrant Palette)
 Generates modern, typography-free 16:9 landscape infographics (`1536x1024`, WebP 80% compression, low quality) with a subtle `"Kalidass"` watermark:
-- Strictly visual-only pictorial architecture diagrams, node topologies, and data conduits.
+- **Milder, Vibrant Color Shades**: Combines milder, muted matte foundation shades (soft slate, gentle charcoal, titanium, subtle indigo) with vibrant, luminous accent color highlights (electric indigo, radiant cyan, warm amber, vibrant violet, emerald).
+- Strictly visual-only pictorial architecture diagrams, node topologies, and data conduits with gentle contrast that is soothing and elegant.
 - Eliminates AI hallucinated text and typographical artifact clutter.
 - **Strict Single-Image Invariant**: Exactly ONE image is generated per article, saved directly to `coverImage`. No inline image blocks are emitted.
 
-### E. Resilient JSON Parsing & Array Normalization
+### E. Date-Aware Search & Non-Negotiable Thesis Angle Invariant
+- **Date-Aware Hybrid Search**: Research queries automatically append the dynamic operational year (e.g. `2026`) and thesis angle directives (`buildSearchQuery`) so Tavily and SerpApi fetch cutting-edge empirical sources.
+- **Non-Negotiable Thesis Angle Priority**: The `angle` field is enforced as a top-priority non-negotiable invariant. Anti-recency prompting guarantees the model fulfills specific architectural requirements and constraints over generic search snippets.
+- **IEEE & Elsevier Publishing Standard with Developer Pragmatism**: Synthesizes formal taxonomy, problem formulations, and citations benchmarked against IEEE/Elsevier journals, paired with actionable systems engineering intuition.
+- **Beginner-Friendly Introduction & Elaborated Block Depth**: Accessible introductory analogies and motivations in the excerpt and first section, followed by deeply elaborated 3-5 sentence paragraphs for all technical blocks.
+
+### F. Resilient JSON Parsing & Array Normalization
 To handle LLM output variations and markdown code block wrappers:
 - **`parse_json_safely()`**: Strips markdown code fences (` ```json `), unwraps stringified JSON, and falls back to regex object/array boundary extraction.
 - **Auto-Normalization**: Bare block arrays (`[ {"type": "heading", ...}, ... ]`) or single-element array wrappers are automatically normalized into standard `{ "title": ..., "blocks": [...] }` dictionaries.
 - **Guarded Property Lookups**: Safely checks dict keys before generating the cover image, preventing runtime `AttributeError: 'list' object has no attribute 'get'`.
 
-### F. Secret Management: Worker Environment vs. Upstash Board
+### G. Secret Management: Worker Environment vs. Upstash Board
 API keys (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `BRAVE_SEARCH_API_KEY`) are managed as Worker environment variables rather than static Upstash Board configurations:
 - **Ephemeral Container Creation**: The Worker dynamically boots, runs, and terminates boxes on-demand via the `@upstash/box` SDK.
 - **Zero Disk Exposure**: Secrets are passed strictly as `attachHeaders` parameters at runtime, which Upstash Box injects at the hypervisor network level. Secrets never touch disk or shell environment variables.
@@ -98,7 +105,7 @@ Content-Type: application/json
 ```json
 {
   "topic": "Emergent Memory Hierarchy in Hybrid State Space Topologies",
-  "angle": "Empirical analysis of KV-cache compression vs. selective state retention.",
+  "angle": "Empirical analysis of KV-cache compression vs. selective state retention on Hopper H100 SRAM.",
   "tone": "research",
   "blockCount": 8,
   "accent": "#6366f1",

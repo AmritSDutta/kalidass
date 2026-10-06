@@ -59,5 +59,18 @@ describe("sanitizeArticleDraft (Hermetic)", () => {
     expect(sanitized.blocks.length).toBeGreaterThanOrEqual(1);
     expect(sanitized.tags).toEqual(["Research", "Neural Systems", "Upstash Box"]);
     expect(sanitized.accent).toBe("#6366f1");
+    expect(sanitized.author.name).toBe("Neural Author");
+    expect(sanitized.author.role).toBe("Systems Research Agent");
+  });
+
+  it("defaults author name to Neural Author when missing in draft", () => {
+    const raw = {
+      title: "Asynchronous Agent Topologies",
+      blocks: [{type: "paragraph", text: "Runtime actors communicate via durable event buses."}],
+    };
+    const sanitized = sanitizeArticleDraft(raw);
+    expect(sanitized.author).toBeDefined();
+    expect(sanitized.author.name).toBe("Neural Author");
+    expect(sanitized.author.role).toBe("Systems Research Agent");
   });
 });

@@ -6,7 +6,7 @@
 /**
  * @typedef {Object} GenerateArticleRequest
  * @property {string} topic The core research subject or article topic
- * @property {string} [angle] Specific thesis angle, hypothesis, or research stance
+ * @property {string} [angle] Mandatory non-negotiable thesis angle, architectural focus, or specific instructions
  * @property {"research" | "field-notes" | "explainer" | "speculative"} [tone] Editorial tone
  * @property {number} [blockCount] Target content block count (e.g., 6, 10, 15)
  * @property {string} [accent] Hex pigment accent color (e.g. #6366f1)
