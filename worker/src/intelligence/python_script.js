@@ -8,6 +8,7 @@
 export function buildIntelligenceScript(params) {
   const queryStr = JSON.stringify(params.query || params.title);
   const titleStr = JSON.stringify(params.title);
+  const apiKeyStr = JSON.stringify(params.apiKey || "");
 
   return `#!/usr/bin/env python3
 import json
@@ -21,6 +22,7 @@ from datetime import datetime, timezone
 SEARCH_URL = "https://serpapi.com/search.json"
 MAIN_QUERY = ${queryStr}
 TITLE = ${titleStr}
+API_KEY = ${apiKeyStr}
 
 SERP_KEYS = [
     "ai_overview",
@@ -45,11 +47,15 @@ SERP_KEYS = [
 
 def search(params):
     query = {k: v for k, v in params.items() if v is not None and v != ""}
-    api_key = os.environ.get("SERPAPI_KEY", "")
+    api_key = os.environ.get("SERPAPI_API_KEY") or os.environ.get("SERPAPI_KEY") or API_KEY
     if api_key:
         query["api_key"] = api_key
     url = f"{SEARCH_URL}?{urllib.parse.urlencode(query, doseq=True)}"
-    req = urllib.request.Request(url, headers={"User-Agent": "kalidass-intel/1.0"})
+    headers = {"User-Agent": "kalidass-intel/1.0"}
+    if api_key:
+        headers["X-Api-Key"] = api_key
+        headers["Authorization"] = f"Bearer {api_key}"
+    req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=40) as resp:
             return json.loads(resp.read().decode("utf-8"))

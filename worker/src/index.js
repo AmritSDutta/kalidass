@@ -312,28 +312,99 @@ function estimateReadTime(blocks) {
   return Math.max(3, Math.round(words / 180) || 3);
 }
 
+export async function reconstructIndex(bucket, env) {
+  const canonicalPath = getIndexPath(env);
+  const rootPrefix = getRootPrefix(env);
+
+  // 1. Try legacy index paths first if canonical index is empty
+  const fallbackPaths = ["journal/index.json", "index.json"];
+  for (const fbPath of fallbackPaths) {
+    if (fbPath !== canonicalPath) {
+      const fbIndex = await readJson(bucket, fbPath, null);
+      if (Array.isArray(fbIndex) && fbIndex.length > 0) {
+        await putJson(bucket, canonicalPath, fbIndex);
+        return fbIndex;
+      }
+    }
+  }
+
+  // 2. Scan bucket for all individual article files
+  if (typeof bucket.list === "function") {
+    const candidatePrefixes = [
+      `${rootPrefix}/articles/`,
+      "journal/articles/",
+      "articles/",
+    ];
+    const foundArticles = new Map();
+
+    for (const prefix of candidatePrefixes) {
+      try {
+        let cursor;
+        do {
+          const res = await bucket.list({prefix, limit: 100, cursor});
+          const items = res.blobs || res.objects || res.files || [];
+          for (const item of items) {
+            const path = item.path || item.pathname || item.name || item.key;
+            if (path && path.endsWith(".json")) {
+              const article = await readJson(bucket, path, null);
+              if (article && article.id && !foundArticles.has(article.id)) {
+                foundArticles.set(article.id, summarize(article));
+              }
+            }
+          }
+          cursor = res.cursor;
+        } while (cursor);
+      } catch (listErr) {
+        console.warn(`[Reindex] Bucket list under '${prefix}' failed:`, listErr?.message);
+      }
+    }
+
+    if (foundArticles.size > 0) {
+      const reconstructed = Array.from(foundArticles.values()).sort(
+        (a, b) =>
+          new Date(b.publishedAt || b.updatedAt) - new Date(a.publishedAt || a.updatedAt)
+      );
+      await putJson(bucket, canonicalPath, reconstructed);
+      return reconstructed;
+    }
+  }
+
+  return [];
+}
+
 async function ensureSeed(bucket, env) {
   const indexPath = getIndexPath(env);
   try {
     const index = await readJson(bucket, indexPath, null);
-    if (Array.isArray(index)) return index;
-    const summaries = [];
-    for (const article of seedArticles) {
-      const record = {
-        ...article,
-        authorEmail: article.authorEmail || "",
-        userId: article.userId || "system",
-        createdAt: article.publishedAt,
-        updatedAt: article.publishedAt,
-      };
-      await putJson(bucket, getArticleObject(article.id, env), record);
-      summaries.push(summarize(record));
+    if (Array.isArray(index) && index.length > 0) return index;
+
+    // Self-healing: if index is missing or empty [], check fallback paths or reconstruct from stored files
+    const recovered = await reconstructIndex(bucket, env);
+    if (recovered.length > 0) return recovered;
+
+    // Seed mock articles ONLY if seedArticles array is non-empty
+    if (seedArticles.length > 0) {
+      const summaries = [];
+      for (const article of seedArticles) {
+        const record = {
+          ...article,
+          authorEmail: article.authorEmail || "",
+          userId: article.userId || "system",
+          createdAt: article.publishedAt,
+          updatedAt: article.publishedAt,
+        };
+        await putJson(bucket, getArticleObject(article.id, env), record);
+        summaries.push(summarize(record));
+      }
+      await putJson(bucket, indexPath, summaries);
+      return summaries;
     }
-    await putJson(bucket, indexPath, summaries);
-    return summaries;
+
+    // Never overwrite index.json with [] on failed/empty reads
+    return Array.isArray(index) ? index : [];
   } catch (err) {
     console.error("Upstash Blob ensureSeed error:", err);
-    return seedArticles.map(summarize);
+    return [];
   }
 }
 
@@ -613,6 +684,26 @@ export default {
         return json({ok: true, message: "Article repository reset to empty"}, 200, origin);
       }
 
+      if (url.pathname === "/api/admin/reindex" && request.method === "POST") {
+        const user = await getAuthUser(request, env);
+        if (!user || user.role !== "admin") {
+          return json({error: "Unauthorized: Admin privileges required to reindex articles"}, 401, origin);
+        }
+        const articles = await withIndexLock(async () => {
+          return await reconstructIndex(bucket, env);
+        });
+        return json(
+          {
+            ok: true,
+            message: `Successfully rebuilt index with ${articles.length} article(s)`,
+            count: articles.length,
+            articles: articles.map((a) => ({id: a.id, slug: a.slug, title: a.title})),
+          },
+          200,
+          origin
+        );
+      }
+
       if (url.pathname === "/api/ai_search_insight") {
         const user = await getAuthUser(request, env);
         if (!user) return json({error: "Unauthorized"}, 401, origin);
@@ -822,7 +913,10 @@ export default {
               return json({...article, ai_intelligence: intelligence}, 200, origin);
             } catch (intelErr) {
               console.error("[Intelligence Error]:", intelErr);
-              return json({error: "Failed to fetch article intelligence. Please try again later."}, 500, origin);
+              return json({
+                error: "Failed to fetch article intelligence. Please try again later.",
+                details: intelErr.message,
+              }, 500, origin);
             }
           }
 

@@ -17,10 +17,14 @@ export async function runBoxIntelligence(params, env) {
 
   const serpApiKey = env.SERPAPI_API_KEY || env.SERP_API_KEY;
   const attachHeaders = {};
+  const boxEnv = {};
   if (serpApiKey) {
     attachHeaders["serpapi.com"] = {
       "X-Api-Key": serpApiKey,
+      "Authorization": `Bearer ${serpApiKey}`,
     };
+    boxEnv.SERPAPI_API_KEY = serpApiKey;
+    boxEnv.SERPAPI_KEY = serpApiKey;
   }
 
   const boxName = `kalidass-intel-${Date.now()}`;
@@ -31,11 +35,15 @@ export async function runBoxIntelligence(params, env) {
     apiKey: env.UPSTASH_BOX_API_KEY,
     enableTelemetry: false,
     attachHeaders,
+    env: boxEnv,
     timeout: 90_000,
   });
 
   try {
-    const pythonScript = buildIntelligenceScript(params);
+    const pythonScript = buildIntelligenceScript({
+      ...params,
+      apiKey: serpApiKey,
+    });
     await box.files.write({
       path: "/workspace/home/intelligence.py",
       content: pythonScript,

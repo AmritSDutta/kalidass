@@ -1,10 +1,11 @@
 import {describe, it, expect, beforeEach} from "vitest";
-import {memoryBucket, getMemoryObject} from "../src/memory.js";
+import {memoryBucket, getMemoryObject, clearMemoryStore} from "../src/memory.js";
 
 describe("memoryBucket (Hermetic)", () => {
   let bucket;
 
   beforeEach(() => {
+    clearMemoryStore();
     bucket = memoryBucket();
   });
 
@@ -42,5 +43,18 @@ describe("memoryBucket (Hermetic)", () => {
 
     expect(getMemoryObject(path)).toBeNull();
     await expect(bucket.get(path)).rejects.toThrow("not_found");
+  });
+
+  it("lists objects filtered by prefix matching @upstash/blob Bucket.list contract", async () => {
+    await bucket.put("kalidass/articles/art-1.json", JSON.stringify({id: "art-1"}));
+    await bucket.put("kalidass/articles/art-2.json", JSON.stringify({id: "art-2"}));
+    await bucket.put("kalidass/media/pic.png", "fake-binary");
+
+    const result = await bucket.list({prefix: "kalidass/articles/"});
+    expect(result.blobs.length).toBe(2);
+    const paths = result.blobs.map((b) => b.path);
+    expect(paths).toContain("kalidass/articles/art-1.json");
+    expect(paths).toContain("kalidass/articles/art-2.json");
+    expect(paths).not.toContain("kalidass/media/pic.png");
   });
 });

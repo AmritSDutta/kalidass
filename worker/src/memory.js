@@ -38,9 +38,29 @@ export function memoryBucket() {
     async del(path) {
       store.delete(path);
     },
+    async list(options = {}) {
+      const prefix = options.prefix || "";
+      const matches = [];
+      for (const [key, item] of store.entries()) {
+        if (key.startsWith(prefix)) {
+          matches.push({
+            path: key,
+            size: item.bytes.byteLength,
+            contentType: item.contentType,
+            url: item.url,
+          });
+        }
+      }
+      return {blobs: matches, cursor: undefined};
+    },
   };
 }
 
 export function getMemoryObject(path) {
   return store.get(path) || null;
 }
+
+export function clearMemoryStore() {
+  store.clear();
+}
+

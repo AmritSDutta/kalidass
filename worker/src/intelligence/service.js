@@ -82,7 +82,7 @@ export async function getOrGenerateArticleIntelligence(article, env, storage, op
   }
 
   const generationPromise = (async () => {
-    const query = `${article.title} ${article.subtitle || article.excerpt || ""}`.trim();
+    const query = (article.title || "").trim() || `${article.subtitle || article.excerpt || ""}`.trim();
     const runner = storage.runBoxFn || runBoxIntelligence;
     const generated = await runner(
       {

@@ -125,6 +125,92 @@ describe("Worker REST API (Hermetic Integration)", () => {
     expect(anonRes.status).toBe(404);
   });
 
+  it("POST /api/admin/reindex requires admin authorization", async () => {
+    const unauthReq = createRequest("/api/admin/reindex", {method: "POST"});
+    const unauthRes = await worker.fetch(unauthReq, env);
+    expect(unauthRes.status).toBe(401);
+  });
+
+  it("POST /api/admin/reindex scans and restores articles from blob storage", async () => {
+    const uniqueSlug = `reindex-test-${Date.now()}`;
+    const createReq = createRequest("/api/articles", {
+      method: "POST",
+      headers: {Authorization: "Bearer test-secret-token"},
+      body: {
+        title: "Reindex Test Article",
+        slug: uniqueSlug,
+        excerpt: "Ensuring reindex reconstructs corrupted index.json.",
+        tags: ["Systems"],
+        published: true,
+        private: false,
+        blocks: [{type: "paragraph", text: "Persistent content."}],
+      },
+    });
+    const createRes = await worker.fetch(createReq, env);
+    expect(createRes.status).toBe(201);
+
+    // Empty index via admin reset
+    const resetReq = createRequest("/api/admin/reset", {
+      method: "POST",
+      headers: {Authorization: "Bearer test-secret-token"},
+    });
+    const resetRes = await worker.fetch(resetReq, env);
+    expect(resetRes.status).toBe(200);
+
+    // Trigger POST /api/admin/reindex
+    const reindexReq = createRequest("/api/admin/reindex", {
+      method: "POST",
+      headers: {Authorization: "Bearer test-secret-token"},
+    });
+    const reindexRes = await worker.fetch(reindexReq, env);
+    expect(reindexRes.status).toBe(200);
+    const reindexData = await reindexRes.json();
+    expect(reindexData.ok).toBe(true);
+    expect(reindexData.count).toBeGreaterThanOrEqual(1);
+    expect(reindexData.articles.some((a) => a.slug === uniqueSlug)).toBe(true);
+
+    // Verify public GET /api/articles lists the article again
+    const listReq = createRequest("/api/articles");
+    const listRes = await worker.fetch(listReq, env);
+    expect(listRes.status).toBe(200);
+    const listData = await listRes.json();
+    expect(listData.some((a) => a.slug === uniqueSlug)).toBe(true);
+  });
+
+  it("GET /api/articles self-heals empty index when articles exist in blob storage", async () => {
+    const uniqueSlug = `self-heal-test-${Date.now()}`;
+    const createReq = createRequest("/api/articles", {
+      method: "POST",
+      headers: {Authorization: "Bearer test-secret-token"},
+      body: {
+        title: "Self Healing Test",
+        slug: uniqueSlug,
+        excerpt: "Automatic recovery test.",
+        tags: ["SelfHealing"],
+        published: true,
+        private: false,
+        blocks: [{type: "paragraph", text: "Healing content."}],
+      },
+    });
+    await worker.fetch(createReq, env);
+
+    // Empty index to simulate corrupted/emptied index.json
+    await worker.fetch(
+      createRequest("/api/admin/reset", {
+        method: "POST",
+        headers: {Authorization: "Bearer test-secret-token"},
+      }),
+      env
+    );
+
+    // Public GET /api/articles automatically self-heals and returns the article
+    const getReq = createRequest("/api/articles");
+    const getRes = await worker.fetch(getReq, env);
+    expect(getRes.status).toBe(200);
+    const getData = await getRes.json();
+    expect(getData.some((a) => a.slug === uniqueSlug)).toBe(true);
+  });
+
   it("returns 404 for unknown endpoints", async () => {
     const req = createRequest("/api/unknown-route-12345");
     const res = await worker.fetch(req, env);
