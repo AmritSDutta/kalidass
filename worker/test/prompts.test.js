@@ -70,6 +70,20 @@ describe("Generator Prompts & Non-Negotiable Angle (Hermetic)", () => {
     // Title word limit invariant
     expect(sysPrompt).toContain("Title Word Limit Invariant");
     expect(sysPrompt).toContain("STRICTLY MAXIMUM 4 WORDS");
+
+    // Minimum 1400 words invariant
+    expect(sysPrompt).toContain("minimum of 1400 words");
+    expect(sysPrompt).toContain("Article Word Count Invariant");
+
+    // Readability and lucidity
+    expect(sysPrompt).toContain("easy to read and understand");
+
+    // Invisible subsections
+    expect(sysPrompt).toContain("Invisible Subsections");
+    expect(sysPrompt).toContain("What is this section all about");
+    expect(sysPrompt).toContain("How it helps in the overall article");
+    expect(sysPrompt).toContain("Why it is important");
+    expect(sysPrompt).toContain("How to use the knowledge");
   });
 
   it("buildUserPrompt incorporates critical non-negotiable thesis angle and structural directives", () => {
@@ -83,6 +97,13 @@ describe("Generator Prompts & Non-Negotiable Angle (Hermetic)", () => {
     expect(userPrompt).toContain("TOPIC: RadixAttention KV Caching");
     expect(userPrompt).toContain("CRITICAL NON-NEGOTIABLE THESIS ANGLE & DIRECTIVES");
     expect(userPrompt).toContain("Radix trees vs hash tables with concrete memory overhead benchmarks");
+    expect(userPrompt).toContain("Minimum Word Count (1400+ words)");
+    expect(userPrompt).toContain("easy to read and understand");
+    expect(userPrompt).toContain("Invisible Subsection Architecture Per Section");
+    expect(userPrompt).toContain("What is this section all about");
+    expect(userPrompt).toContain("How it helps in the overall article");
+    expect(userPrompt).toContain("Why it is important");
+    expect(userPrompt).toContain("How to use the knowledge");
     expect(userPrompt).toContain("Beginner-Friendly Introduction");
     expect(userPrompt).toContain("Elaborated Technical Depth");
     expect(userPrompt).toContain("IEEE & Elsevier Rigor + Developer Pragmatism");

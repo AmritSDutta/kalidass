@@ -147,6 +147,7 @@ def main():
         search_context = "\\n\\nEMPIRICAL WEB RESEARCH CITATIONS:\\n" + "\\n".join(
             [f"- {c['title']}: {c['description']} ({c['url']})" for c in citations]
         )
+    log(f"Stage 1 Complete: Hybrid search finished ({len(citations)} citations retrieved).")
 
     final_user_prompt = (
         f"{usr_prompt}"
@@ -173,13 +174,15 @@ def main():
             cand = data.get("candidates", [])[0]
             text = cand.get("content", {}).get("parts", [])[0].get("text", "")
             generated_json = parse_json_safely(text)
+            if generated_json:
+                log("Stage 2 Complete: Gemini synthesis successful.")
         except Exception as e:
-            log(f"Gemini parsing failed: {e}", file=sys.stderr)
+            log(f"Gemini parsing failed: {e}")
             print(f"Gemini parsing failed: {e}", file=sys.stderr)
 
     # 3. Fallback: Ollama Cloud API
     if not generated_json:
-        log(f"ollama getting called")
+        log("Calling Ollama fallback...")
 
         ollama_url = f"{${ollamaBaseUrl}}/api/chat"
         ollama_payload = {
@@ -196,8 +199,10 @@ def main():
             try:
                 content = data["message"].get("content", "")
                 generated_json = parse_json_safely(content)
+                if generated_json:
+                    log("Stage 3 Complete: Ollama fallback synthesis successful.")
             except Exception as e:
-                log(f"Ollama parsing failed: {e}", file=sys.stderr)
+                log(f"Ollama parsing failed: {e}")
                 print(f"Ollama parsing failed: {e}", file=sys.stderr)
 
     # 3.5. Normalize polymorphic structure (handle bare block arrays or wrapped arrays)
@@ -219,40 +224,14 @@ def main():
     if not isinstance(generated_json, dict):
         generated_json = None
 
-    # 4. Deterministic fallback if external LLMs are unconfigured or failed
-    is_fallback = False
+    # 4. Fail if external LLMs failed to produce structured article content
     if not generated_json:
-        is_fallback = True
-        generated_json = {
-            "title": ${JSON.stringify(request.topic || "Autonomous Systems Synthesis")},
-            "subtitle": ${JSON.stringify(request.angle || "Field notes from isolated container runtime.")},
-            "excerpt": "Deep synthesis on neural state synchronization and containerized agentic execution in Kalidass Journal.",
-            "coverImage": "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png",
-            "videoUrl": "",
-            "author": {
-                "name": "Neural Author",
-                "role": "Systems Research Agent",
-                "avatar": "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png"
-            },
-            "tags": ["Systems", "Upstash Box", "Neural Runtimes", "Python"],
-            "accent": ${JSON.stringify(request.accent || "#6366f1")},
-            "featured": False,
-            "blocks": [
-                {
-                    "type": "heading",
-                    "text": "1. Python Runtime Invariants in Isolated Containers"
-                },
-                {
-                    "type": "paragraph",
-                    "text": "By running an isolated Python container in Upstash Box, research agents orchestrate hybrid research workflows combining Tavily and SerpApi intelligence."
-                }
-            ],
-            "published": False,
-            "private": True,
-            "aiGenerated": True,
-            "isFallback": True,
-            "fallbackNotice": "Generated using local systems fallback template. Configure GEMINI_API_KEY via attachHeaders for live neural synthesis."
-        }
+        err_msg = "Article generation failed: external LLMs (Gemini / Ollama) failed to synthesize structured article content."
+        log(f"ERROR: {err_msg}")
+        print(f"ERROR: {err_msg}", file=sys.stderr)
+        sys.exit(1)
+
+    log("Stage 4 Complete: Structured article payload validated.")
 
     # 5. OpenAI gpt-image-1 Technical Infographic Generation (strictly single cover image)
     try:
@@ -262,30 +241,32 @@ def main():
         topic_desc = f"{title} — {excerpt}" if excerpt else str(title or user_context)
         topic_desc = topic_desc[:300]
 
-        infographic_prompt = (
-            f"Create a modern PREMIUM horizontal landscape infographic on:\\n"
-            f"{topic_desc}\\n\\n"
-            f"STYLE & COLOR PALETTE:\\n"
-            f"- ultra clean pictorial colorful infographic with whitish background for modern systems engineering and computing research\\n"
-            f"- BACKGROUND: Clean, elegant whitish background (light off-white, light silver-gray, or soft alabaster white canvas) providing crisp contrast for colorful infographic elements\\n"
-            f"- COLOR PALETTE: MILDER, VIBRANT COLOR SHADES. Harmonious balance combining milder, muted matte foundation shades (soft slate, gentle charcoal, titanium, subtle deep indigo) with vibrant, luminous accent color highlights (electric indigo, radiant cyan, warm amber, vibrant violet, and emerald)\\n"
-            f"- gentle, balanced contrast that is soothing and elegant, strictly avoiding harsh over-saturated neons or dark murky clutter\\n"
-            f"- STRICTLY NO TEXT, NO WORDS, NO LABELS, NO LETTERS, NO TYPOGRAPHY anywhere in the image (except the subtle watermark below)\\n"
-            f"- 100% visual and pictorial depiction using high-tech diagrams, architecture blocks, nodes, data conduits, neural pathways, memory hierarchy schematics, and geometric illustrations only\\n"
-            f"- wide horizontal landscape composition (16:9 banner)\\n"
-            f"- balanced systems architecture blocks arranged horizontally\\n"
-            f"- looks like a premium IEEE / Elsevier editorial systems publication companion poster\\n"
-            f"- minimal clutter, mathematically precise framing\\n\\n"
-            f"SAFETY & ETHICS:\\n"
-            f"- strictly professional, dignified, and universally positive\\n"
-            f"- strictly NO vulgarity, NO nudity, NO suggestive content, and NO socially or morally abusive depictions\\n"
-            f"- celebrate engineering rigor, distributed consensus, neural architectures, algorithmic beauty, and open-source systems\\n\\n"
-            f"WATERMARK (SOLE TEXT EXCEPTION):\\n"
-            f"Add subtle semi-transparent watermark text:\\n"
-            f"\\"Kalidass\\"\\n\\n"
-            f"Place watermark diagonally near bottom-right.\\n"
-            f"Keep watermark elegant and non-intrusive."
-        )
+        infographic_prompt = f"""Create a modern PREMIUM horizontal landscape infographic on:
+{topic_desc}
+
+STYLE & COLOR PALETTE:
+- ultra clean pictorial colorful infographic with whitish background for modern systems engineering and computing research
+- BACKGROUND: Clean, elegant whitish background (light off-white, light silver-gray, or soft alabaster white canvas) providing crisp contrast for colorful infographic elements
+- COLOR PALETTE: MILDER, VIBRANT COLOR SHADES. Harmonious balance combining milder, muted matte foundation shades (soft slate, gentle charcoal, titanium, subtle deep indigo) with vibrant, luminous accent color highlights (electric indigo, radiant cyan, warm amber, vibrant violet, and emerald)
+- gentle, balanced contrast that is soothing and elegant, strictly avoiding harsh over-saturated neons or dark murky clutter
+- STRICTLY NO TEXT, NO WORDS, NO LABELS, NO LETTERS, NO TYPOGRAPHY anywhere in the image (except the subtle watermark below)
+- 100% visual and pictorial depiction using high-tech diagrams, architecture blocks, nodes, data conduits, neural pathways, memory hierarchy schematics, and geometric illustrations only
+- wide horizontal landscape composition (16:9 banner)
+- balanced systems architecture blocks arranged horizontally
+- looks like a premium IEEE / Elsevier editorial systems publication companion poster
+- minimal clutter, mathematically precise framing
+
+SAFETY & ETHICS:
+- strictly professional, dignified, and universally positive
+- strictly NO vulgarity, NO nudity, NO suggestive content, and NO socially or morally abusive depictions
+- celebrate engineering rigor, distributed consensus, neural architectures, algorithmic beauty, and open-source systems
+
+WATERMARK (SOLE TEXT EXCEPTION):
+Add subtle semi-transparent watermark text:
+"Kalidass"
+
+Place watermark diagonally near bottom-right.
+Keep watermark elegant and non-intrusive."""
 
         gpt_img_payload = {
             "model": "gpt-image-1",
@@ -305,6 +286,7 @@ def main():
                 generated_json["coverImage"] = f"data:image/webp;base64,{b64}"
             elif remote_url:
                 generated_json["coverImage"] = remote_url
+            log("Stage 5 Complete: Infographic cover image generated successfully.")
     except Exception as e:
         print(f"gpt-image-1 generation skipped: {e}", file=sys.stderr)
 
@@ -323,10 +305,12 @@ def main():
             "cite": "Autonomous Research Tooling (Firecrawl/Tavily)"
         })
     generated_json["blocks"] = blocks
+    log("Stage 6 Complete: References and empirical attributions attached.")
 
     with open("/workspace/home/article_output.json", "w", encoding="utf-8") as f:
         json.dump(generated_json, f, indent=2)
 
+    log("Stage 7 Complete: Article written to /workspace/home/article_output.json.")
     log("PYTHON_GENERATION_COMPLETE")
     print("PYTHON_GENERATION_COMPLETE")
 

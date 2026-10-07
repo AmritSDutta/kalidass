@@ -75,6 +75,13 @@ MANDATORY THESIS ANGLE & DIRECTIVES INVARIANT:
 
 EDITORIAL & ACADEMIC STANDARDS:
 - Tone: ${toneDesc}
+- Minimum Article Word Count: The whole article MUST be a minimum of 1400 words across its structured content blocks. Ensure thorough, comprehensive elaboration across all sections to satisfy this minimum length.
+- Readability & Lucidity: The article MUST be easy to read and understand. Maintain extreme clarity, engaging prose, intuitive mental models, and accessible explanations without sacrificing rigorous technical precision. Avoid impenetrable jargon barriers.
+- Section Architecture & Invisible Subsections: Every major section (each section heading and its accompanying paragraph blocks) MUST seamlessly integrate an invisible subsection blueprint addressing these 4 core dimensions in its narrative flow (without creating separate clutter subheadings):
+  1. What is this section all about: Crystal-clear statement of the section's core scope, premise, and foundational mental model.
+  2. How it helps in the overall article: Explicit connective tissue explaining the section's structural role in advancing the article's broader thesis.
+  3. Why it is important: Concrete stakes, failure modes, performance trade-offs, and critical system invariants.
+  4. How to use the knowledge: Actionable takeaways, engineering guidelines, and pragmatic guidance for applying the concepts in real-world systems.
 - Academic & Publishing Rigor: Benchmark against IEEE Transactions and Elsevier Computer Science journal publications. Maintain formal precision, structured discourse, precise technical taxonomy, and empirical attribution.
 - Developer-Friendly Pragmatism: Bridge theoretical rigor with pragmatic software engineering. Ground abstract concepts in concrete system architectures, runtime mechanics, memory layouts, and practical developer trade-offs. Avoid impenetrable mathematical gatekeeping; prioritize clear, actionable mental models.
 - Beginner-Friendly Introduction & Summary: The article excerpt and the opening section (introductory heading and initial paragraph blocks) MUST be welcoming and accessible. Provide clear conceptual intuition, relatable analogies, and articulate *why* the technology matters before descending into deeper systems mechanics.
@@ -105,6 +112,7 @@ CRITICAL SCHEMA INVARIANTS:
 4. Do NOT output any image blocks in "blocks" — exactly ONE cover image is generated separately for the article.
 5. The final blocks must conclude with {"type": "heading", "text": "References & Empirical Attributions"} and a {"type": "quote", "text": "...", "cite": "..."} citing empirical papers/sources.
 6. Title Word Limit Invariant: The "title" MUST be strictly 4 words or fewer (maximum 4 words; e.g. "Attention as Routing", "Sparse MoE Plumbing", "Speculative Edge Execution"). Never exceed 4 words.
+7. Article Word Count Invariant: The entire article across all blocks MUST contain a minimum of 1400 words.
 
 Always output strictly valid JSON conforming to the requested schema.`;
 
@@ -123,7 +131,7 @@ Always output strictly valid JSON conforming to the requested schema.`;
 export function buildUserPrompt(request) {
   const currentDate = getCurrentDateFormatted();
   const currentYear = getCurrentYear();
-  const blockTarget = request.blockCount || 8;
+  const blockTarget = request.blockCount || 10;
 
   const template = `Please research and author a complete, publication-ready Kalidass Journal research article on the following topic:
 
@@ -135,11 +143,18 @@ TARGET BLOCK COUNT: Approximately ${blockTarget} structured blocks (headings, te
 ACCENT COLOR: ${request.accent || "#6366f1"}
 
 STRUCTURAL & EDITORIAL REQUIREMENTS:
-1. Beginner-Friendly Introduction: The excerpt and opening section (heading + initial paragraphs) must introduce the topic intuitively with real-world analogies and motivation for why it matters.
-2. Elaborated Technical Depth: Subsequent paragraph blocks must be dense, detailed, and substantive (3-5 comprehensive sentences each), explaining exact mechanisms, runtime dynamics, memory/concurrency trade-offs, and causality.
-3. IEEE & Elsevier Rigor + Developer Pragmatism: Adhere to IEEE/Elsevier academic precision, taxonomy, and citations while keeping the narrative directly actionable and developer-friendly.
-4. Non-Negotiable Angle Enforcement: If a thesis angle is specified, ensure every single aspect, framework, and constraint in it is deeply explored and featured as the central thesis of the article.
-5. Title Word Limit Invariant: The "title" MUST be strictly 4 words or fewer (maximum 4 words). Do not use long descriptive titles.
+1. Minimum Word Count (1400+ words): The whole article must be a minimum of 1400 words across all blocks.
+2. Readability & Lucidity: The article must be easy to read and understand, with clear explanations, intuitive mental models, and beginner-welcoming prose.
+3. Invisible Subsection Architecture Per Section: Each section must organically weave in 4 invisible subsections/facets within its paragraph narrative:
+   - What is this section all about (core scope and intuitive premise)
+   - How it helps in the overall article (connective role in the broader thesis)
+   - Why it is important (stakes, failure modes, trade-offs, and critical system invariants)
+   - How to use the knowledge (pragmatic implementation rules and concrete real-world usage)
+4. Beginner-Friendly Introduction: The excerpt and opening section (heading + initial paragraphs) must introduce the topic intuitively with real-world analogies and motivation for why it matters.
+5. Elaborated Technical Depth: Subsequent paragraph blocks must be dense, detailed, and substantive (3-5 comprehensive sentences each), explaining exact mechanisms, runtime dynamics, memory/concurrency trade-offs, and causality.
+6. IEEE & Elsevier Rigor + Developer Pragmatism: Adhere to IEEE/Elsevier academic precision, taxonomy, and citations while keeping the narrative directly actionable and developer-friendly.
+7. Non-Negotiable Angle Enforcement: If a thesis angle is specified, ensure every single aspect, framework, and constraint in it is deeply explored and featured as the central thesis of the article.
+8. Title Word Limit Invariant: The "title" MUST be strictly 4 words or fewer (maximum 4 words). Do not use long descriptive titles.
 
 Ensure the response contains only the structured JSON Object { "title": ..., "subtitle": ..., "excerpt": ..., "tags": [...], "accent": "...", "blocks": [...] } with full references and attributions. Do NOT output a bare JSON array.`;
 
