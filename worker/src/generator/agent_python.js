@@ -28,6 +28,9 @@ import sys
 import urllib.request
 import urllib.parse
 
+def log(msg):
+    print(f"[Box Intel] {msg}")
+
 def http_post_json(url, payload, headers=None):
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, method="POST")
@@ -80,6 +83,7 @@ def parse_json_safely(raw_text):
 
 def search_tavily(query):
     # attachHeaders injects Authorization: Bearer <key> for api.tavily.com
+    log(f"Tavily called...")
     url = "https://api.tavily.com/search"
     payload = {
         "query": query,
@@ -94,10 +98,12 @@ def search_tavily(query):
             {"title": r.get("title", ""), "url": r.get("url", ""), "description": r.get("content", "")}
             for r in data.get("results", [])
         ]
+
     return []
 
 def search_firecrawl(query):
     # attachHeaders injects Authorization: Bearer <key> for api.firecrawl.dev
+    log(f"firecrawl called...")
     url = "https://api.firecrawl.dev/v1/search"
     payload = {
         "query": query,
@@ -168,10 +174,13 @@ def main():
             text = cand.get("content", {}).get("parts", [])[0].get("text", "")
             generated_json = parse_json_safely(text)
         except Exception as e:
+            log(f"Gemini parsing failed: {e}", file=sys.stderr)
             print(f"Gemini parsing failed: {e}", file=sys.stderr)
 
     # 3. Fallback: Ollama Cloud API
     if not generated_json:
+        log(f"ollama getting called")
+
         ollama_url = f"{${ollamaBaseUrl}}/api/chat"
         ollama_payload = {
             "model": ${ollamaModelName},
@@ -188,6 +197,7 @@ def main():
                 content = data["message"].get("content", "")
                 generated_json = parse_json_safely(content)
             except Exception as e:
+                log(f"Ollama parsing failed: {e}", file=sys.stderr)
                 print(f"Ollama parsing failed: {e}", file=sys.stderr)
 
     # 3.5. Normalize polymorphic structure (handle bare block arrays or wrapped arrays)
@@ -317,6 +327,7 @@ def main():
     with open("/workspace/home/article_output.json", "w", encoding="utf-8") as f:
         json.dump(generated_json, f, indent=2)
 
+    log("PYTHON_GENERATION_COMPLETE")
     print("PYTHON_GENERATION_COMPLETE")
 
 if __name__ == "__main__":
