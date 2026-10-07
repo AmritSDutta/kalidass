@@ -31,7 +31,7 @@ export default function Home(): ReactNode {
           <div className={styles.orbAlt} />
           <div className={styles.kicker}>
             <span className={styles.kickerDot} />
-            Vol. 01 // Meghaduta Edition
+            Vol. 01 // Meghdutt Edition
           </div>
           <h1>
             Field notes from
