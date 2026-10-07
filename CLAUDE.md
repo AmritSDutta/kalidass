@@ -268,6 +268,7 @@ Kalidass Journal integrates Grafana Faro for browser Real User Monitoring (RUM),
 - **Trace Header CORS Isolation**: `TracingInstrumentation` limits W3C trace propagation to `/^\/api/` and `kalidass.amrit.fyi`.
 - **No `@grafana/faro-react`**: Removed — its `react-router ^7 || ^8` peer conflicts with Docusaurus's `react-router@5` and breaks `npm clean-install` on Cloudflare Pages. Error capture uses `src/components/ErrorBoundary.tsx` (`FaroAwareErrorBoundary` → `getFaro()?.api.pushError`).
 - **Route View Tracking**: `src/client-modules/faro.ts` exports `onRouteDidUpdate` → `api.setView` per SPA navigation.
+- **CSP Connect Allowance**: `blog_frontend/static/_headers` `connect-src` includes the vendor wildcard `https://*.grafana.net` (pattern of `*.auth0.com` / `*.blob.upstash.io`). Never hardcode stack-specific Faro origins.
 - **Production Console Stripping**: Terser `pure_funcs` drops `console.log/info/debug/warn` from the production client bundle (`console.error` kept).
 - **Client Hardening (`src/client-modules/hardening.ts`)**: Production-only cosmetic deterrent — blocks context menu and devtools/view-source shortcuts (F12, Ctrl/Cmd+Shift+I/J/C, Ctrl/Cmd+U). Not a security boundary.
 - **Root Error Boundary**: `src/theme/Root.tsx` wraps the application in `<FaroAwareErrorBoundary>` with an accessible fallback screen.

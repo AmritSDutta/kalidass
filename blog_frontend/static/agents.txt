@@ -1,0 +1,15 @@
+# agents.txt — guidance for AI agents and LLM crawlers
+# Site: Kalidass Journal — a research magazine on models, agents, evals, and the systems under them.
+
+Site: https://kalidass.amrit.fyi
+Name: Kalidass Journal
+Description: Field notes from the neural heart. Long-form systems research articles on AI models, agents, evaluations, and infrastructure.
+Content: Public article pages at /story/:slug, issue archive at /magazine.
+Off-limits: /admin and /generate (operator tooling; no public content).
+API: Read-only article data via /api/articles (public); full REST contract documented in AI_AGENT_PUBLISH.md.
+Sitemap: https://kalidass.amrit.fyi/sitemap.xml
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /generate

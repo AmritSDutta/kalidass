@@ -68,6 +68,10 @@ To simplify deployment configuration, `docusaurus.config.ts` and `src/client-mod
    - Appends `/collect/${FARO_APP_ID}`.
 3. **Safe No-Op**: If neither configuration is provided, the client module stays cleanly inactive without generating console errors or breaking page loads.
 
+### Content Security Policy
+
+Browser telemetry POSTs from `faro.ts` are gated by the site CSP in `blog_frontend/static/_headers`. `connect-src` includes the vendor wildcard `https://*.grafana.net` — the same pattern used for Auth0 and Upstash — so any stack region or app ID works without committing stack-specific origins to git.
+
 ---
 
 ## 4. Docusaurus 3 & Webpack 5 Integration

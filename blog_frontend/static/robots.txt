@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /generate
+
+Sitemap: https://kalidass.amrit.fyi/sitemap.xml

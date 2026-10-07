@@ -153,7 +153,8 @@ const config: Config = {
     ],
   ],
   themeConfig: {
-    image: "img/docusaurus-social-card.jpg",
+    // Interim og:image/twitter:card fallback — replace with a designed 1200x630 brand card later.
+    image: "https://pub-c1d80f0f7327493997a3c1285f43a9ea.r2.dev/amrit_logo.png",
     colorMode: {
       defaultMode: "dark",
       respectPrefersColorScheme: true,
