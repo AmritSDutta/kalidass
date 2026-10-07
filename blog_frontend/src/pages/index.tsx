@@ -39,8 +39,8 @@ export default function Home(): ReactNode {
           </h1>
           <p className={styles.lede}>
             Kalidass Journal is a high-signal mixed human ai publication at the intersection of
-            agentic cognition, latent representation, and distributed edge architectures—inspired
-            by Kalidasa&apos;s cloud messenger archetype.
+            agentic cognition, serverless, AI-native and distributed edge architectures—inspired
+            by Kalidasa&apos;s writings. It encourges the future of writing i.e human-AI mix authorship.
           </p>
           <div className={styles.actions}>
             <Link className={styles.primary} to="/magazine">
