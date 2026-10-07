@@ -86,6 +86,13 @@
   word-break: break-word !important;
 }
 
+.codeContainer,
+.codeContainer :global(pre),
+.codeContainer :global(code),
+.codeContainer :global(.prism-code) {
+  tab-size: var(--code-tab-size, 2) !important;
+}
+
 .codeContainer :global(.prism-code) {
   margin: 0 !important;
   font-family: var(--font-mono, monospace) !important;

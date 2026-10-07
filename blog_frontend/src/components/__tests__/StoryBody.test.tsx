@@ -130,4 +130,34 @@ describe("StoryBody block rendering (Hermetic)", () => {
     expect(screen.getByRole("button", {name: /toggle line wrapping/i})).toBeTruthy();
     expect(screen.getByRole("button", {name: /copy code/i})).toBeTruthy();
   });
+
+  it("applies canonical indentation tab-size (4 for Python/Rust, 2 for TS/JS)", () => {
+    const {container: pyContainer} = render(
+      <StoryBody
+        article={articleWithBlocks([
+          {
+            type: "code",
+            text: "def hello():\n    print('world')",
+            language: "python",
+          },
+        ])}
+      />
+    );
+    const pyBlock = pyContainer.querySelector("[style*='--code-tab-size']");
+    expect(pyBlock?.getAttribute("style")).toContain("--code-tab-size: 4");
+
+    const {container: tsContainer} = render(
+      <StoryBody
+        article={articleWithBlocks([
+          {
+            type: "code",
+            text: "const hello = 'world';",
+            language: "typescript",
+          },
+        ])}
+      />
+    );
+    const tsBlock = tsContainer.querySelector("[style*='--code-tab-size']");
+    expect(tsBlock?.getAttribute("style")).toContain("--code-tab-size: 2");
+  });
 });

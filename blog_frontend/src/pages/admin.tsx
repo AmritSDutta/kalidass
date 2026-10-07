@@ -15,6 +15,7 @@ import {useAuth} from "@site/src/lib/auth";
 import {emptyDraft, formatDate} from "@site/src/lib/media";
 import type {Article, ArticleDraft, ArticleSummary, Block, QualityEvalResult, AiIntelligence} from "@site/src/lib/types";
 import {IntelligencePanel} from "@site/src/components/IntelligencePanel/IntelligencePanel";
+import {getLanguageIndentSize} from "@site/src/components/ArticleCodeBlock";
 import styles from "./admin.module.css";
 
 const ACCENTS = ["#6366f1", "#f97316", "#06b6d4", "#10b981", "#f43f5e", "#eab308"];
@@ -62,24 +63,59 @@ function fromArticle(article: Article | ArticleDraft): ArticleDraft {
   };
 }
 
-function formatCodeSnippet(raw: string): string {
+function formatCodeSnippet(raw: string, language?: string): string {
   if (!raw) return "";
+  const indentSize = getLanguageIndentSize(language);
+  const indentUnit = " ".repeat(indentSize);
   const lines = raw.replace(/\r\n/g, "\n").split("\n");
   const nonEmpties = lines.filter((l) => l.trim().length > 0);
   if (nonEmpties.length === 0) return raw.trim();
+
+  // Expand tabs using target language indent size
+  const expandedLines = lines.map((l) => l.replace(/\t/g, indentUnit));
   const leadingSpaces = nonEmpties.map((l) => {
-    const match = l.match(/^[ \t]*/);
-    return match ? match[0].replace(/\t/g, "  ").length : 0;
+    const expanded = l.replace(/\t/g, indentUnit);
+    const match = expanded.match(/^[ ]*/);
+    return match ? match[0].length : 0;
   });
   const minIndent = Math.min(...leadingSpaces);
-  return lines
-    .map((line) => {
-      if (line.trim().length === 0) return "";
-      const expanded = line.replace(/\t/g, "  ");
-      return expanded.slice(minIndent).trimEnd();
-    })
-    .join("\n")
-    .trim();
+
+  // Unindent common outer margin
+  const unindented = expandedLines.map((line) => {
+    if (line.trim().length === 0) return "";
+    return line.slice(minIndent).trimEnd();
+  });
+
+  // Check if relative indentation needs rescaling (e.g. 2-space to 4-space or vice versa)
+  const relativeNonEmpties = unindented.filter((l) => l.length > 0);
+  const relativeIndents = relativeNonEmpties
+    .map((l) => l.match(/^[ ]*/)?.[0].length || 0)
+    .filter((n) => n > 0);
+
+  let detectedStep: number | null = null;
+  if (relativeIndents.length > 0) {
+    if (relativeIndents.every((n) => n % 4 === 0)) {
+      detectedStep = 4;
+    } else if (relativeIndents.every((n) => n % 2 === 0)) {
+      detectedStep = 2;
+    }
+  }
+
+  if (detectedStep && detectedStep !== indentSize) {
+    return unindented
+      .map((line) => {
+        if (!line) return "";
+        const match = line.match(/^([ ]*)(.*)$/);
+        if (!match) return line;
+        const currentSpaces = match[1].length;
+        const level = Math.round(currentSpaces / (detectedStep as number));
+        return " ".repeat(level * indentSize) + match[2];
+      })
+      .join("\n")
+      .trim();
+  }
+
+  return unindented.join("\n").trim();
 }
 
 function AdminInner(): ReactNode {
@@ -937,7 +973,7 @@ function AdminInner(): ReactNode {
                         <button
                           type="button"
                           className={styles.ghost}
-                          onClick={() => updateBlock(index, {text: formatCodeSnippet(block.text)})}
+                          onClick={() => updateBlock(index, {text: formatCodeSnippet(block.text, block.language)})}
                           style={{padding: "0.25rem 0.6rem", fontSize: "0.78rem"}}
                           title="Auto-format indentation and trailing whitespace"
                         >
@@ -959,10 +995,26 @@ function AdminInner(): ReactNode {
                             setTimeout(() => {
                               target.selectionStart = target.selectionEnd = start + 2;
                             }, 0);
+                          } else if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            const target = e.currentTarget;
+                            const start = target.selectionStart;
+                            const end = target.selectionEnd;
+                            const textBefore = block.text.substring(0, start);
+                            const lastNewline = textBefore.lastIndexOf("\n");
+                            const currentLine = lastNewline === -1 ? textBefore : textBefore.substring(lastNewline + 1);
+                            const indentMatch = currentLine.match(/^[ \t]*/);
+                            const indent = indentMatch ? indentMatch[0] : "";
+                            const insertion = "\n" + indent;
+                            const newText = block.text.substring(0, start) + insertion + block.text.substring(end);
+                            updateBlock(index, {text: newText});
+                            setTimeout(() => {
+                              target.selectionStart = target.selectionEnd = start + insertion.length;
+                            }, 0);
                           }
                         }}
                         placeholder="// Enter code snippet here (Tab inserts 2 spaces)..."
-                        style={{fontFamily: "var(--font-mono, monospace)", fontSize: "0.88rem", tabSize: 2}}
+                        style={{fontFamily: "var(--font-mono, monospace)", fontSize: "0.88rem", tabSize: getLanguageIndentSize(block.language)}}
                       />
                     </>
                   ) : null}

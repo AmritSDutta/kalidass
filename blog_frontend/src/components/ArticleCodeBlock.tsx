@@ -1,6 +1,28 @@
-import {useState, type ReactNode} from "react";
+import {useState, type CSSProperties, type ReactNode} from "react";
 import CodeBlock from "@theme/CodeBlock";
 import styles from "./ArticleCodeBlock.module.css";
+
+export function getLanguageIndentSize(language?: string): number {
+  const lang = (language || "").trim().toLowerCase();
+  switch (lang) {
+    case "python":
+    case "py":
+    case "rust":
+    case "rs":
+    case "go":
+    case "golang":
+    case "java":
+    case "csharp":
+    case "cs":
+    case "c#":
+    case "cpp":
+    case "c++":
+    case "c":
+      return 4;
+    default:
+      return 2;
+  }
+}
 
 export interface ArticleCodeBlockProps {
   text: string;
@@ -31,6 +53,7 @@ export default function ArticleCodeBlock({
   const [copied, setCopied] = useState<boolean>(false);
 
   const normalizedLang = (language || "text").trim().toLowerCase();
+  const indentSize = getLanguageIndentSize(normalizedLang);
 
   const handleCopy = async () => {
     try {
@@ -51,6 +74,7 @@ export default function ArticleCodeBlock({
   return (
     <div
       className={`${styles.codeContainer} ${wrappedActive ? styles.wrapped : ""} ${className}`.trim()}
+      style={{"--code-tab-size": indentSize} as CSSProperties}
     >
       <div className={styles.header}>
         <div className={styles.headerInfo}>
