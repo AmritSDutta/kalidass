@@ -366,6 +366,25 @@ npx docs7 dev docs --port 3333
 node scripts/validate_docs.mjs docs
 ```
 
+
+
+---
+
+
+## Developers Digest
+
+- Kalidass is necessary as almost no site provide opptunity to read technical material dynamically, all offers static content.
+  To quence knowledge thrust , we need to visit associated site or AI chat.
+- Kalidass uses Serpapi to ingest interesting extension. enrichment for AI.
+- It enbles WebMCP tools , so author can experience benefits of Dynamic reading platform.
+- Authors can extends their writing skills, as this site anpounces future boldly , mixed AI-HUMAN authorship, embraces it too.
+- MCP tools exposes enriched data , and tools to modify, analysis exiting Articles.
+- Kalidass also embraces , System One AI (Jev, Clef), for generating quick evaluations.
+- It is completely serverless architecture and modern as well, build with Upstash Box , Blob , redis , Cloudflare Workers.
+- Kalidass facilitate article Draft genertion from direct LLM from the platform UI itself. (restricted for admin as of now)
+- Serpapi  fuels the concept of Mixed writing , every article has traditional articles side , and then modern Ai Inelligences as another side of the coin.
+
+
 ---
 
 ## License & Credits

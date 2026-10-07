@@ -4,12 +4,16 @@ import {defineConfig} from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "@site": fileURLToPath(new URL("./", import.meta.url)),
       // "@docusaurus/Link" is a Docusaurus webpack alias, not an npm package
       "@docusaurus/Link": fileURLToPath(
         new URL("./src/test-utils/docusaurus-link-stub.tsx", import.meta.url)
       ),
       "@theme/CodeBlock": fileURLToPath(
         new URL("./src/test-utils/docusaurus-codeblock-stub.tsx", import.meta.url)
+      ),
+      "@theme/Layout": fileURLToPath(
+        new URL("./src/test-utils/docusaurus-layout-stub.tsx", import.meta.url)
       ),
       "@generated/docusaurus.config": fileURLToPath(
         new URL("./src/test-utils/docusaurus-config-stub.ts", import.meta.url)
