@@ -1,5 +1,18 @@
 # Kalidass Journal — Systems Research Magazine
 
+  One of Kalidasa's most celebrated verses on critical knowledge and intellectual discernment comes from the prologue of his play Mālavikāgnimitra (Act 1, Verse 2): 
+
+  पुराणमित्येव न साधु सर्वं न चापि काव्यं नवमित्यवद्यम्।सन्तः परीक्ष्यान्यतरद्भजन्ते मूढः परप्रत्ययनेयबुद्धिः॥   
+
+  Translation & Meaning:
+  "Everything is not good simply because it is old, nor is a creation flawed merely because it is new. The wise examine with an open, discerning mind and accept what is genuinely worthy, while the foolish are blindly guided by the opinions of others."   
+  
+  Another notable observation by Kalidasa regarding education and pedagogy occurs in the Raghuvaṃśa (Canto 3, Verse 29): 
+  "क्रिया हि वस्तुपहिता प्रसीदति" (Kriyā hi vastūpahitā prasīdati), 
+
+  which translates to: 
+  "Knowledge or instruction yields fruit only when imparted to a receptive and worthy mind."
+
 **Kalidass Journal** is a colorful research publication exploring the neural heart: attention architectures, agent workflows, evals, and multimodal systems plumbing.
 
 The application is structured as a **combined monorepo** consisting of a **Docusaurus 3.10** static frontend, a **Cloudflare Worker REST API**, and **Upstash Blob** object storage.
