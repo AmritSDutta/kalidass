@@ -1,6 +1,7 @@
 import type {ReactNode} from "react";
 import type {Article} from "../lib/types";
 import VideoEmbed from "./VideoEmbed";
+import ArticleCodeBlock from "./ArticleCodeBlock";
 import styles from "./StoryBody.module.css";
 
 export function headingSlug(text: string, index?: number): string {
@@ -78,6 +79,17 @@ export default function StoryBody({article, dirtyIndices = []}: Props): ReactNod
                 title={article.title}
               />
             </div>
+          );
+        }
+        if (block.type === "code") {
+          return (
+            <ArticleCodeBlock
+              key={index}
+              text={block.text}
+              language={block.language}
+              title={block.title}
+              className={dirtyClass.trim()}
+            />
           );
         }
         return (

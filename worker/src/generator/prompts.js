@@ -101,18 +101,20 @@ You MUST respond with a single valid JSON Object adhering strictly to this schem
     {"type": "paragraph", "text": "Accessible introductory foundation establishing the core motivation and conceptual mental model..."},
     {"type": "heading", "text": "2. Section Heading (e.g. Deep Systems Mechanics & Runtime Dynamics)"},
     {"type": "paragraph", "text": "Deep, elaborated technical analysis detailing data conduits, state machines, and cache locality (3-5 dense sentences)..."},
-    {"type": "quote", "text": "Key thesis or empirical insight", "cite": "Source Paper/Specification"}
+    {"type": "quote", "text": "Key thesis or empirical insight", "cite": "Source Paper/Specification"},
+    {"type": "code", "text": "Minimal working snippet illustrating the mechanism", "language": "python", "title": "snippet.py"}
   ]
 }
 
 CRITICAL SCHEMA INVARIANTS:
 1. The root MUST be a JSON Object { ... } with keys "title", "subtitle", "excerpt", "tags", "accent", and "blocks".
 2. Do NOT output a top-level JSON array [ ... ].
-3. Allowed block types in "blocks" are strictly: "heading", "paragraph", and "quote".
+3. Allowed block types in "blocks" are strictly: "heading", "paragraph", "quote", and "code".
 4. Do NOT output any image blocks in "blocks" — exactly ONE cover image is generated separately for the article.
-5. The final blocks must conclude with {"type": "heading", "text": "References & Empirical Attributions"} and a {"type": "quote", "text": "...", "cite": "..."} citing empirical papers/sources.
-6. Title Word Limit Invariant: The "title" MUST be strictly 4 words or fewer (maximum 4 words; e.g. "Attention as Routing", "Sparse MoE Plumbing", "Speculative Edge Execution"). Never exceed 4 words.
-7. Article Word Count Invariant: The entire article across all blocks MUST contain a minimum of 1400 words.
+5. Code Block Invariant: "code" blocks are optional (at most 2 per article), MUST include a "language" (e.g. "python", "go", "sql"), and may include an optional "title" filename. Use them only when the mechanism is best shown as a short snippet.
+6. The final blocks must conclude with {"type": "heading", "text": "References & Empirical Attributions"} and a {"type": "quote", "text": "...", "cite": "..."} citing empirical papers/sources.
+7. Title Word Limit Invariant: The "title" MUST be strictly 4 words or fewer (maximum 4 words; e.g. "Attention as Routing", "Sparse MoE Plumbing", "Speculative Edge Execution"). Never exceed 4 words.
+8. Article Word Count Invariant: The entire article across all blocks MUST contain a minimum of 1400 words.
 
 Always output strictly valid JSON conforming to the requested schema.`;
 

@@ -37,7 +37,7 @@ export function validateEnhancedBlocks(blocks: unknown[]): {valid: true} | {vali
     }
     const blk = b as Record<string, unknown>;
     const type = blk.type;
-    if (type === "paragraph" || type === "heading" || type === "quote") {
+    if (type === "paragraph" || type === "heading" || type === "quote" || type === "code") {
       if (typeof blk.text !== "string" || !blk.text.trim()) {
         return {valid: false, error: `enhancedBlocks[${i}]: ${type} block requires a non-empty text string.`};
       }
@@ -46,7 +46,7 @@ export function validateEnhancedBlocks(blocks: unknown[]): {valid: true} | {vali
         return {valid: false, error: `enhancedBlocks[${i}]: ${type} block requires a non-empty url string.`};
       }
     } else {
-      return {valid: false, error: `enhancedBlocks[${i}]: invalid block type '${String(type)}'. Allowed: paragraph, heading, quote, image, video.`};
+      return {valid: false, error: `enhancedBlocks[${i}]: invalid block type '${String(type)}'. Allowed: paragraph, heading, quote, image, video, code.`};
     }
   }
   return {valid: true};
@@ -530,6 +530,8 @@ export class StoryWebMcp {
               cite: {type: "string"},
               url: {type: "string"},
               caption: {type: "string"},
+              language: {type: "string"},
+              title: {type: "string"},
             },
             required: ["type"],
           },

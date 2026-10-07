@@ -54,8 +54,7 @@ kalidass/
 ├── CLAUDE.md                  # Fast-reference agent instructions (this file)
 ├── DEPLOY.md                  # Direct Cloudflare deployment checklist
 ├── README.md                  # Comprehensive architecture, run, & deploy guide
-├── start.sh                   # Local dual-process startup script
-└── ZERO_TRUST_DEPLOY.md       # Cloudflare Zero Trust Access runbook
+└── start.sh                   # Local dual-process startup script
 ```
 
 ---

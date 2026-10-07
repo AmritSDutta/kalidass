@@ -8,6 +8,9 @@ export default defineConfig({
       "@docusaurus/Link": fileURLToPath(
         new URL("./src/test-utils/docusaurus-link-stub.tsx", import.meta.url)
       ),
+      "@theme/CodeBlock": fileURLToPath(
+        new URL("./src/test-utils/docusaurus-codeblock-stub.tsx", import.meta.url)
+      ),
     },
   },
   test: {

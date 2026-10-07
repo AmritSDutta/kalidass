@@ -192,7 +192,7 @@ function AdminInner(): ReactNode {
     const headings: {index: number; text: string; id: string; wordCount: number}[] = [];
     let totalWords = 0;
     let currentHeading: {index: number; text: string; id: string; wordCount: number} | null = null;
-    const blockCounts = {paragraph: 0, heading: 0, quote: 0, image: 0, video: 0};
+    const blockCounts = {paragraph: 0, heading: 0, quote: 0, image: 0, video: 0, code: 0};
 
     const metaWords = `${draft.title} ${draft.subtitle} ${draft.excerpt}`
       .trim()
@@ -202,7 +202,7 @@ function AdminInner(): ReactNode {
 
     (draft.blocks || []).forEach((block, index) => {
       const text =
-        block.type === "quote" || block.type === "paragraph" || block.type === "heading"
+        block.type === "quote" || block.type === "paragraph" || block.type === "heading" || block.type === "code"
           ? block.text || ""
           : block.caption || "";
       const words = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
@@ -289,7 +289,9 @@ function AdminInner(): ReactNode {
           ? {type, url: "", caption: "", _id}
           : type === "quote"
             ? {type, text: "", cite: "", _id}
-            : {type, text: "", _id};
+            : type === "code"
+              ? {type, text: "", language: "typescript", title: "", _id}
+              : {type, text: "", _id};
     setDraft((current) => ({...current, blocks: [...current.blocks, next]}));
   };
 
@@ -766,7 +768,7 @@ function AdminInner(): ReactNode {
               <div className={styles.blocksHead}>
                 <h2>Body</h2>
                 <div>
-                  {(["paragraph", "heading", "quote", "image", "video"] as BlockType[]).map(
+                  {(["paragraph", "heading", "quote", "image", "video", "code"] as BlockType[]).map(
                     (type) => (
                       <button key={type} type="button" onClick={() => addBlock(type)}>
                         + {blockLabel(type)}
@@ -840,6 +842,55 @@ function AdminInner(): ReactNode {
                         onChange={(event) =>
                           updateBlock(index, {caption: event.target.value})
                         }
+                      />
+                    </>
+                  ) : null}
+                  {block.type === "code" ? (
+                    <>
+                      <div style={{display: "flex", gap: "0.5rem", marginBottom: "0.5rem"}}>
+                        <select
+                          value={block.language || "typescript"}
+                          onChange={(event) => updateBlock(index, {language: event.target.value})}
+                          style={{
+                            background: "var(--paper-solid, #131b31)",
+                            color: "var(--ink, #fff)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "6px",
+                            padding: "0.4rem 0.6rem",
+                            fontFamily: "var(--font-mono, monospace)",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          <option value="typescript">TypeScript</option>
+                          <option value="javascript">JavaScript</option>
+                          <option value="python">Python</option>
+                          <option value="go">Go</option>
+                          <option value="rust">Rust</option>
+                          <option value="sql">SQL</option>
+                          <option value="bash">Bash / Shell</option>
+                          <option value="json">JSON</option>
+                          <option value="yaml">YAML</option>
+                          <option value="java">Java</option>
+                          <option value="csharp">C#</option>
+                          <option value="cpp">C++</option>
+                          <option value="c">C</option>
+                          <option value="html">HTML</option>
+                          <option value="css">CSS</option>
+                          <option value="docker">Dockerfile</option>
+                        </select>
+                        <input
+                          value={block.title || ""}
+                          placeholder="Filename / title (optional, e.g. main.py)"
+                          onChange={(event) => updateBlock(index, {title: event.target.value})}
+                          style={{flex: 1}}
+                        />
+                      </div>
+                      <textarea
+                        value={block.text}
+                        rows={8}
+                        onChange={(event) => updateBlock(index, {text: event.target.value})}
+                        placeholder="// Enter code snippet here..."
+                        style={{fontFamily: "var(--font-mono, monospace)", fontSize: "0.88rem", tabSize: 2}}
                       />
                     </>
                   ) : null}

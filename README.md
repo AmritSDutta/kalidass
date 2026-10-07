@@ -108,8 +108,7 @@ kalidass/
 ├── CLAUDE.md                  # Fast-reference agent instructions & commands
 ├── DEPLOY.md                  # Direct Cloudflare Pages/Worker deployment guide
 ├── README.md                  # Master project guide (this file)
-├── start.sh                   # Concurrent local dev startup script
-└── ZERO_TRUST_DEPLOY.md       # Cloudflare Zero Trust Access & proxy runbook
+└── start.sh                   # Concurrent local dev startup script
 ```
 
 ---
@@ -241,7 +240,7 @@ npx wrangler deploy
    - Add `kalidass.amrit.fyi` to Pages Custom Domains.
 5. Deploy. `blog_frontend/functions/api/[[route]].ts` automatically proxies all `/api/*` requests in-memory via `context.env.JOURNAL_WORKER.fetch(request)`.
 
-> Refer to [`ZERO_TRUST_DEPLOY.md`](./ZERO_TRUST_DEPLOY.md) and [`DEPLOY.md`](./DEPLOY.md) for complete runbooks.
+> Refer to [`DEPLOY.md`](./DEPLOY.md) for the complete deployment runbook.
 
 ---
 

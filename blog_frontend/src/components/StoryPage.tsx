@@ -110,18 +110,19 @@ export default function StoryPage(): ReactNode {
 
   const headingsAnalysis = useMemo(() => {
     if (!article?.blocks) {
-      return {headings: [] as HeadingItem[], totalWords: 0, blockCounts: {p: 0, h: 0, q: 0, img: 0, vid: 0}};
+      return {headings: [] as HeadingItem[], totalWords: 0, blockCounts: {p: 0, h: 0, q: 0, img: 0, vid: 0, code: 0}};
     }
 
     const headings: HeadingItem[] = [];
     let currentHeading: HeadingItem | null = null;
     let totalWords = 0;
-    const blockCounts = {p: 0, h: 0, q: 0, img: 0, vid: 0};
+    const blockCounts = {p: 0, h: 0, q: 0, img: 0, vid: 0, code: 0};
 
     article.blocks.forEach((block, index) => {
-      const text = block.type === "quote" || block.type === "paragraph" || block.type === "heading"
-        ? block.text || ""
-        : block.caption || "";
+      const text =
+        block.type === "quote" || block.type === "paragraph" || block.type === "heading" || block.type === "code"
+          ? block.text || ""
+          : block.caption || "";
       const words = text.trim() ? text.trim().split(/\s+/).length : 0;
       totalWords += words;
 
@@ -135,6 +136,9 @@ export default function StoryPage(): ReactNode {
         if (currentHeading) currentHeading.wordCount += words;
       } else if (block.type === "quote") {
         blockCounts.q += 1;
+        if (currentHeading) currentHeading.wordCount += words;
+      } else if (block.type === "code") {
+        blockCounts.code += 1;
         if (currentHeading) currentHeading.wordCount += words;
       } else if (block.type === "image") {
         blockCounts.img += 1;
@@ -609,6 +613,9 @@ export default function StoryPage(): ReactNode {
                       ) : null}
                       {headingsAnalysis.blockCounts.vid > 0 ? (
                         <span>{headingsAnalysis.blockCounts.vid} video</span>
+                      ) : null}
+                      {headingsAnalysis.blockCounts.code > 0 ? (
+                        <span>{headingsAnalysis.blockCounts.code} code</span>
                       ) : null}
                     </div>
                   </div>

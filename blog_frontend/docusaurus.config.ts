@@ -114,6 +114,21 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+      additionalLanguages: [
+        "python",
+        "bash",
+        "go",
+        "rust",
+        "java",
+        "csharp",
+        "sql",
+        "json",
+        "yaml",
+        "ruby",
+        "kotlin",
+        "swift",
+        "docker",
+      ],
     },
   } satisfies Preset.ThemeConfig,
 };

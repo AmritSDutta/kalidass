@@ -33,12 +33,21 @@ export const BlockVideoSchema = z.object({
   _id: z.string().optional(),
 });
 
+export const BlockCodeSchema = z.object({
+  type: z.literal("code"),
+  text: z.string().min(1),
+  language: z.string().optional(),
+  title: z.string().optional(),
+  _id: z.string().optional(),
+});
+
 export const BlockSchema = z.discriminatedUnion("type", [
   BlockParagraphSchema,
   BlockHeadingSchema,
   BlockQuoteSchema,
   BlockImageSchema,
   BlockVideoSchema,
+  BlockCodeSchema,
 ]);
 
 export const GeneratedArticleSchema = z.object({
@@ -95,7 +104,7 @@ export function sanitizeArticleDraft(raw, request = {}) {
 
   const blocks = Array.isArray(data?.blocks) ? data.blocks : [];
   const normalizedBlocks = blocks.map((b) => {
-    const type = ["paragraph", "heading", "quote", "image", "video"].includes(b.type)
+    const type = ["paragraph", "heading", "quote", "image", "video", "code"].includes(b.type)
       ? b.type
       : "paragraph";
     const _id = b._id || crypto.randomUUID();
@@ -105,6 +114,15 @@ export function sanitizeArticleDraft(raw, request = {}) {
     }
     if (type === "quote") {
       return {type, text: String(b.text || "").trim() || "...", cite: b.cite ? String(b.cite).trim() : undefined, _id};
+    }
+    if (type === "code") {
+      return {
+        type,
+        text: String(b.text || "").trim() || "...",
+        language: b.language ? String(b.language).trim() : undefined,
+        title: b.title ? String(b.title).trim() : undefined,
+        _id,
+      };
     }
     if (type === "image") {
       return {

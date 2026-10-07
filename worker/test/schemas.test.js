@@ -73,4 +73,25 @@ describe("sanitizeArticleDraft (Hermetic)", () => {
     expect(sanitized.author.name).toBe("Neural Author");
     expect(sanitized.author.role).toBe("Systems Research Agent");
   });
+
+  it("sanitizes code blocks with language and title", () => {
+    const raw = {
+      title: "Distributed KV Stores",
+      blocks: [
+        {
+          type: "code",
+          text: "fn main() { println!(\"Hello raft\"); }",
+          language: "rust",
+          title: "raft.rs",
+        },
+      ],
+    };
+    const sanitized = sanitizeArticleDraft(raw);
+    expect(sanitized.blocks).toHaveLength(1);
+    expect(sanitized.blocks[0].type).toBe("code");
+    expect(sanitized.blocks[0].text).toBe("fn main() { println!(\"Hello raft\"); }");
+    expect(sanitized.blocks[0].language).toBe("rust");
+    expect(sanitized.blocks[0].title).toBe("raft.rs");
+    expect(sanitized.blocks[0]._id).toBeDefined();
+  });
 });

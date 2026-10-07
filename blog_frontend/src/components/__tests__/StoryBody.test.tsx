@@ -103,4 +103,25 @@ describe("StoryBody block rendering (Hermetic)", () => {
     );
     expect(fileContainer.querySelector("video")?.getAttribute("src")).toBe("https://cdn.dev/clip.mp4");
   });
+
+  it("renders code blocks with language and optional title", () => {
+    const {container} = render(
+      <StoryBody
+        article={articleWithBlocks([
+          {
+            type: "code",
+            text: "const meaning = 42;",
+            language: "typescript",
+            title: "src/meaning.ts",
+          },
+        ])}
+      />
+    );
+    const pre = container.querySelector("pre");
+    expect(pre).toBeTruthy();
+    expect(pre?.getAttribute("data-language")).toBe("typescript");
+    expect(pre?.getAttribute("data-title")).toBe("src/meaning.ts");
+    expect(screen.getByText("const meaning = 42;")).toBeTruthy();
+    expect(screen.getByText("src/meaning.ts")).toBeTruthy();
+  });
 });

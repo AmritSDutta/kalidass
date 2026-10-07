@@ -492,6 +492,42 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
           "Brand new replacement introductory paragraph."
         );
       });
+
+      it("stages a code block with language and title via enhancedBlocks", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "a@b.c", role: "author"},
+        });
+
+        const dispatchedEvents: any[] = [];
+        const listener = (e: Event) => dispatchedEvents.push((e as CustomEvent).detail);
+        window.addEventListener("kalidass:stage-enhancement", listener);
+
+        const res = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          enhancedBlocks: [
+            {
+              type: "code",
+              text: "console.log('Neural Attention Layer');",
+              language: "typescript",
+              title: "attention.ts",
+            },
+          ],
+          instruction: "Appended implementation code snippet",
+        })) as any;
+
+        window.removeEventListener("kalidass:stage-enhancement", listener);
+
+        expect(res.available).toBe(true);
+        expect(res.staged).toBe(true);
+        const stagedBlocks = dispatchedEvents[0].stagedArticle.blocks;
+        const lastBlock = stagedBlocks[stagedBlocks.length - 1];
+        expect(lastBlock.type).toBe("code");
+        expect(lastBlock.text).toBe("console.log('Neural Attention Layer');");
+        expect(lastBlock.language).toBe("typescript");
+        expect(lastBlock.title).toBe("attention.ts");
+      });
     });
   });
 });

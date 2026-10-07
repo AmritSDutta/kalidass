@@ -9,7 +9,8 @@ export type Block =
   | {type: "heading"; text: string; _id?: string}
   | {type: "quote"; text: string; cite?: string; _id?: string}
   | {type: "image"; url: string; caption?: string; _id?: string}
-  | {type: "video"; url: string; caption?: string; _id?: string};
+  | {type: "video"; url: string; caption?: string; _id?: string}
+  | {type: "code"; text: string; language?: string; title?: string; _id?: string};
 
 export type AuthUser = {
   sub: string;
