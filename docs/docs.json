@@ -28,7 +28,12 @@
           "data-model",
           "reading-experience",
           "studio",
-          "media-uploads",
+          "media-uploads"
+        ]
+      },
+      {
+        "group": "WebMCP & AI Agents",
+        "pages": [
           "webmcp"
         ]
       },
