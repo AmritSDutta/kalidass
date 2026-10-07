@@ -114,7 +114,7 @@ In addition to durable object storage in Upstash Blob, the worker incorporates a
 | Redis Key Pattern | TTL | Data Type | Purpose |
 | :--- | :--- | :--- | :--- |
 | `kalidass:feed:public` | 3 hours (10,800s) | `ArticleSummary[]` | Cached public feed with deterministic featured story stamped |
-| `kalidass:feed:etag` | 3 hours (10,800s) | `string` (hex digest) | Full-feed SHA-256 ETag hash for client revalidation |
+| `kalidass:feed:etag` | 3 hours (10,800s) | `string` (hex digest) | Full-feed content-hash ETag for client revalidation |
 | `kalidass:article:<id>` | 24 hours (86,400s) | `Article` JSON | Cached public article payload for fast reader delivery |
 | `kalidass:slug:<slug>` | 24 hours (86,400s) | `string` (article ID) | Slug-to-ID pointer for fast URL resolution |
 | `kalidass:ai_intel:<id>` | 24 hours (86,400s) | `AiIntelligence` JSON | Cached SerpApi search dossier |
@@ -124,7 +124,7 @@ In addition to durable object storage in Upstash Blob, the worker incorporates a
 When a client queries `GET /api/articles` without status parameters:
 1. **Cache Lookup**: The worker queries `kalidass:feed:public` and `kalidass:feed:etag`.
 2. **ETag Revalidation**: If the client provides an `If-None-Match` header, `matchesEtag(clientHeader, etag)` validates the validator. It strips weak prefixes (`W/`) and splits comma-separated header lists per RFC 7232. On a match, the worker returns `304 Not Modified` with an empty body and `etag` header.
-3. **Full-Feed Folding**: The feed ETag is computed by hashing the count, lead ID, lead timestamp, and every article's ID and timestamp (`` `items.map(i => `${i.id}:${i.updatedAt || i.publishedAt}`).join("|")` ``). This guarantees that editing a non-lead article invalidates the ETag, eliminating stale 304 responses.
+3. **Full-Feed Folding**: The feed ETag is computed by folding every article's `` `${id}:${updatedAt || publishedAt}:${featured}` `` into a rolling hash with the item count appended. Editing any article — including non-lead items — changes the ETag, eliminating stale 304 responses.
 4. **Deterministic Featured Stamping**: `ensureFeaturedDecided(items)` guarantees that exactly one lead story is marked `featured: true`. If no story is marked, the top story is stamped. If writing to Redis fails, stamping still occurs in-memory to prevent hero layout flicker.
 
 ### Story Caching & Isolation Policy
@@ -135,8 +135,9 @@ Public story reads (`GET /api/articles/:idOrSlug`) query `kalidass:article:<id>`
 
 ### Mutation Invalidation Protocol
 
-- **`invalidateAllArticleCaches(redis)`**: Purges `kalidass:feed:public` and `kalidass:feed:etag` on new article creation.
-- **`invalidateArticleCache(redis, article)`**: Purges `kalidass:article:<id>`, `kalidass:slug:<slug>`, and all public feed keys when an article is updated, deleted, or republished.
+- **`invalidateArticleCaches(redis, {id, slug, oldSlug})`**: Purges `kalidass:article:<id>`, `kalidass:slug:<slug>` (plus the prior slug on renames), and the public feed keys — called on article create, update, delete, generate, and intelligence compilation.
+- **`invalidateOnlyArticleCache(redis, {id, slug, oldSlug})`**: Purges only the story keys, preserving `feed:public` / `feed:etag`. Invoked by `PUT /api/articles/:id?invalidate_feed=false` (or `x-invalidate-feed: false`) — used by the staged WebMCP enhancement save so an editor's content pass doesn't flush the 3-hour home feed (home cards stay stale up to the feed TTL by the caller's explicit choice).
+- **`invalidateAllArticleCaches(redis)`**: Purges the feed keys on admin reset and reindex.
 
 
 ## JSON Helpers

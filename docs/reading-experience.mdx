@@ -11,7 +11,7 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 
 - **Hero & Publication Header**: Displays the publication tagline *"Field notes from the neural heart."*, live system indicators, and primary navigation actions.
 - **Dedicated Featured Story (`Lead Dispatch`)**: A visually distinct featured section with generous top spacing (`margin-top: 4.5rem;`) and a section divider. Renders the lead story (`articles.find(a => a.featured) || articles[0]`) using the featured card variant. Deterministic lead selection (`ensureFeaturedDecided`) guarantees exactly one story is stamped `featured: true` so the hero never flickers.
-- **3-Hour Edge Delivery & ETag Revalidation**: Home page article feeds are served from Upstash Redis (`kalidass:feed:public`) under a 3-hour TTL (10,800s). Full-feed SHA-256 ETag folding enables returning clients to revalidate via `If-None-Match`, receiving instantaneous `304 Not Modified` responses with zero Blob reads.
+- **3-Hour Edge Delivery & ETag Revalidation**: Home page article feeds are served from Upstash Redis (`kalidass:feed:public`) under a 3-hour TTL (10,800s). Full-feed content-hash ETag folding enables returning clients to revalidate via `If-None-Match`, receiving instantaneous `304 Not Modified` responses with zero Blob reads.
 - **In This Cycle**: The next 3 articles are arranged in a 3-column responsive grid with tag chips, author avatars, and read times.
 - **Index List**: All remaining articles are presented as streamlined row entries linking to `/story/:slug` with their primary tag.
 - **Error Handling**: Network and API errors are caught and surfaced in a dedicated notification banner with troubleshooting hints.

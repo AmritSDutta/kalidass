@@ -4,7 +4,7 @@ import Link from "@docusaurus/Link";
 import {useLocation} from "@docusaurus/router";
 import StoryBody, {headingSlug} from "@site/src/components/StoryBody";
 import VideoEmbed from "@site/src/components/VideoEmbed";
-import {evaluateQuality, getArticle, getArticleIntelligence} from "@site/src/lib/api";
+import {evaluateQuality, getArticle, getArticleIntelligence, updateArticle} from "@site/src/lib/api";
 import {useAuth} from "@site/src/lib/auth";
 import {formatDate} from "@site/src/lib/media";
 import type {Article, QualityEvalResult, AiIntelligence} from "@site/src/lib/types";
@@ -28,6 +28,13 @@ export default function StoryPage(): ReactNode {
   const [evaluating, setEvaluating] = useState<boolean>(false);
   const [evalError, setEvalError] = useState<string>("");
 
+  // Staged enhancement state
+  const [stagedArticle, setStagedArticle] = useState<Article | null>(null);
+  const [stagedDirtyIndices, setStagedDirtyIndices] = useState<number[]>([]);
+  const [stagedInstruction, setStagedInstruction] = useState<string>("");
+  const [stagedError, setStagedError] = useState<string>("");
+  const [isSavingStaged, setIsSavingStaged] = useState<boolean>(false);
+
   // Tab navigation state for left reading column
   const [activeTab, setActiveTab] = useState<"article" | "intel">("article");
   const [intelligence, setIntelligence] = useState<AiIntelligence | null>(null);
@@ -38,7 +45,39 @@ export default function StoryPage(): ReactNode {
   const intelRequested = useRef<boolean>(false);
 
   useEffect(() => {
+    const handleStageEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        stagedArticle: Article;
+        dirtyIndices: number[];
+        instruction: string;
+      }>;
+      if (customEvent.detail?.stagedArticle) {
+        // Defense-in-depth: ignore events not targeting this mounted story
+        if (customEvent.detail.stagedArticle.slug && customEvent.detail.stagedArticle.slug !== slug) {
+          return;
+        }
+        setStagedArticle(customEvent.detail.stagedArticle);
+        setStagedDirtyIndices(customEvent.detail.dirtyIndices || []);
+        setStagedInstruction(customEvent.detail.instruction || "");
+        setStagedError("");
+      }
+    };
+
+    window.addEventListener("kalidass:stage-enhancement", handleStageEvent);
+    return () => {
+      window.removeEventListener("kalidass:stage-enhancement", handleStageEvent);
+    };
+  }, [slug]);
+
+  useEffect(() => {
     if (!slug) return;
+    setStagedArticle(null);
+    setStagedDirtyIndices([]);
+    setStagedInstruction("");
+    setStagedError("");
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kalidass:stage-clear"));
+    }
     getArticle(slug)
       .then((art) => {
         setArticle(art);
@@ -220,11 +259,101 @@ export default function StoryPage(): ReactNode {
     }
   };
 
+  const handleSaveStaged = async () => {
+    if (!stagedArticle || isSavingStaged) return;
+    setIsSavingStaged(true);
+    setStagedError("");
+    try {
+      const updated = await updateArticle(
+        stagedArticle.id,
+        {
+          title: stagedArticle.title,
+          subtitle: stagedArticle.subtitle,
+          excerpt: stagedArticle.excerpt,
+          coverImage: stagedArticle.coverImage,
+          videoUrl: stagedArticle.videoUrl,
+          author: stagedArticle.author,
+          authorEmail: stagedArticle.authorEmail,
+          tags: stagedArticle.tags,
+          accent: stagedArticle.accent,
+          published: stagedArticle.published,
+          private: stagedArticle.private,
+          featured: stagedArticle.featured,
+          slug: stagedArticle.slug,
+          blocks: stagedArticle.blocks,
+        },
+        {invalidateFeed: false}
+      );
+      // PUT responses don't carry has_intelligence; preserve the flag so the AI Intel badge survives staged saves
+      setArticle({...updated, has_intelligence: updated.has_intelligence ?? article.has_intelligence});
+      setStagedArticle(null);
+      setStagedDirtyIndices([]);
+      setStagedInstruction("");
+      setStagedError("");
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("kalidass:stage-clear"));
+      }
+    } catch (err) {
+      setStagedError(`Failed to save: ${err instanceof Error ? err.message : "unknown error"}`);
+    } finally {
+      setIsSavingStaged(false);
+    }
+  };
+
+  const handleDiscardStaged = () => {
+    setStagedArticle(null);
+    setStagedDirtyIndices([]);
+    setStagedInstruction("");
+    setStagedError("");
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kalidass:stage-clear"));
+    }
+  };
+
+  // Blocks-only staging: the body/Layout read the staged article while the hero
+  // (cover, kicker, byline) intentionally renders the saved one — enhancements
+  // never target hero fields today.
+  const displayedArticle = stagedArticle || article;
+
   return (
-    <Layout title={article.title} description={article.excerpt}>
+    <Layout title={displayedArticle.title} description={displayedArticle.excerpt}>
       <main
         className={styles.page}
         style={{"--story-accent": storyAccent} as CSSProperties}>
+        {stagedArticle ? (
+          <div className={styles.previewBar}>
+            <div className={styles.previewInfo}>
+              <span className={styles.previewBadge}>Staged Preview</span>
+              <span className={styles.previewDetails}>
+                {stagedInstruction || "AI Content Enhancement"} (
+                {stagedDirtyIndices.length} block{stagedDirtyIndices.length === 1 ? "" : "s"} modified)
+              </span>
+              {stagedError ? (
+                <span className={styles.stagedError} role="alert">
+                  {stagedError}
+                </span>
+              ) : null}
+            </div>
+            <div className={styles.previewActions}>
+              <button
+                type="button"
+                className={styles.saveBtn}
+                disabled={isSavingStaged}
+                onClick={handleSaveStaged}
+              >
+                {isSavingStaged ? "Saving..." : "Save Changes"}
+              </button>
+              <button
+                type="button"
+                className={styles.discardBtn}
+                disabled={isSavingStaged}
+                onClick={handleDiscardStaged}
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        ) : null}
         <div className={styles.hero}>
           {article.coverImage ? (
             <img className={styles.cover} src={article.coverImage} alt="" />
@@ -314,7 +443,7 @@ export default function StoryPage(): ReactNode {
                   {article.videoUrl ? (
                     <VideoEmbed url={article.videoUrl} title={article.title} />
                   ) : null}
-                  <StoryBody article={article} />
+                  <StoryBody article={displayedArticle} dirtyIndices={stagedDirtyIndices} />
                   {article.aiGenerated ? (
                     <div className={`${styles.aiBanner} ${styles.aiBannerBottom}`} role="note">
                       <span className={styles.aiBannerIcon}>AI</span>

@@ -163,6 +163,25 @@ export async function invalidateArticleCaches(redis, { id, slug, oldSlug } = {})
 }
 
 /**
+ * Invalidates only the article keys in Redis, preserving the public home feed cache.
+ *
+ * @param {import("./types").KeyValueStore} redis
+ * @param {{ id?: string, slug?: string, oldSlug?: string }} [opts]
+ * @returns {Promise<void>}
+ */
+export async function invalidateOnlyArticleCache(redis, { id, slug, oldSlug } = {}) {
+  try {
+    const tasks = [];
+    if (id) tasks.push(redis.del(`article:${id}`));
+    if (slug) tasks.push(redis.del(`slug:${slug}`));
+    if (oldSlug && oldSlug !== slug) tasks.push(redis.del(`slug:${oldSlug}`));
+    await Promise.all(tasks);
+  } catch (err) {
+    console.warn("[Cache] Article-only invalidation failed:", err?.message);
+  }
+}
+
+/**
  * Invalidates all cached feed keys.
  *
  * @param {import("./types").KeyValueStore} redis

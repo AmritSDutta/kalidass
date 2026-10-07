@@ -10,6 +10,7 @@ import {
   getCachedArticle,
   setCachedArticle,
   invalidateArticleCaches,
+  invalidateOnlyArticleCache,
   invalidateAllArticleCaches,
   matchesEtag,
   ensureFeaturedDecided,
@@ -116,6 +117,23 @@ describe("Redis Multi-User Delivery & Cache Layer", () => {
 
       expect(await redis.get("feed:public")).toBeNull();
       expect(await redis.get("feed:etag")).toBeNull();
+      expect(await redis.get("article:art-1")).toBeNull();
+      expect(await redis.get("slug:slug-1")).toBeNull();
+      expect(await redis.get("slug:old-slug")).toBeNull();
+    });
+
+    it("invalidates only article cache and keeps feed cache untouched", async () => {
+      const redis = getRedisClient(env);
+      await redis.set("feed:public", [{id: "1"}]);
+      await redis.set("feed:etag", '"test"');
+      await redis.set("article:art-1", {id: "art-1"});
+      await redis.set("slug:slug-1", "art-1");
+      await redis.set("slug:old-slug", "art-1");
+
+      await invalidateOnlyArticleCache(redis, {id: "art-1", slug: "slug-1", oldSlug: "old-slug"});
+
+      expect(await redis.get("feed:public")).toEqual([{id: "1"}]);
+      expect(await redis.get("feed:etag")).toBe('"test"');
       expect(await redis.get("article:art-1")).toBeNull();
       expect(await redis.get("slug:slug-1")).toBeNull();
       expect(await redis.get("slug:old-slug")).toBeNull();
@@ -296,6 +314,51 @@ describe("Redis Multi-User Delivery & Cache Layer", () => {
       expect(await redis.get("feed:public")).toBeNull();
       expect(await redis.get(`article:${created.id}`)).toBeNull();
       expect(await redis.get("slug:original-story")).toBeNull();
+    });
+
+    it("PUT /api/articles/:id with invalidate_feed=false invalidates article cache but leaves feed cache untouched", async () => {
+      // 1. Create article
+      const postReq = createRequest("/api/articles", {
+        method: "POST",
+        headers: {Authorization: "Bearer test-secret-token"},
+        body: {
+          title: "Selectively Cached Story",
+          slug: "selectively-cached-story",
+          published: true,
+          private: false,
+          blocks: [{type: "paragraph", text: "Version 1"}],
+        },
+      });
+      const postRes = await worker.fetch(postReq, env);
+      const created = await postRes.json();
+
+      // 2. Prime story cache and feed cache
+      await worker.fetch(createRequest(`/api/articles/${created.slug}`), env);
+      await worker.fetch(createRequest("/api/articles"), env);
+
+      const redis = getRedisClient(env);
+      expect(await getCachedArticle(redis, created.slug)).not.toBeNull();
+      expect(await getCachedPublicFeed(redis)).not.toBeNull();
+
+      // 3. Update article with invalidate_feed=false
+      const putReq = createRequest(`/api/articles/${created.id}?invalidate_feed=false`, {
+        method: "PUT",
+        headers: {Authorization: "Bearer test-secret-token"},
+        body: {
+          title: "Selectively Cached Story Updated",
+          slug: "selectively-cached-story",
+          published: true,
+          private: false,
+          blocks: [{type: "paragraph", text: "Enhanced textual content"}],
+        },
+      });
+      const putRes = await worker.fetch(putReq, env);
+      expect(putRes.status).toBe(200);
+
+      // Verify article cache was purged, but feed:public and feed:etag remained intact
+      expect(await redis.get(`article:${created.id}`)).toBeNull();
+      expect(await redis.get("feed:public")).not.toBeNull();
+      expect(await redis.get("feed:etag")).not.toBeNull();
     });
 
     it("DELETE /api/articles/:id invalidates story cache and feed cache", async () => {

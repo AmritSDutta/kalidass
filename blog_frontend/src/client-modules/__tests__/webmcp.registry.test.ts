@@ -5,10 +5,12 @@ const apiMocks = vi.hoisted(() => ({
   listArticles: vi.fn(),
   getArticle: vi.fn(),
   getArticleIntelligence: vi.fn(),
+  getAuthMe: vi.fn(),
 }));
 vi.mock("../../lib/api", () => apiMocks);
 
 import "../webmcp"; // auto-registers tools on import (window exists in jsdom)
+import {clearPendingStaged} from "../storyWebMcp";
 
 const sampleArticle = {
   id: "art-1",
@@ -70,12 +72,13 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
     apiMocks.getArticleIntelligence.mockReset();
   });
 
-  it("auto-registers all 6 tools on the model context registry", async () => {
+  it("auto-registers all 7 tools on the model context registry", async () => {
     const registry = window.modelContext;
     expect(registry).toBeTruthy();
     const tools = await registry!.listTools();
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([
+      "enhanceStoryContent",
       "getPeopleAlsoAsk",
       "getStoryAiOverview",
       "getStoryCitations",
@@ -263,6 +266,232 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
       expect(res.available).toBe(false);
       expect(res.error).toMatch(/story lookup failed/i);
       expect(res.error).toMatch(/attention-as-routing/);
+    });
+
+    describe("enhanceStoryContent tool", () => {
+      beforeEach(() => {
+        localStorage.clear();
+        clearPendingStaged();
+        apiMocks.getAuthMe.mockReset();
+      });
+
+      it("does not expose slug parameter in schema or parameters", () => {
+        const tool = window.modelContext!.tools.enhanceStoryContent;
+        expect(tool.inputSchema?.properties?.slug).toBeUndefined();
+        expect(tool.parameters?.properties?.slug).toBeUndefined();
+      });
+
+      it("rejects when not on a story page", async () => {
+        window.history.pushState(null, "", "/magazine");
+        const res = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          enhancedText: "New paragraph",
+        })) as any;
+        expect(res.available).toBe(false);
+        expect(res.error).toBe("Tool only available on a story page (/story/:slug).");
+      });
+
+      it("rejects unauthorized caller with exact error message", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "stranger@other.com", role: "author"},
+        });
+
+        const res = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          enhancedText: "New unauthorized text",
+        })) as any;
+
+        expect(res.available).toBe(false);
+        expect(res.error).toBe(
+          "Not privileged to change: you must be the author or an admin to enhance this story."
+        );
+      });
+
+      it("returns actionable error when sectionHeading does not match any heading", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "a@b.c", role: "author"},
+        });
+
+        const res = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          sectionHeading: "Nonexistent Heading",
+          enhancedText: "Some text",
+        })) as any;
+
+        expect(res.available).toBe(false);
+        expect(res.error).toContain("No heading matching 'Nonexistent Heading'");
+        expect(res.error).toContain("Available headings: Empirical Benchmarks | References & Attributions");
+      });
+
+      it("rejects malformed enhancedBlocks with runtime validation error", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "a@b.c", role: "author"},
+        });
+
+        // 1. Unknown type
+        const resUnknown = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          enhancedBlocks: [{type: "invalid_type", text: "Hello"}],
+        })) as any;
+        expect(resUnknown.available).toBe(false);
+        expect(resUnknown.error).toContain("invalid block type 'invalid_type'");
+
+        // 2. Image missing url
+        const resNoUrl = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          enhancedBlocks: [{type: "image", caption: "Photo"}],
+        })) as any;
+        expect(resNoUrl.available).toBe(false);
+        expect(resNoUrl.error).toContain("image block requires a non-empty url string");
+      });
+
+      it("permits author, updates targeted section heading, and returns full harmonized result shape", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "a@b.c", role: "author"}, // Matches sampleArticle.authorEmail
+        });
+
+        const dispatchedEvents: any[] = [];
+        const listener = (e: Event) => dispatchedEvents.push((e as CustomEvent).detail);
+        window.addEventListener("kalidass:stage-enhancement", listener);
+
+        const res = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          sectionHeading: "Empirical Benchmarks",
+          enhancedText: "Empirical Benchmarks & Validation Suite",
+          instruction: "Refined section heading title",
+        })) as any;
+
+        window.removeEventListener("kalidass:stage-enhancement", listener);
+
+        expect(res.available).toBe(true);
+        expect(res.ok).toBe(true);
+        expect(res.staged).toBe(true);
+        expect(res.slug).toBe("attention-as-routing");
+        expect(res.dirtyIndices).toEqual([1]);
+        expect(res.updatedIndices).toEqual([1]); // Block index 1 is "Empirical Benchmarks"
+        expect(dispatchedEvents).toHaveLength(1);
+        expect(dispatchedEvents[0].dirtyIndices).toEqual([1]);
+        expect(dispatchedEvents[0].stagedArticle.blocks[1].text).toBe(
+          "Empirical Benchmarks & Validation Suite"
+        );
+      });
+
+      it("composes consecutive enhancements without dropping prior staged edits", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "a@b.c", role: "author"},
+        });
+
+        // 1. First edit: update section heading at block 1
+        await window.modelContext!.tools.enhanceStoryContent.execute({
+          sectionHeading: "Empirical Benchmarks",
+          enhancedText: "Empirical Benchmarks (Updated)",
+        });
+
+        // 2. Second edit: update block 0 (introductory paragraph)
+        const res2 = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          blockIndex: 0,
+          enhancedText: "Composed introductory paragraph edit.",
+        })) as any;
+
+        expect(res2.available).toBe(true);
+        expect(res2.staged).toBe(true);
+
+        // Verify with a third query or inspect the last staged dispatch
+        const dispatchedEvents: any[] = [];
+        const listener = (e: Event) => dispatchedEvents.push((e as CustomEvent).detail);
+        window.addEventListener("kalidass:stage-enhancement", listener);
+
+        // 3. Third edit: append a note
+        await window.modelContext!.tools.enhanceStoryContent.execute({
+          enhancedText: "Appended conclusion note.",
+        });
+
+        window.removeEventListener("kalidass:stage-enhancement", listener);
+
+        const lastStaged = dispatchedEvents[0].stagedArticle;
+        // Block 0 was changed in edit 2
+        expect(lastStaged.blocks[0].text).toBe("Composed introductory paragraph edit.");
+        // Block 1 was changed in edit 1 and preserved
+        expect(lastStaged.blocks[1].text).toBe("Empirical Benchmarks (Updated)");
+        // Last block was newly appended
+        expect(lastStaged.blocks[lastStaged.blocks.length - 1].text).toBe("Appended conclusion note.");
+      });
+
+      it("resets pendingStaged when kalidass:stage-clear event is dispatched", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "a@b.c", role: "author"},
+        });
+
+        // First edit
+        await window.modelContext!.tools.enhanceStoryContent.execute({
+          blockIndex: 0,
+          enhancedText: "Staged edit before clear",
+        });
+
+        // Dispatch stage-clear (simulating user discard or route navigation)
+        window.dispatchEvent(new Event("kalidass:stage-clear"));
+
+        // Second edit: should start fresh from sampleArticle again
+        const dispatchedEvents: any[] = [];
+        const listener = (e: Event) => dispatchedEvents.push((e as CustomEvent).detail);
+        window.addEventListener("kalidass:stage-enhancement", listener);
+
+        await window.modelContext!.tools.enhanceStoryContent.execute({
+          blockIndex: 1,
+          enhancedText: "Fresh edit after clear",
+        });
+
+        window.removeEventListener("kalidass:stage-enhancement", listener);
+
+        const currentStaged = dispatchedEvents[0].stagedArticle;
+        // Block 0 should have reverted to original sampleArticle text
+        expect(currentStaged.blocks[0].text).toBe("Introduction to routing networks.");
+        // Block 1 has the new edit
+        expect(currentStaged.blocks[1].text).toBe("Fresh edit after clear");
+      });
+
+      it("permits elevated admin via admin token and stages block replacement", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        localStorage.setItem("kalidass-admin-token", "valid-admin-secret");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "admin@kalidass.dev", role: "admin"},
+        });
+
+        const dispatchedEvents: any[] = [];
+        const listener = (e: Event) => dispatchedEvents.push((e as CustomEvent).detail);
+        window.addEventListener("kalidass:stage-enhancement", listener);
+
+        const res = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          blockIndex: 0,
+          enhancedBlocks: [
+            {type: "paragraph", text: "Brand new replacement introductory paragraph."},
+          ],
+          instruction: "Replaced lead paragraph with clearer introduction",
+        })) as any;
+
+        window.removeEventListener("kalidass:stage-enhancement", listener);
+
+        expect(res.available).toBe(true);
+        expect(res.staged).toBe(true);
+        expect(res.updatedIndices).toEqual([0]);
+        expect(dispatchedEvents[0].stagedArticle.blocks[0].text).toBe(
+          "Brand new replacement introductory paragraph."
+        );
+      });
     });
   });
 });

@@ -16,16 +16,20 @@ export function headingSlug(text: string, index?: number): string {
 
 type Props = {
   article: Article;
+  dirtyIndices?: number[];
 };
 
-export default function StoryBody({article}: Props): ReactNode {
+export default function StoryBody({article, dirtyIndices = []}: Props): ReactNode {
+  const isDirty = (index: number) => dirtyIndices.includes(index);
+
   return (
     <div className={styles.body}>
       {(article.blocks || []).map((block, index) => {
+        const dirtyClass = isDirty(index) ? ` ${styles.dirtyBlock}` : "";
         if (block.type === "heading") {
           const id = headingSlug(block.text, index);
           return (
-            <h2 key={index} id={id} className={styles.heading}>
+            <h2 key={index} id={id} className={`${styles.heading}${dirtyClass}`}>
               {block.text}
             </h2>
           );
@@ -37,10 +41,11 @@ export default function StoryBody({article}: Props): ReactNode {
           const lines = String(block.text || "")
             .split(/\r?\n/)
             .filter((line) => line.trim());
+          const baseQuoteClass = isReferences ? `${styles.quote} ${styles.quoteRef}` : styles.quote;
           return (
             <blockquote
               key={index}
-              className={isReferences ? `${styles.quote} ${styles.quoteRef}` : styles.quote}>
+              className={`${baseQuoteClass}${dirtyClass}`}>
               {isReferences ? (
                 <div className={styles.refLines}>
                   {lines.map((line, li) => (
@@ -58,7 +63,7 @@ export default function StoryBody({article}: Props): ReactNode {
         }
         if (block.type === "image") {
           return (
-            <figure key={index} className={styles.image}>
+            <figure key={index} className={`${styles.image}${dirtyClass}`}>
               <img src={block.url} alt={block.caption || article.title} />
               {block.caption ? <figcaption>{block.caption}</figcaption> : null}
             </figure>
@@ -66,16 +71,17 @@ export default function StoryBody({article}: Props): ReactNode {
         }
         if (block.type === "video") {
           return (
-            <VideoEmbed
-              key={index}
-              url={block.url}
-              caption={block.caption}
-              title={article.title}
-            />
+            <div key={index} className={dirtyClass.trim() || undefined}>
+              <VideoEmbed
+                url={block.url}
+                caption={block.caption}
+                title={article.title}
+              />
+            </div>
           );
         }
         return (
-          <p key={index} className={styles.paragraph}>
+          <p key={index} className={`${styles.paragraph}${dirtyClass}`}>
             {block.text}
           </p>
         );

@@ -12,6 +12,7 @@ import {
   getCachedArticle,
   setCachedArticle,
   invalidateArticleCaches,
+  invalidateOnlyArticleCache,
   invalidateAllArticleCaches,
   matchesEtag,
   ensureFeaturedDecided,
@@ -1092,11 +1093,23 @@ export default {
             );
             return article;
           });
-          await invalidateArticleCaches(redis, {
-            id: updatedArticle.id,
-            slug: updatedArticle.slug,
-            oldSlug: existing.slug,
-          });
+          const shouldInvalidateFeed =
+            url.searchParams.get("invalidate_feed") !== "false" &&
+            request.headers.get("x-invalidate-feed") !== "false";
+
+          if (shouldInvalidateFeed) {
+            await invalidateArticleCaches(redis, {
+              id: updatedArticle.id,
+              slug: updatedArticle.slug,
+              oldSlug: existing.slug,
+            });
+          } else {
+            await invalidateOnlyArticleCache(redis, {
+              id: updatedArticle.id,
+              slug: updatedArticle.slug,
+              oldSlug: existing.slug,
+            });
+          }
           return json(updatedArticle, 200, origin);
         }
 

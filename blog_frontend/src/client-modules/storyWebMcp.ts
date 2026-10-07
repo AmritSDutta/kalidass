@@ -1,4 +1,4 @@
-import {getArticle, getArticleIntelligence} from "../lib/api";
+import {getArticle, getArticleIntelligence, getAuthMe} from "../lib/api";
 import type {Article, AiIntelligence, Block} from "../lib/types";
 import type {WebMcpTool} from "./webmcpShared";
 import {getBrowserStorySlug} from "./webmcpShared";
@@ -6,12 +6,50 @@ import {getBrowserStorySlug} from "./webmcpShared";
 export interface StoryWebMcpDeps {
   getArticleFn?: typeof getArticle;
   getIntelligenceFn?: typeof getArticleIntelligence;
+  getAuthMeFn?: typeof getAuthMe;
   currentPathname?: string;
+  adminTokenOverride?: string | null;
 }
 
 export interface StoryResolution {
   article: Article;
   intel: AiIntelligence | null;
+}
+
+// Module-level pending snapshot for composing consecutive enhancements in the same session
+let pendingStaged: Article | null = null;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("kalidass:stage-clear", () => {
+    pendingStaged = null;
+  });
+}
+
+export function clearPendingStaged(): void {
+  pendingStaged = null;
+}
+
+export function validateEnhancedBlocks(blocks: unknown[]): {valid: true} | {valid: false; error: string} {
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    if (!b || typeof b !== "object") {
+      return {valid: false, error: `enhancedBlocks[${i}]: block must be an object.`};
+    }
+    const blk = b as Record<string, unknown>;
+    const type = blk.type;
+    if (type === "paragraph" || type === "heading" || type === "quote") {
+      if (typeof blk.text !== "string" || !blk.text.trim()) {
+        return {valid: false, error: `enhancedBlocks[${i}]: ${type} block requires a non-empty text string.`};
+      }
+    } else if (type === "image" || type === "video") {
+      if (typeof blk.url !== "string" || !blk.url.trim()) {
+        return {valid: false, error: `enhancedBlocks[${i}]: ${type} block requires a non-empty url string.`};
+      }
+    } else {
+      return {valid: false, error: `enhancedBlocks[${i}]: invalid block type '${String(type)}'. Allowed: paragraph, heading, quote, image, video.`};
+    }
+  }
+  return {valid: true};
 }
 
 export type StoryToolResult<T> =
@@ -276,7 +314,176 @@ export class StoryWebMcp {
   }
 
   /**
-   * Generates the 4 WebMcpTool schema definitions.
+   * Tool 5: enhanceStoryContent
+   * Enhances textual blog content (headings, paragraphs, quotes) on the story page.
+   * Target story is strictly resolved from window.location (/story/:slug).
+   * Enforces privilege: caller must be the author or an elevated admin.
+   * Staged transiently into the page session via 'kalidass:stage-enhancement' custom event.
+   */
+  async enhanceStoryContent(args?: {
+    instruction?: string;
+    sectionHeading?: string;
+    blockIndex?: number;
+    enhancedText?: string;
+    enhancedBlocks?: Block[];
+  }): Promise<
+    StoryToolResult<{
+      ok: true;
+      staged: true;
+      slug: string;
+      dirtyIndices: number[];
+      updatedIndices: number[];
+      articleTitle: string;
+      message: string;
+    }>
+  > {
+    const routeSlug = getBrowserStorySlug(this.deps.currentPathname);
+    if (!routeSlug) {
+      return {available: false, error: "Tool only available on a story page (/story/:slug)."};
+    }
+
+    let article: Article;
+    try {
+      const getFn = this.deps.getArticleFn || getArticle;
+      article = await getFn(routeSlug);
+    } catch (err) {
+      return {
+        available: false,
+        error: `Story lookup failed for '${routeSlug}': ${err instanceof Error ? err.message : "unknown error"}`,
+      };
+    }
+
+    // Check edit privileges
+    const getMeFn = this.deps.getAuthMeFn || getAuthMe;
+    let authUser: {email?: string; role?: string} | null = null;
+    const adminToken =
+      this.deps.adminTokenOverride !== undefined
+        ? this.deps.adminTokenOverride
+        : typeof window !== "undefined"
+          ? localStorage.getItem("kalidass-admin-token")
+          : null;
+
+    try {
+      const meRes = await getMeFn(undefined, adminToken || undefined);
+      if (meRes?.user) {
+        authUser = meRes.user;
+      }
+    } catch {
+      authUser = null;
+    }
+
+    const isAuthor =
+      Boolean(authUser?.email && article.authorEmail) &&
+      authUser!.email!.toLowerCase().trim() === article.authorEmail.toLowerCase().trim();
+    const isAdmin = authUser?.role === "admin";
+
+    if (!isAuthor && !isAdmin) {
+      return {
+        available: false,
+        error: "Not privileged to change: you must be the author or an admin to enhance this story.",
+      };
+    }
+
+    // Compose on top of any already staged edits for this slug
+    const baseArticle =
+      pendingStaged && pendingStaged.slug === routeSlug ? pendingStaged : article;
+    const existingBlocks = [...(baseArticle.blocks || [])];
+    const dirtyIndices: number[] = [];
+
+    if (Array.isArray(args?.enhancedBlocks) && args!.enhancedBlocks.length > 0) {
+      const validation = validateEnhancedBlocks(args!.enhancedBlocks);
+      if (!validation.valid) {
+        return {available: false, error: validation.error};
+      }
+      if (typeof args?.blockIndex === "number" && args.blockIndex >= 0 && args.blockIndex <= existingBlocks.length) {
+        const insertIndex = args.blockIndex;
+        existingBlocks.splice(insertIndex, 1, ...args!.enhancedBlocks);
+        for (let i = 0; i < args!.enhancedBlocks.length; i++) {
+          dirtyIndices.push(insertIndex + i);
+        }
+      } else {
+        const startIdx = existingBlocks.length;
+        existingBlocks.push(...args!.enhancedBlocks);
+        for (let i = 0; i < args!.enhancedBlocks.length; i++) {
+          dirtyIndices.push(startIdx + i);
+        }
+      }
+    } else if (typeof args?.enhancedText === "string" && args.enhancedText.trim()) {
+      const textToUse = args.enhancedText.trim();
+      let targetIdx = -1;
+
+      if (typeof args?.blockIndex === "number" && args.blockIndex >= 0 && args.blockIndex < existingBlocks.length) {
+        targetIdx = args.blockIndex;
+      } else if (args?.sectionHeading) {
+        const headingQuery = args.sectionHeading.toLowerCase().trim();
+        targetIdx = existingBlocks.findIndex(
+          (b) => b.type === "heading" && (b.text || "").toLowerCase().trim().includes(headingQuery)
+        );
+        if (targetIdx === -1) {
+          const availableHeadings = existingBlocks
+            .filter((b) => b.type === "heading")
+            .map((b) => b.text || "")
+            .filter(Boolean);
+          return {
+            available: false,
+            error: `No heading matching '${args.sectionHeading}'. Available headings: ${availableHeadings.length ? availableHeadings.join(" | ") : "none"}`,
+          };
+        }
+      }
+
+      if (targetIdx >= 0) {
+        const targetBlock = existingBlocks[targetIdx];
+        if (targetBlock.type === "image" || targetBlock.type === "video") {
+          existingBlocks[targetIdx] = {...targetBlock, caption: textToUse};
+        } else {
+          existingBlocks[targetIdx] = {...targetBlock, text: textToUse};
+        }
+        dirtyIndices.push(targetIdx);
+      } else {
+        const newBlock: Block = {type: "paragraph", text: textToUse};
+        dirtyIndices.push(existingBlocks.length);
+        existingBlocks.push(newBlock);
+      }
+    } else {
+      return {
+        available: false,
+        error: "No enhancedText or enhancedBlocks provided to stage.",
+      };
+    }
+
+    const stagedArticle: Article = {
+      ...baseArticle,
+      blocks: existingBlocks,
+    };
+
+    pendingStaged = stagedArticle;
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("kalidass:stage-enhancement", {
+          detail: {
+            stagedArticle,
+            dirtyIndices,
+            instruction: args?.instruction || "AI Content Enhancement",
+          },
+        })
+      );
+    }
+
+    return {
+      available: true,
+      ok: true,
+      staged: true,
+      slug: routeSlug,
+      dirtyIndices,
+      updatedIndices: dirtyIndices,
+      articleTitle: article.title,
+      message: `Staged enhancements across ${dirtyIndices.length} block(s). Review in preview bar and save to publish.`,
+    };
+  }
+
+  /**
+   * Generates the 5 WebMcpTool schema definitions.
    */
   getToolDefinitions(): WebMcpTool[] {
     const baseSlugSchema = {
@@ -286,6 +493,48 @@ export class StoryWebMcp {
           type: "string",
           description:
             "Optional article slug (defaults automatically to the current active story on /story/:slug).",
+        },
+      },
+    };
+
+    const enhanceSchema = {
+      type: "object" as const,
+      properties: {
+        instruction: {
+          type: "string",
+          description:
+            "Description of the enhancement rationale (e.g. 'Add empirical citation data to section 2').",
+        },
+        sectionHeading: {
+          type: "string",
+          description:
+            "Optional section heading title to locate and enhance.",
+        },
+        blockIndex: {
+          type: "number",
+          description:
+            "Optional 0-based block index to target or replace.",
+        },
+        enhancedText: {
+          type: "string",
+          description:
+            "Enhanced textual content for the targeted block or new paragraph.",
+        },
+        enhancedBlocks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              type: {type: "string"},
+              text: {type: "string"},
+              cite: {type: "string"},
+              url: {type: "string"},
+              caption: {type: "string"},
+            },
+            required: ["type"],
+          },
+          description:
+            "Optional full replacement blocks array.",
         },
       },
     };
@@ -322,6 +571,20 @@ export class StoryWebMcp {
         inputSchema: baseSlugSchema,
         parameters: baseSlugSchema,
         execute: (args?: {slug?: string}) => this.getPeopleAlsoAsk(args),
+      },
+      {
+        name: "enhanceStoryContent",
+        description:
+          "Enhance textual blog content on the active story page (/story/:slug). Target story resolved automatically from URL. Requires author or admin privilege.",
+        inputSchema: enhanceSchema,
+        parameters: enhanceSchema,
+        execute: (args?: {
+          instruction?: string;
+          sectionHeading?: string;
+          blockIndex?: number;
+          enhancedText?: string;
+          enhancedBlocks?: Block[];
+        }) => this.enhanceStoryContent(args),
       },
     ];
   }

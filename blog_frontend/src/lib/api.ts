@@ -120,8 +120,13 @@ export function createArticle(draft: ArticleDraft) {
   });
 }
 
-export function updateArticle(idOrSlug: string, draft: ArticleDraft) {
-  return request<Article>(`/api/articles/${encodeURIComponent(idOrSlug)}`, {
+export function updateArticle(
+  idOrSlug: string,
+  draft: ArticleDraft,
+  options?: { invalidateFeed?: boolean }
+) {
+  const query = options?.invalidateFeed === false ? "?invalidate_feed=false" : "";
+  return request<Article>(`/api/articles/${encodeURIComponent(idOrSlug)}${query}`, {
     method: "PUT",
     body: JSON.stringify(draft),
   });
