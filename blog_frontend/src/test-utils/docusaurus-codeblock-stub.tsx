@@ -6,6 +6,7 @@ type CodeBlockProps = {
   language?: string;
   title?: string;
   showLineNumbers?: boolean;
+  metastring?: string;
   className?: string;
 };
 
@@ -13,10 +14,18 @@ export default function CodeBlockStub({
   children,
   language,
   title,
+  showLineNumbers,
+  metastring,
   className,
 }: CodeBlockProps): ReactNode {
   return (
-    <pre className={className} data-language={language} data-title={title}>
+    <pre
+      className={className}
+      data-language={language}
+      data-title={title}
+      data-show-line-numbers={showLineNumbers !== undefined ? String(showLineNumbers) : undefined}
+      data-metastring={metastring}
+    >
       {title && <div className="code-title">{title}</div>}
       <code>{children}</code>
     </pre>

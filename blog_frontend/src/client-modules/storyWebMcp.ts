@@ -29,6 +29,26 @@ export function clearPendingStaged(): void {
   pendingStaged = null;
 }
 
+/**
+ * Strips raw markdown tokens and normalizes text into humanized plain prose.
+ * Removes heading markers, asterisks, underscores, bullets, and blockquote arrows.
+ */
+export function humanizeSectionText(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/_([^_]+)_/g, "$1")
+    .replace(/^[\*\-\+]\s+/gm, "")
+    .replace(/^>\s+/gm, "")
+    .replace(/`([^`]+)`/g, "$1")
+    .trim();
+}
+
+const HIGHLIGHT_LINES_PATTERN = /^\d+(\s*-\s*\d+)?(\s*,\s*\d+(\s*-\s*\d+)?)*$/;
+
 export function validateEnhancedBlocks(blocks: unknown[]): {valid: true} | {valid: false; error: string} {
   for (let i = 0; i < blocks.length; i++) {
     const b = blocks[i];
@@ -40,6 +60,14 @@ export function validateEnhancedBlocks(blocks: unknown[]): {valid: true} | {vali
     if (type === "paragraph" || type === "heading" || type === "quote" || type === "code") {
       if (typeof blk.text !== "string" || !blk.text.trim()) {
         return {valid: false, error: `enhancedBlocks[${i}]: ${type} block requires a non-empty text string.`};
+      }
+      if (
+        type === "code" &&
+        blk.highlightLines !== undefined &&
+        blk.highlightLines !== "" &&
+        (typeof blk.highlightLines !== "string" || !HIGHLIGHT_LINES_PATTERN.test(blk.highlightLines.trim()))
+      ) {
+        return {valid: false, error: `enhancedBlocks[${i}]: code block highlightLines must be comma-separated line ranges like "1, 4-6".`};
       }
     } else if (type === "image" || type === "video") {
       if (typeof blk.url !== "string" || !blk.url.trim()) {
@@ -323,6 +351,7 @@ export class StoryWebMcp {
   async enhanceStoryContent(args?: {
     instruction?: string;
     sectionHeading?: string;
+    addNewSection?: boolean;
     blockIndex?: number;
     enhancedText?: string;
     enhancedBlocks?: Block[];
@@ -390,26 +419,47 @@ export class StoryWebMcp {
     const existingBlocks = [...(baseArticle.blocks || [])];
     const dirtyIndices: number[] = [];
 
-    if (Array.isArray(args?.enhancedBlocks) && args!.enhancedBlocks.length > 0) {
-      const validation = validateEnhancedBlocks(args!.enhancedBlocks);
+    if (args?.addNewSection) {
+      const headingText = humanizeSectionText(args?.sectionHeading || "New Section");
+      const bodyText = humanizeSectionText(args?.enhancedText || "");
+      const newBlocks: Block[] = [{type: "heading", text: headingText}];
+      if (bodyText) {
+        newBlocks.push({type: "paragraph", text: bodyText});
+      }
+      const insertIdx =
+        typeof args?.blockIndex === "number" && args.blockIndex >= 0 && args.blockIndex <= existingBlocks.length
+          ? args.blockIndex
+          : existingBlocks.length;
+      existingBlocks.splice(insertIdx, 0, ...newBlocks);
+      for (let i = 0; i < newBlocks.length; i++) {
+        dirtyIndices.push(insertIdx + i);
+      }
+    } else if (Array.isArray(args?.enhancedBlocks) && args!.enhancedBlocks.length > 0) {
+      const sanitizedBlocks: Block[] = args!.enhancedBlocks.map((b) => {
+        if (b.type === "paragraph" || b.type === "heading") {
+          return {...b, text: humanizeSectionText(b.text)};
+        }
+        return b;
+      });
+      const validation = validateEnhancedBlocks(sanitizedBlocks);
       if (!validation.valid) {
         return {available: false, error: validation.error};
       }
       if (typeof args?.blockIndex === "number" && args.blockIndex >= 0 && args.blockIndex <= existingBlocks.length) {
         const insertIndex = args.blockIndex;
-        existingBlocks.splice(insertIndex, 1, ...args!.enhancedBlocks);
-        for (let i = 0; i < args!.enhancedBlocks.length; i++) {
+        existingBlocks.splice(insertIndex, 1, ...sanitizedBlocks);
+        for (let i = 0; i < sanitizedBlocks.length; i++) {
           dirtyIndices.push(insertIndex + i);
         }
       } else {
         const startIdx = existingBlocks.length;
-        existingBlocks.push(...args!.enhancedBlocks);
-        for (let i = 0; i < args!.enhancedBlocks.length; i++) {
+        existingBlocks.push(...sanitizedBlocks);
+        for (let i = 0; i < sanitizedBlocks.length; i++) {
           dirtyIndices.push(startIdx + i);
         }
       }
     } else if (typeof args?.enhancedText === "string" && args.enhancedText.trim()) {
-      const textToUse = args.enhancedText.trim();
+      const textToUse = humanizeSectionText(args.enhancedText);
       let targetIdx = -1;
 
       if (typeof args?.blockIndex === "number" && args.blockIndex >= 0 && args.blockIndex < existingBlocks.length) {
@@ -426,17 +476,19 @@ export class StoryWebMcp {
             .filter(Boolean);
           return {
             available: false,
-            error: `No heading matching '${args.sectionHeading}'. Available headings: ${availableHeadings.length ? availableHeadings.join(" | ") : "none"}`,
+            error: `No heading matching '${args.sectionHeading}'. To add a new section, set addNewSection: true. Available headings: ${availableHeadings.length ? availableHeadings.join(" | ") : "none"}`,
           };
         }
       }
 
       if (targetIdx >= 0) {
         const targetBlock = existingBlocks[targetIdx];
+        // Code blocks keep raw text: markdown stripping would corrupt source (# comments, - bullets).
+        const finalText = targetBlock.type === "code" ? args.enhancedText.trim() : textToUse;
         if (targetBlock.type === "image" || targetBlock.type === "video") {
           existingBlocks[targetIdx] = {...targetBlock, caption: textToUse};
         } else {
-          existingBlocks[targetIdx] = {...targetBlock, text: textToUse};
+          existingBlocks[targetIdx] = {...targetBlock, text: finalText};
         }
         dirtyIndices.push(targetIdx);
       } else {
@@ -508,7 +560,12 @@ export class StoryWebMcp {
         sectionHeading: {
           type: "string",
           description:
-            "Optional section heading title to locate and enhance.",
+            "Section heading title to locate, update, or add. When adding a section, provide clean humanized text without markdown formatting.",
+        },
+        addNewSection: {
+          type: "boolean",
+          description:
+            "Set to true when adding a brand new section (creates a heading block and accompanying humanized paragraph block).",
         },
         blockIndex: {
           type: "number",
@@ -518,7 +575,7 @@ export class StoryWebMcp {
         enhancedText: {
           type: "string",
           description:
-            "Enhanced textual content for the targeted block or new paragraph.",
+            "Humanized, non-markdown editorial text for the section or paragraph. Provide plain humanized prose WITHOUT markdown formatting (no '#', '##', '**', '*', or backticks; UI renders typography natively).",
         },
         enhancedBlocks: {
           type: "array",
@@ -532,11 +589,14 @@ export class StoryWebMcp {
               caption: {type: "string"},
               language: {type: "string"},
               title: {type: "string"},
+              showLineNumbers: {type: "boolean"},
+              wrapLines: {type: "boolean"},
+              highlightLines: {type: "string"},
             },
             required: ["type"],
           },
           description:
-            "Optional full replacement blocks array.",
+            "Optional full replacement blocks array. For headings and paragraphs, provide humanized non-markdown text.",
         },
       },
     };
@@ -577,12 +637,13 @@ export class StoryWebMcp {
       {
         name: "enhanceStoryContent",
         description:
-          "Enhance textual blog content on the active story page (/story/:slug). Target story resolved automatically from URL. Requires author or admin privilege.",
+          "Enhance or add sections on the active story page (/story/:slug). When adding or editing a section, provide humanized, natural, non-markdown text (no raw '#', '##', '**', '*', or bullet characters). Sections render plain humanized typography natively. Target story resolved automatically from URL. Requires author or admin privilege.",
         inputSchema: enhanceSchema,
         parameters: enhanceSchema,
         execute: (args?: {
           instruction?: string;
           sectionHeading?: string;
+          addNewSection?: boolean;
           blockIndex?: number;
           enhancedText?: string;
           enhancedBlocks?: Block[];

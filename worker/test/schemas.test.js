@@ -74,7 +74,7 @@ describe("sanitizeArticleDraft (Hermetic)", () => {
     expect(sanitized.author.role).toBe("Systems Research Agent");
   });
 
-  it("sanitizes code blocks with language and title", () => {
+  it("sanitizes code blocks with language, title, and formatting options", () => {
     const raw = {
       title: "Distributed KV Stores",
       blocks: [
@@ -83,6 +83,9 @@ describe("sanitizeArticleDraft (Hermetic)", () => {
           text: "fn main() { println!(\"Hello raft\"); }",
           language: "rust",
           title: "raft.rs",
+          showLineNumbers: false,
+          wrapLines: true,
+          highlightLines: "1-2",
         },
       ],
     };
@@ -92,6 +95,20 @@ describe("sanitizeArticleDraft (Hermetic)", () => {
     expect(sanitized.blocks[0].text).toBe("fn main() { println!(\"Hello raft\"); }");
     expect(sanitized.blocks[0].language).toBe("rust");
     expect(sanitized.blocks[0].title).toBe("raft.rs");
+    expect(sanitized.blocks[0].showLineNumbers).toBe(false);
+    expect(sanitized.blocks[0].wrapLines).toBe(true);
+    expect(sanitized.blocks[0].highlightLines).toBe("1-2");
     expect(sanitized.blocks[0]._id).toBeDefined();
+  });
+
+  it("drops malformed highlightLines ranges from code blocks", () => {
+    const raw = {
+      title: "Distributed KV Stores",
+      blocks: [
+        {type: "code", text: "print('x')", language: "python", highlightLines: "all"},
+      ],
+    };
+    const sanitized = sanitizeArticleDraft(raw);
+    expect(sanitized.blocks[0].highlightLines).toBeUndefined();
   });
 });

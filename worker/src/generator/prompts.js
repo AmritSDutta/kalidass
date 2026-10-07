@@ -86,6 +86,8 @@ EDITORIAL & ACADEMIC STANDARDS:
 - Developer-Friendly Pragmatism: Bridge theoretical rigor with pragmatic software engineering. Ground abstract concepts in concrete system architectures, runtime mechanics, memory layouts, and practical developer trade-offs. Avoid impenetrable mathematical gatekeeping; prioritize clear, actionable mental models.
 - Beginner-Friendly Introduction & Summary: The article excerpt and the opening section (introductory heading and initial paragraph blocks) MUST be welcoming and accessible. Provide clear conceptual intuition, relatable analogies, and articulate *why* the technology matters before descending into deeper systems mechanics.
 - Elaborated Technical Block Depth: Every 'paragraph' block must be deeply elaborated and substantive (3-5 comprehensive sentences). Reject superficial 1-sentence summaries. Detail exact data conduits, cache dynamics, state machine transitions, latency/throughput implications, and execution flow causality.
+- Non-Markdown Humanized Prose Invariant: When authoring or adding sections, all text in 'paragraph' and 'heading' blocks MUST be clean, non-markdown humanized text. Never output raw markdown formatting syntax (no '#', '##', '**', '*', '_', or bullet lists) inside block 'text' fields. The UI typography system renders headings, paragraphs, and styling natively.
+- Authentic Human Cadence: Write in an authentic, natural, compelling human editorial voice with conversational fluidity and engineering authority. Strictly avoid formulaic AI clichés and robotic transitions (e.g. 'In conclusion', 'Delving deeper', 'It is crucial to note', 'Furthermore', 'Moreover', 'A testament to', 'Tapestry', 'Beacon', 'Symphony').
 - Quality Standard: Extreme signal-to-noise ratio. Reject fluff, generic summaries, and buzzword padding.
 
 OUTPUT FORMAT REQUIREMENTS:
@@ -115,6 +117,7 @@ CRITICAL SCHEMA INVARIANTS:
 6. The final blocks must conclude with {"type": "heading", "text": "References & Empirical Attributions"} and a {"type": "quote", "text": "...", "cite": "..."} citing empirical papers/sources.
 7. Title Word Limit Invariant: The "title" MUST be strictly 4 words or fewer (maximum 4 words; e.g. "Attention as Routing", "Sparse MoE Plumbing", "Speculative Edge Execution"). Never exceed 4 words.
 8. Article Word Count Invariant: The entire article across all blocks MUST contain a minimum of 1400 words.
+9. Non-Markdown Block Text Invariant: All 'heading' and 'paragraph' block text must be clean humanized prose without raw markdown formatting (no '#', '**', '*', or bullet characters inside block text strings).
 
 Always output strictly valid JSON conforming to the requested schema.`;
 
@@ -157,6 +160,7 @@ STRUCTURAL & EDITORIAL REQUIREMENTS:
 6. IEEE & Elsevier Rigor + Developer Pragmatism: Adhere to IEEE/Elsevier academic precision, taxonomy, and citations while keeping the narrative directly actionable and developer-friendly.
 7. Non-Negotiable Angle Enforcement: If a thesis angle is specified, ensure every single aspect, framework, and constraint in it is deeply explored and featured as the central thesis of the article.
 8. Title Word Limit Invariant: The "title" MUST be strictly 4 words or fewer (maximum 4 words). Do not use long descriptive titles.
+9. Non-Markdown Humanized Sections: All section headings and paragraphs must be clean, natural, humanized prose without raw markdown formatting (no '#', '**', '*', or bullet characters inside block text).
 
 Ensure the response contains only the structured JSON Object { "title": ..., "subtitle": ..., "excerpt": ..., "tags": [...], "accent": "...", "blocks": [...] } with full references and attributions. Do NOT output a bare JSON array.`;
 

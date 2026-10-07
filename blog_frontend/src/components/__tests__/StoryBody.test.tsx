@@ -104,7 +104,7 @@ describe("StoryBody block rendering (Hermetic)", () => {
     expect(fileContainer.querySelector("video")?.getAttribute("src")).toBe("https://cdn.dev/clip.mp4");
   });
 
-  it("renders code blocks with language and optional title", () => {
+  it("renders code blocks with language, title, and interactive formatting controls", () => {
     const {container} = render(
       <StoryBody
         article={articleWithBlocks([
@@ -113,6 +113,9 @@ describe("StoryBody block rendering (Hermetic)", () => {
             text: "const meaning = 42;",
             language: "typescript",
             title: "src/meaning.ts",
+            showLineNumbers: true,
+            wrapLines: true,
+            highlightLines: "1",
           },
         ])}
       />
@@ -120,8 +123,11 @@ describe("StoryBody block rendering (Hermetic)", () => {
     const pre = container.querySelector("pre");
     expect(pre).toBeTruthy();
     expect(pre?.getAttribute("data-language")).toBe("typescript");
-    expect(pre?.getAttribute("data-title")).toBe("src/meaning.ts");
+    expect(pre?.getAttribute("data-metastring")).toBe("{1}");
     expect(screen.getByText("const meaning = 42;")).toBeTruthy();
-    expect(screen.getByText("src/meaning.ts")).toBeTruthy();
+    expect(screen.getAllByText("src/meaning.ts").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", {name: /toggle line numbers/i})).toBeTruthy();
+    expect(screen.getByRole("button", {name: /toggle line wrapping/i})).toBeTruthy();
+    expect(screen.getByRole("button", {name: /copy code/i})).toBeTruthy();
   });
 });

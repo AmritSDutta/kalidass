@@ -88,6 +88,9 @@ export default function StoryBody({article, dirtyIndices = []}: Props): ReactNod
               text={block.text}
               language={block.language}
               title={block.title}
+              showLineNumbers={block.showLineNumbers}
+              wrapLines={block.wrapLines}
+              highlightLines={block.highlightLines}
               className={dirtyClass.trim()}
             />
           );

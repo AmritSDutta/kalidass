@@ -182,7 +182,7 @@ export type Block =
   | { type: "quote"; text: string; cite?: string; _id?: string }
   | { type: "image"; url: string; caption?: string; _id?: string }
   | { type: "video"; url: string; caption?: string; _id?: string }
-  | { type: "code"; text: string; language?: string; title?: string; _id?: string };
+  | { type: "code"; text: string; language?: string; title?: string; showLineNumbers?: boolean; wrapLines?: boolean; highlightLines?: string; _id?: string };
 ```
 
 ### Core Article Models
@@ -212,7 +212,7 @@ Kalidass Journal exposes 7 structured tools on `window.modelContext`, `document.
 | `getStoryCitations` | Story-scoped | none | Extracts attribution quotes and references from the story body. |
 | `getStoryVideoLinks` | Story-scoped | none | Returns hero and inline body video players and captions. |
 | `getPeopleAlsoAsk` | Story-scoped | none | Returns searcher questions and answer snippets from the dossier. |
-| `enhanceStoryContent` | Story-scoped (Auth) | `enhancedText?`, `sectionHeading?`, `blockIndex?`, `enhancedBlocks?`, `instruction?` | Stages in-browser content modifications with live preview bar. Resolves route internally via `window.location`. |
+| `enhanceStoryContent` | Story-scoped (Auth) | `enhancedText?`, `sectionHeading?`, `addNewSection?`, `blockIndex?`, `enhancedBlocks?`, `instruction?` | Stages in-browser content modifications with live preview bar. Resolves route internally via `window.location`. |
 
 ### Staging Lifecycle Events
 - **`kalidass:stage-enhancement`**: Dispatched by `enhanceStoryContent`. Handled by `StoryPage.tsx` to render the floating diff preview bar with dirty block highlights.

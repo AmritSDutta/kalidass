@@ -40,6 +40,12 @@ const sampleArticle = {
       text: "Switch Transformers: Scaling to Trillion Parameter Models",
       cite: "Fedus et al., 2021",
     },
+    {
+      type: "code",
+      text: "def route():\n    pass",
+      language: "python",
+      title: "router.py",
+    },
   ],
   ai_intelligence: {
     query: "attention as routing",
@@ -527,6 +533,85 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
         expect(lastBlock.text).toBe("console.log('Neural Attention Layer');");
         expect(lastBlock.language).toBe("typescript");
         expect(lastBlock.title).toBe("attention.ts");
+      });
+
+      it("keeps raw text when enhancedText targets a code block (no markdown stripping)", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "a@b.c", role: "author"},
+        });
+
+        const dispatchedEvents: any[] = [];
+        const listener = (e: Event) => dispatchedEvents.push((e as CustomEvent).detail);
+        window.addEventListener("kalidass:stage-enhancement", listener);
+
+        const rawCode = "# Config loader\n- item\nprint('hello')";
+        const res = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          blockIndex: 5,
+          enhancedText: rawCode,
+          instruction: "Updated routing snippet",
+        })) as any;
+
+        window.removeEventListener("kalidass:stage-enhancement", listener);
+
+        expect(res.available).toBe(true);
+        expect(res.staged).toBe(true);
+        const stagedBlocks = dispatchedEvents[0].stagedArticle.blocks;
+        expect(stagedBlocks[5].type).toBe("code");
+        expect(stagedBlocks[5].text).toBe(rawCode);
+      });
+
+      it("rejects malformed code block highlightLines ranges", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "a@b.c", role: "author"},
+        });
+
+        const res = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          enhancedBlocks: [
+            {type: "code", text: "print('x')", language: "python", highlightLines: "all"},
+          ],
+          instruction: "Bad highlight range",
+        })) as any;
+
+        expect(res.available).toBe(false);
+        expect(res.error).toContain("highlightLines");
+      });
+
+      it("adds a new section with non-markdown humanized text via addNewSection: true", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "a@b.c", role: "author"},
+        });
+
+        const dispatchedEvents: any[] = [];
+        const listener = (e: Event) => dispatchedEvents.push((e as CustomEvent).detail);
+        window.addEventListener("kalidass:stage-enhancement", listener);
+
+        const res = (await window.modelContext!.tools.enhanceStoryContent.execute({
+          addNewSection: true,
+          sectionHeading: "### Modern Routing Paradigms",
+          enhancedText: "**Sparse routing** provides substantial throughput gains without raw markdown tokens.",
+          instruction: "Added new section on routing paradigms",
+        })) as any;
+
+        window.removeEventListener("kalidass:stage-enhancement", listener);
+
+        expect(res.available).toBe(true);
+        expect(res.staged).toBe(true);
+        const stagedBlocks = dispatchedEvents[0].stagedArticle.blocks;
+        const newHeading = stagedBlocks[stagedBlocks.length - 2];
+        const newParagraph = stagedBlocks[stagedBlocks.length - 1];
+        expect(newHeading.type).toBe("heading");
+        expect(newHeading.text).toBe("Modern Routing Paradigms");
+        expect(newParagraph.type).toBe("paragraph");
+        expect(newParagraph.text).toBe("Sparse routing provides substantial throughput gains without raw markdown tokens.");
       });
     });
   });

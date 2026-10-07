@@ -62,6 +62,26 @@ function fromArticle(article: Article | ArticleDraft): ArticleDraft {
   };
 }
 
+function formatCodeSnippet(raw: string): string {
+  if (!raw) return "";
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  const nonEmpties = lines.filter((l) => l.trim().length > 0);
+  if (nonEmpties.length === 0) return raw.trim();
+  const leadingSpaces = nonEmpties.map((l) => {
+    const match = l.match(/^[ \t]*/);
+    return match ? match[0].replace(/\t/g, "  ").length : 0;
+  });
+  const minIndent = Math.min(...leadingSpaces);
+  return lines
+    .map((line) => {
+      if (line.trim().length === 0) return "";
+      const expanded = line.replace(/\t/g, "  ");
+      return expanded.slice(minIndent).trimEnd();
+    })
+    .join("\n")
+    .trim();
+}
+
 function AdminInner(): ReactNode {
   const {
     user,
@@ -847,7 +867,7 @@ function AdminInner(): ReactNode {
                   ) : null}
                   {block.type === "code" ? (
                     <>
-                      <div style={{display: "flex", gap: "0.5rem", marginBottom: "0.5rem"}}>
+                      <div style={{display: "flex", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap", alignItems: "center"}}>
                         <select
                           value={block.language || "typescript"}
                           onChange={(event) => updateBlock(index, {language: event.target.value})}
@@ -882,14 +902,66 @@ function AdminInner(): ReactNode {
                           value={block.title || ""}
                           placeholder="Filename / title (optional, e.g. main.py)"
                           onChange={(event) => updateBlock(index, {title: event.target.value})}
-                          style={{flex: 1}}
+                          style={{flex: 1, minWidth: "180px"}}
                         />
+                      </div>
+                      <div style={{display: "flex", gap: "0.8rem", marginBottom: "0.5rem", flexWrap: "wrap", alignItems: "center", fontSize: "0.82rem"}}>
+                        <label style={{display: "inline-flex", alignItems: "center", gap: "0.35rem", cursor: "pointer"}}>
+                          <input
+                            type="checkbox"
+                            checked={block.showLineNumbers !== false}
+                            onChange={(e) => updateBlock(index, {showLineNumbers: e.target.checked})}
+                          />
+                          Line numbers
+                        </label>
+                        <label style={{display: "inline-flex", alignItems: "center", gap: "0.35rem", cursor: "pointer"}}>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(block.wrapLines)}
+                            onChange={(e) => updateBlock(index, {wrapLines: e.target.checked})}
+                          />
+                          Wrap lines
+                        </label>
+                        <input
+                          value={block.highlightLines || ""}
+                          placeholder="Highlight lines (e.g. 1, 4-6)"
+                          aria-label="Highlight lines"
+                          onChange={(e) => updateBlock(index, {highlightLines: e.target.value})}
+                          style={{
+                            maxWidth: "180px",
+                            padding: "0.25rem 0.5rem",
+                            fontSize: "0.8rem",
+                            fontFamily: "var(--font-mono, monospace)",
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className={styles.ghost}
+                          onClick={() => updateBlock(index, {text: formatCodeSnippet(block.text)})}
+                          style={{padding: "0.25rem 0.6rem", fontSize: "0.78rem"}}
+                          title="Auto-format indentation and trailing whitespace"
+                        >
+                          Auto-format indentation
+                        </button>
                       </div>
                       <textarea
                         value={block.text}
                         rows={8}
                         onChange={(event) => updateBlock(index, {text: event.target.value})}
-                        placeholder="// Enter code snippet here..."
+                        onKeyDown={(e) => {
+                          if (e.key === "Tab") {
+                            e.preventDefault();
+                            const target = e.currentTarget;
+                            const start = target.selectionStart;
+                            const end = target.selectionEnd;
+                            const newText = block.text.substring(0, start) + "  " + block.text.substring(end);
+                            updateBlock(index, {text: newText});
+                            setTimeout(() => {
+                              target.selectionStart = target.selectionEnd = start + 2;
+                            }, 0);
+                          }
+                        }}
+                        placeholder="// Enter code snippet here (Tab inserts 2 spaces)..."
                         style={{fontFamily: "var(--font-mono, monospace)", fontSize: "0.88rem", tabSize: 2}}
                       />
                     </>

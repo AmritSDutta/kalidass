@@ -38,6 +38,9 @@ export const BlockCodeSchema = z.object({
   text: z.string().min(1),
   language: z.string().optional(),
   title: z.string().optional(),
+  showLineNumbers: z.boolean().optional(),
+  wrapLines: z.boolean().optional(),
+  highlightLines: z.string().optional(),
   _id: z.string().optional(),
 });
 
@@ -116,11 +119,20 @@ export function sanitizeArticleDraft(raw, request = {}) {
       return {type, text: String(b.text || "").trim() || "...", cite: b.cite ? String(b.cite).trim() : undefined, _id};
     }
     if (type === "code") {
+      // Keep only well-formed line ranges (e.g. "1, 4-6"); drop anything else.
+      const highlightLines = /^\d+(\s*-\s*\d+)?(\s*,\s*\d+(\s*-\s*\d+)?)*$/.test(
+        String(b.highlightLines || "").trim()
+      )
+        ? String(b.highlightLines).trim()
+        : undefined;
       return {
         type,
         text: String(b.text || "").trim() || "...",
         language: b.language ? String(b.language).trim() : undefined,
         title: b.title ? String(b.title).trim() : undefined,
+        showLineNumbers: typeof b.showLineNumbers === "boolean" ? b.showLineNumbers : undefined,
+        wrapLines: typeof b.wrapLines === "boolean" ? b.wrapLines : undefined,
+        highlightLines,
         _id,
       };
     }
