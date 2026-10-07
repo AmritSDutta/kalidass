@@ -13,40 +13,69 @@
   which translates to: 
   "Knowledge or instruction yields fruit only when imparted to a receptive and worthy mind."
 
-**Kalidass Journal** is a colorful research publication exploring the neural heart: attention architectures, agent workflows, evals, and multimodal systems plumbing.
+---
 
-The application is structured as a **combined monorepo** consisting of a **Docusaurus 3.10** static frontend, a **Cloudflare Worker REST API**, and **Upstash Blob** object storage.
+**Kalidass Journal** is an open-source, edge-native technical publication and systems research magazine. It explores the neural heart of modern computing: attention mechanisms, agent workflows, automated evaluations, multimodal plumbing, and distributed edge architectures.
+
+The project is built as a unified monorepo bringing together a **Docusaurus 3.10 + React 19** static reader frontend, a private **Cloudflare Worker** REST API, **Upstash Blob & Redis** storage, and **Upstash Box** isolated cloud container sandboxes.
 
 ---
 
-## 1. System Architecture & Data Flow
+## What Kalidass Journal Offers
+
+### 📖 For Readers
+- **Immersive Research Reading**: Beautiful editorial layout with vibrant Neel theme styling, categorical pigment palettes (`Neel`, `Haldi`, `Sindoor`, `Gulabi`, `Mehendi`, `Aakash`), and rainbow accent gradients.
+- **Lead Dispatch & Magazine Feeds**: Dedicated featured cover story hero on `/`, dynamic 3-column "In This Cycle" grid, and an issue archive (`/magazine`) with instant text search and tag filters.
+- **Interactive Story Outline & Density**: Sticky table of contents tracking reading progress, section word counts, and element density metrics (paragraphs, quotes, images, videos, and code snippets).
+- **First-Class Multi-Language Code Blocks**: Reusable `<ArticleCodeBlock />` with line numbers and Prism syntax highlighting across 13+ languages (Python, Bash, Go, Rust, Java, C#, SQL, JSON, YAML, Ruby, Kotlin, Swift, Docker).
+- **Live Search Grounding (`AI Intel`)**: In-reader dossier powered by SerpApi and Upstash Box displaying Google AI Overviews, source citations, Knowledge Graphs, and "People Also Ask" questions.
+
+### ✍️ For Writers & Editorial Teams
+- **Studio CMS (`/admin`)**: Clean web-based dashboard with 4 tab modes: **Compose**, **Drafts**, **Published**, and **Delete**.
+- **Polymorphic Block Authoring**: Compose essays using 6 structured block types: `paragraph`, `heading`, `quote`, `image`, `video`, and `code`.
+- **Pre-Submit Quality & Safety Audit**: Live evaluation measuring synthetic AI probability, technical rigor score ($1.0 - 5.0$), engagement, and content safety. Automatically blocks saving or publishing if safety risk exceeds 0.55.
+- **Granular Privacy & Multi-Author Isolation**: Save private drafts (`published: false`), unlisted essays (`private: true`), or flag AI-assisted generation (`aiGenerated: true`). Regular authors manage only their own essays; admins have global permissions.
+
+### 🤖 For AI Agents & Tooling
+- **Autonomous Article Generation (`/generate_article`)**: Ephemeral containerized agents running in Upstash Box research topics on the web, synthesize 1,200+ word essays, and generate custom 16:9 infographic cover art.
+- **In-Browser WebMCP Tools**: Full W3C Web Model Context Protocol implementation exposing 7 in-page tools (`window.modelContext`) for browser AI agents (Gemini, Claude, Chrome built-in AI) to search, read, inspect citations, and stage inline edits.
+- **Machine-to-Machine REST API**: Direct programmatic publishing via `POST /api/articles` with Bearer token authentication.
+
+### ⚡ For Architects & Operators
+- **Zero-Trust Private Worker Architecture**: The backend Cloudflare Worker runs with `workers_dev = false` and has no public internet exposure. It is reached strictly in-memory via Cloudflare Pages Function Service Binding RPC.
+- **Multi-Tier Edge Caching**: 3-hour feed cache and 24-hour story & intelligence caches on Upstash Redis with content-hash ETag revalidation for sub-millisecond edge responses.
+- **Zero-Dependency Dev Mode**: Immediate offline local development using built-in in-memory storage — no cloud accounts or credentials required to get started.
+
+---
+
+## System Architecture
 
 ```mermaid
 flowchart LR
     subgraph Client["Reader & Studio UI"]
         Reader["Reader (/story/:slug, /magazine, /)"]
         Studio["Studio CMS (/admin, /generate_article)"]
-        WebMCP["In-Browser WebMCP Tools"]
+        WebMCP["In-Browser WebMCP Tools (window.modelContext)"]
     end
 
     subgraph PagesEdge["Cloudflare Pages Edge (kalidass.amrit.fyi)"]
         Pages["Docusaurus 3.10 Static SPA"]
-        Proxy["Pages Function (functions/api/[[route]].ts)"]
+        Proxy["Pages Gateway (functions/api/[[route]].ts)"]
     end
 
     subgraph PrivateWorker["Private Cloudflare Worker (workers_dev = false)"]
         Worker["Worker REST API (/api/*)"]
-        EvalEngine["Quality & Safety Engine (Jev / Clef / Heuristic)"]
+        EvalEngine["Quality & Safety Evaluator"]
     end
 
     subgraph CloudSandbox["Upstash Box Sandboxes"]
-        BoxGen["Article Generator (Node / Python)"]
+        BoxGen["Article Generator Agent (Python / Node)"]
         BoxIntel["Intelligence Runner (Python + SerpApi)"]
     end
 
-    subgraph Storage["Persistence & Caching Layer"]
-        Blob["Upstash Blob (Articles, Intelligence & Media)"]
-        Redis["Upstash Redis (Dossier & Eval Cache)"]
+    subgraph Storage["Storage & Caching Layer"]
+        Blob["Upstash Blob (Articles & Media)"]
+        Redis["Upstash Redis (Dossier & Feed Cache)"]
         Memory["In-Memory Store (Dev Fallback)"]
     end
 
@@ -63,340 +92,280 @@ flowchart LR
     Worker -->|Fallback Mode| Memory
 ```
 
-- **Static Frontend**: Pre-rendered Docusaurus 3.10 + React 19 SPA served on `https://kalidass.amrit.fyi` with contextual WebMCP tools.
-- **Pages Function Gateway**: Catch-all function (`blog_frontend/functions/api/[[route]].ts`) intercepts `/api/*` and invokes the private worker via the `JOURNAL_WORKER` Service Binding in memory.
-- **Private Worker API**: Cloudflare Worker (`workers_dev = false`, zero public exposure) handling CRUD operations (`/api/articles`), health checks (`/api/health`), media uploads (`/api/objects`), intelligence dossiers (`/api/articles/:slug/intel`), quality evals (`/api/eval/quality`), and signed browser uploads (`/api/upload`).
-- **Autonomous Upstash Box Sandboxes**: Ephemeral containerized runners for article synthesis (`agent.py`) and live search grounding (`intelligence.py` with SerpApi).
-- **Multi-Tier Persistence & Caching**: Durable JSON articles and media stored in Upstash Blob; intelligence dossiers and eval results cached in Upstash Redis (with in-memory fallbacks for local development).
-
 ---
 
-## 2. Monorepo Directory Layout
+## Local Setup & Quickstart
 
-```text
-kalidass/
-├── blog_frontend/             # Static frontend & reader application
-│   ├── src/
-│   │   ├── client-modules/    # api-base.ts, webmcp.ts (window.modelContext)
-│   │   ├── components/        # ArticleCard, IntelligencePanel, StoryBody, StoryPage, VideoEmbed
-│   │   ├── css/               # Neel theme, pigment tokens, and rainbow gradients
-│   │   ├── lib/               # api.ts (CRUD/uploads), media.ts, types.ts
-│   │   └── pages/             # /, /magazine, /admin, /generate_article (dynamic /story/:slug* via plugin)
-│   ├── static/                # Static assets, _redirects, .nojekyll
-│   ├── docusaurus.config.ts   # Docusaurus config, addRoute, and dev proxy
-│   ├── package.json           # Frontend dependencies and scripts
-│   └── tsconfig.json          # TypeScript strict configuration (noEmit: true)
-├── worker/                    # Cloudflare Worker REST API
-│   ├── src/
-│   │   ├── index.js           # Main fetch handler, router, CORS, auth
-│   │   ├── eval/              # Quality & safety evaluation pipeline (heuristic, Jev, Clef)
-│   │   ├── generator/         # Upstash Box AI article generator (Python & Node harnesses)
-│   │   ├── intelligence/      # Upstash Box Python research runner & SerpApi grounding
-│   │   ├── redis/             # Redis caching adapter (Upstash Redis & memory fallback)
-│   │   ├── memory.js          # In-memory storage adapter fallback
-│   │   └── seed.js            # Seed bootstrap (empty by default)
-│   ├── package.json           # Worker dependencies
-│   ├── wrangler.toml          # Cloudflare Worker configuration & bindings
-│   └── .dev.vars.example      # Example environment variables template
-├── docs/                      # Unified Docs7 documentation suite
-│   ├── docs.json              # Docs7 config ($schema, filterSidebar, groups)
-│   ├── custom.css             # Frame widening for responsive Mermaid
-│   ├── *.mdx                  # Frontend & system architecture docs
-│   └── worker/*.mdx           # Worker & storage architecture docs
-├── AGENTS.md                  # Canonical AI agent operational invariants
-├── AI_AGENT_PUBLISH.md        # Machine-to-machine API publishing specification
-├── CLAUDE.md                  # Fast-reference agent instructions & commands
-├── DEPLOY.md                  # Direct Cloudflare Pages/Worker deployment guide
-├── README.md                  # Master project guide (this file)
-└── start.sh                   # Concurrent local dev startup script
-```
-
----
-
-## 3. Core Features & Data Contracts
-
-### Routes
-- `/` — Homepage featuring the publication header, dedicated **Featured Story** section (`Lead Dispatch`), 3-column "In This Cycle", and issue index.
-- `/magazine` — Issue archive with real-time text search and dynamic tag filtering.
-- `/admin` — Studio CMS with four tab modes: **Compose**, **Drafts**, **Published**, and **Delete**. Includes editable URL slugs (`/story/<slug>`), real-time title sync, and customizable pigment swatches (`ACCENTS`). Deep linking supported via `?mode=` and `?edit=<slug>`.
-- `/story/:slug*` — Dynamic story reader registered via plugin `actions.addRoute` rendering polymorphic blocks with custom accent tints.
-
-### Publication Flags
-- `published`: When `false`, saved as a draft (requires Bearer authentication; unauthenticated queries return `404`).
-- `private`: Defaults to `true` (unlisted). Excluded from public `/` and `/magazine` feeds, and readable only by its author or an admin (anonymous `/story/:slug` requests return `404`).
-- `aiGenerated`: When `true`, renders the `AI` badge across cards and reader headers.
-
-### Content Blocks (`src/lib/types.ts`)
-Articles support 5 block types: `paragraph`, `heading`, `quote` (with optional `cite`), `image` (with optional `caption`), and `video` (YouTube, Vimeo, or direct MP4).
-
----
-
-## 4. How to Run Locally
+You can run Kalidass Journal locally using your choice of package manager (`npm`, `pnpm`, `yarn`, or `bun`) on any operating system (Windows, macOS, or Linux).
 
 ### Prerequisites
-- Node.js `>=20.0` (validated on Node.js 22).
-- `npm` package manager.
+- **Node.js**: `>=20.0.0` (validated on Node.js 20 and 22).
+- Any standard package manager: `npm` (bundled with Node), `pnpm`, `yarn`, or `bun`.
 
-### Option A: Concurrent Startup (Recommended)
+---
+
+### Option 1: One-Line Concurrent Startup (Recommended)
 
 From the repository root:
 
+**Linux / macOS / Git Bash:**
 ```bash
 chmod +x start.sh
 ./start.sh
 ```
 
-This launches both the Cloudflare Worker on `http://127.0.0.1:8787` and the Docusaurus frontend on `http://0.0.0.0:3000`.
+**Windows PowerShell:**
+```powershell
+# Starts worker in background and launches frontend
+Start-Process -FilePath "node" -ArgumentList "./node_modules/wrangler/bin/wrangler.js dev --ip 0.0.0.0 --port 8787" -WorkingDirectory "worker"
+Set-Location blog_frontend; node ./node_modules/@docusaurus/core/bin/docusaurus.mjs start --port 3000
+```
+
+Once running:
+- **Frontend Reader & Studio**: [http://localhost:3000](http://localhost:3000)
+- **Worker API**: [http://localhost:8787/api/health](http://localhost:8787/api/health)
 
 ---
 
-### Option B: Manual Multi-Terminal Startup
+### Option 2: Running Services in Separate Terminals
 
-#### 1. Start the Cloudflare Worker
-In your first terminal:
+#### Terminal 1 — Cloudflare Worker API (Port 8787)
+Navigate to the `worker/` directory and install dependencies:
 
 ```bash
 cd worker
-npm install
 
-# (Optional) Configure Upstash Blob for persistent local testing:
-# Copy .dev.vars.example to .dev.vars and add your UPSTASH_BLOB_TOKEN
+# Install dependencies (choose your package manager):
+npm install       # npm
+pnpm install      # pnpm
+yarn install      # yarn
+bun install       # bun
 
-npm run start
+# Start the worker dev server:
+npm run start     # npm
+pnpm start        # pnpm
+yarn start        # yarn
+bun run start     # bun
 ```
 
-- Worker listens on `http://127.0.0.1:8787`.
-- Without `UPSTASH_BLOB_TOKEN`, the worker runs on an empty in-memory store (no seeded articles).
+> **Zero-Config Dev Mode**: If no credentials are provided, the worker automatically runs on an in-memory storage engine. You can immediately create, read, and edit test articles in Studio without setting up any cloud databases.
 
-#### 2. Start the Frontend
-In your second terminal:
+#### Terminal 2 — Frontend Reader & Studio (Port 3000)
+Navigate to the `blog_frontend/` directory and install dependencies:
 
 ```bash
 cd blog_frontend
-npm install
-npm run start
+
+# Install dependencies:
+npm install       # npm
+pnpm install      # pnpm
+yarn install      # yarn
+bun install       # bun
+
+# Start the Docusaurus dev server:
+npm run start     # npm
+pnpm start        # pnpm
+yarn start        # yarn
+bun run start     # bun
 ```
 
-- Frontend serves on `http://0.0.0.0:3000`.
-- The Webpack dev server automatically proxies `/api/*` requests to `http://127.0.0.1:8787`.
+The frontend will open automatically at `http://localhost:3000`. Requests to `/api/*` are transparently proxied to the worker on `http://127.0.0.1:8787`.
 
 ---
 
-## 5. Running & Validating Docs7 Documentation
+### Option 3: Connecting Real Cloud Services (Optional)
 
-The unified Docs7 documentation suite is hosted at the repository root in `docs/`:
+To enable persistent cloud storage, Redis caching, or AI generation during local testing, create a `worker/.dev.vars` file (copied from `worker/.dev.vars.example`):
 
-```bash
-# Preview documentation site on port 3333
-npx docs7 dev docs --port 3333
+```ini
+# worker/.dev.vars (DO NOT COMMIT)
+UPSTASH_BLOB_TOKEN="your_upstash_blob_token"
+UPSTASH_REDIS_REST_URL="https://your-redis.upstash.io"
+UPSTASH_REDIS_REST_TOKEN="your_upstash_redis_token"
+ADMIN_TOKEN="your_local_admin_password"
+ADMIN_EMAILS="admin@example.com"
 
-# Validate docs integrity (zero errors / zero warnings)
-node scripts/validate_docs.mjs docs
+# Optional AI services
+UPSTASH_BOX_TOKEN="your_upstash_box_token"
+OPENAI_API_KEY="sk-..."
+SERPAPI_API_KEY="..."
 ```
 
 ---
 
-## 6. How to Deploy (Cloudflare Pages + Worker Service Binding)
+## Deployment Guide
 
-### Step 1: Upstash Blob Setup
-1. Create a public bucket in [Upstash Console](https://console.upstash.com).
-2. Copy the bucket token (`UPSTASH_BLOB_TOKEN`).
+Kalidass Journal is designed for seamless, zero-maintenance deployment to Cloudflare's global edge network.
 
-### Step 2: Deploy the Private Cloudflare Worker
+### Deployment Method A: Cloudflare Dashboard (Recommended / No CLI Needed)
+
+1. **Deploy the Worker**:
+   - In Cloudflare Dashboard, go to **Workers & Pages** → **Create application** → **Create Worker**.
+   - Name it `kalidass-journal-worker`.
+   - Under **Settings** → **Variables and Secrets**, add your secrets:
+     - `UPSTASH_BLOB_TOKEN`: Upstash Blob storage token.
+     - `UPSTASH_REDIS_REST_URL` & `UPSTASH_REDIS_REST_TOKEN`: Upstash Redis credentials.
+     - `ADMIN_TOKEN`: Secret key for Studio administrator access and agent publishing.
+     - `ADMIN_EMAILS`: Comma-separated admin email list.
+
+2. **Deploy the Frontend (Cloudflare Pages)**:
+   - Go to **Workers & Pages** → **Create application** → **Pages** → **Connect to Git**.
+   - Select your repository.
+   - Configure Build Settings:
+     - **Framework preset**: `Docusaurus` (or `None`)
+     - **Root directory**: `blog_frontend`
+     - **Build command**: `npm run build` (or `pnpm build` / `bun run build`)
+     - **Build output directory**: `build`
+     - **Environment variables**:
+       - `NODE_VERSION`: `20`
+       - `AUTH0_DOMAIN`: `your-tenant.us.auth0.com` (optional; leave blank for single-operator mode)
+       - `AUTH0_CLIENT_ID`: `your-client-id`
+       - `AUTH0_AUDIENCE`: `https://api.kalidass.amrit.fyi`
+       - `PRIVATE_APP`: `false` (set to `true` for password-only single-operator mode)
+
+3. **Link Service Binding**:
+   - In your Pages project settings, navigate to **Settings** → **Functions** → **Service bindings**.
+   - Click **Add binding**:
+     - **Variable name**: `JOURNAL_WORKER`
+     - **Service**: `kalidass-journal-worker`
+     - **Environment**: `production`
+
+All requests to `/api/*` will now execute directly inside the private worker across Cloudflare's in-memory isolate network!
+
+---
+
+### Deployment Method B: Wrangler CLI (Terminal Driven)
+
+You can deploy directly using Wrangler with any package runner (`npx`, `pnpm dlx`, `yarn dlx`, or `bunx`):
+
+#### 1. Deploy the Worker
 ```bash
 cd worker
+
+# Install dependencies if not already installed
 npm install
 
-# Configure secret tokens (do not commit secrets)
+# Set your production secrets securely:
 npx wrangler secret put UPSTASH_BLOB_TOKEN
-npx wrangler secret put ADMIN_TOKEN  # Legacy/M2M password for Studio writes and AI agent publishing
-npx wrangler secret put AUTH0_DOMAIN # e.g. dev-xxx.us.auth0.com (or in wrangler.toml)
-npx wrangler secret put AUTH0_AUDIENCE # e.g. https://api.kalidass.amrit.fyi (or in wrangler.toml)
-npx wrangler secret put ADMIN_EMAILS # Comma-separated Super-Admin email addresses
+npx wrangler secret put UPSTASH_REDIS_REST_URL
+npx wrangler secret put UPSTASH_REDIS_REST_TOKEN
+npx wrangler secret put ADMIN_TOKEN
+npx wrangler secret put ADMIN_EMAILS
 
-# Deploy private worker to Cloudflare (workers_dev = false, zero public exposure)
+# Deploy the private worker:
 npx wrangler deploy
+# Or with pnpm:  pnpm dlx wrangler deploy
+# Or with bun:   bunx wrangler deploy
 ```
 
-### Step 3: Deploy the Frontend to Cloudflare Pages
-1. Connect your Git repository in the Cloudflare Dashboard under **Workers & Pages** → **Create application** → **Pages**.
-2. Set Build Settings:
-   - **Framework preset**: None / Docusaurus
-   - **Root directory**: `blog_frontend`
-   - **Build command**: `npm run build`
-   - **Build output directory**: `build`
-   - **Environment variables**:
-     - `NODE_VERSION`: `20`
-     - `AUTH0_DOMAIN`: `your-tenant.us.auth0.com`
-     - `AUTH0_CLIENT_ID`: `your-spa-client-id`
-     - `AUTH0_AUDIENCE`: `https://api.kalidass.amrit.fyi`
-     - `PRIVATE_APP`: `false` (optional; set to `true` to disable Auth0 UI and run admin-token-only single-operator mode)
-3. Configure the **Service Binding**:
-   - Under Pages **Settings** → **Bindings** (or **Functions** → **Service bindings**), add:
-     - **Type**: `Service binding`
-     - **Name**: `JOURNAL_WORKER`
-     - **Value**: `kalidass-journal-worker`
-4. Set Custom Domain:
-   - Add `kalidass.amrit.fyi` to Pages Custom Domains.
-5. Deploy. `blog_frontend/functions/api/[[route]].ts` automatically proxies all `/api/*` requests in-memory via `context.env.JOURNAL_WORKER.fetch(request)`.
-
-> Refer to [`DEPLOY.md`](./DEPLOY.md) for the complete deployment runbook.
-
----
-
-## 7. Studio CMS & Authentication
-
-1. Navigate to `/admin` to open the Studio CMS.
-2. Sign in with **Auth0** using the login prompt in the top navigation bar. Alternatively, enter an `ADMIN_TOKEN` via the manual token prompt or browser console:
-   ```javascript
-   localStorage.setItem("kalidass-admin-token", "<your-admin-token>");
-   ```
-3. **Operating Modes**:
-   - **Multi-User Auth0 Mode (Default)**: Authors authenticate via Auth0. Regular authors only see and edit their own drafts and private articles (`GET /api/articles?status=draft`). Super-Admins (`ADMIN_TOKEN` or `ADMIN_EMAILS`) have full global access across all articles.
-   - **Private App Mode (`PRIVATE_APP=true`)**: Disables the Auth0 login UI entirely. The Studio runs as a single-operator CMS unlocking exclusively with `ADMIN_TOKEN`.
-4. Use the tabs to:
-   - **Compose**: Write text, add pull quotes, insert images, and embed videos with automatic `authorEmail` stamping.
-   - **Drafts**: Edit and preview your unlisted drafts.
-   - **Published**: Manage live articles and toggles.
-   - **Delete**: Purge authorized articles.
-
----
-
-## 8. Machine-to-Machine Agent Publishing
-
-Autonomous AI agents can publish articles directly via HTTP through the edge gateway:
-
+#### 2. Deploy the Frontend Pages Project
 ```bash
-curl -X POST https://kalidass.amrit.fyi/api/articles \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Field notes from the eval trench",
-    "subtitle": "What broke and what we measured",
-    "excerpt": "A summary deck for search cards.",
-    "author": {"name": "Agent", "role": "Correspondent", "avatar": ""},
-    "tags": ["Evals", "Agents"],
-    "accent": "#6366f1",
-    "published": false,
-    "private": true,
-    "aiGenerated": true,
-    "blocks": [{"type": "paragraph", "text": "Opening section content."}]
-  }'
+cd blog_frontend
+
+# Install dependencies & build static site:
+npm install
+npm run build
+
+# Deploy build directory to Cloudflare Pages:
+npx wrangler pages deploy build --project-name=kalidass-journal
+# Or with pnpm:  pnpm dlx wrangler pages deploy build --project-name=kalidass-journal
+# Or with bun:   bunx wrangler pages deploy build --project-name=kalidass-journal
 ```
 
-> Refer to [`AI_AGENT_PUBLISH.md`](./AI_AGENT_PUBLISH.md) for the complete JSON schema and publishing lifecycle.
+---
+
+## Studio CMS & Publishing
+
+1. **Accessing the Studio**: Open `/admin` in your browser.
+2. **Logging In**:
+   - **Auth0 Mode**: Sign in via your configured Auth0 identity provider.
+   - **Admin Token Mode**: Set your admin token directly in the browser console:
+     ```javascript
+     localStorage.setItem("kalidass-admin-token", "your-admin-token");
+     ```
+3. **Tab Navigation**:
+   - **Compose**: Write articles with title, subtitle, custom slug (`/story/<slug>`), pigment swatch, and 6 block types (`paragraph`, `heading`, `quote`, `image`, `video`, `code`).
+   - **Drafts**: View and resume work on unpublished drafts (`published: false`).
+   - **Published**: Browse live essays, toggle visibility, or update metadata.
+   - **Delete**: Purge authorized entries with confirmation prompts.
 
 ---
 
-## 9. Article Heuristics (Quality & Safety Evaluation)
+## WebMCP (In-Browser AI Tools)
 
-Kalidass Journal integrates automated editorial quality assessment and content safety guardrails powered by pluggable providers (TypeSafe Jev, Cloudflare Clef, and local deterministic heuristics) at the authenticated `POST /api/eval/quality` endpoint (Bearer token required):
-
-- **AI Writing Detection (`noul` primitive)**: Computes probability of synthetic AI generation vs. human composition.
-- **Technical Accuracy & Rigor (`score` primitive)**: Analyzes systems architecture depth and technical precision ($1.0 - 5.0$).
-- **Reader Engagement (`score` primitive)**: Measures flow, pacing, and narrative clarity ($1.0 - 5.0$).
-- **Editorial Readiness (`choice` primitive)**: Triage classifier returning `ready_for_publication`, `needs_minor_polish`, or `needs_major_revision`.
-- **Pre-Submit Safety Hard-Blocking**: Evaluates violence, sexual, and antisocial risk primitives. If any risk exceeds $0.55$, saving/publishing is immediately blocked in Studio Compose and rejected with HTTP `422` by the edge worker.
-- **Exact Word Boundary Scunthorpe Defense**: Local heuristic evaluator (`worker/src/eval/heuristic.js`) enforces regex whole-word boundaries (`\b${escapedTerm}\b`), ensuring technical terminology (such as `"analysis"`, `"analytics"`, and `"analyzer"`) never false-matches substrings like `"anal"`.
-- **Live Reader & Studio Badges**: Live audit cards in `StoryPage.tsx` and `admin.tsx` display real-time safety verdicts, AI probability, and technical rigor scores under the "Article Heuristics" banner.
-
-> Refer to [`docs/worker/quality-eval.mdx`](./docs/worker/quality-eval.mdx) for architecture diagrams, schema specifications, provider cascade details, and local heuristic fallback behavior.
-
----
-
-## 10. Autonomous Upstash Box AI Article Generator
-
-Kalidass Journal provides containerized research article synthesis powered by isolated cloud sandboxes via `@upstash/box` (`POST /api/generate` and `/generate_article` UI):
-
-- **Ephemeral Cloud Sandbox**: Spins up isolated Linux containers on-demand via the `@upstash/box` SDK to execute custom Python (`agent.py`) and Node.js research agents.
-- **Hypervisor Secret Injection via `attachHeaders`**: API keys (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `BRAVE_SEARCH_API_KEY`) reside in Worker environment secrets and are injected into outbound network calls at the hypervisor level. Secrets never touch the container disk or shell variables.
-- **Resilient JSON Output**: Features `parse_json_safely()` to strip markdown fences and automatically normalize bare lists or array wrappers into standard article schemas.
-- **Single Cover Image Invariant**: Strictly generates exactly ONE image per article (`coverImage` via `gpt-image-1` typography-free 16:9 infographics). No inline images are emitted.
-- **Direct Draft Persistence**: Generated articles undergo immediate safety evaluation and are persisted into Upstash Blob as unlisted drafts (`published: false, private: true, aiGenerated: true`).
-- **Single Admin Token**: Authenticated seamlessly with `kalidass-admin-token` in `localStorage`.
-
-> Refer to [`docs/worker/upstash-box-generator.mdx`](./docs/worker/upstash-box-generator.mdx) for architecture, prompt schemas, and runner specifications.
-
----
-
-## 11. Article Intelligence Engine (SerpApi & Upstash Box)
-
-Kalidass Journal integrates an automated search grounding and live intelligence compiler powered by **Upstash Box** and **SerpApi** (`worker/src/intelligence/`):
-
-- **Ephemeral Python Sandbox**: Executes a standalone research script (`intelligence.py`) inside an isolated Upstash Box container (`runtime: "python"`, `size: "small"`) to query Google Search via SerpApi.
-- **Empirical Grounding Primitives**: Extracts Google AI Overviews (with source citations and expanded text blocks), Knowledge Graph entities, People Also Ask (PAA) questions, related inline videos, and organic citations.
-- **In-Flight Concurrency Locks**: Uses module-level promise locking (`_intelInflightLocks`) to guarantee that concurrent requests for the same article never spawn duplicate Box containers.
-- **Multi-Tier Caching & Persistence**: Compiled dossiers are cached in Upstash Redis (24-hour TTL) with an in-memory Map fallback, and durably stored in Upstash Blob (`kalidass/intelligence/{id}.json`).
-- **Gated Compilation vs. Public Peek**:
-  - `GET /api/articles/:slug/intel`: Public read-only sub-resource reading from Redis/Blob without spawning containers (gated by draft/private state).
-  - `GET /api/articles/:slug?intelligence=true[&refresh=true]`: Authenticated route enabling authors and admins to compile or refresh live intelligence.
-  - `GET /api/articles/:slug`: Returns `has_intelligence: boolean` so the reader UI renders the tab badge without eagerly downloading the full payload.
-- **Interactive Reader UI (`IntelligencePanel`)**: Dynamic story header tabs ("Article", "AI Intelligence", "Article Heuristics") featuring lazy-loaded accordions, verified citations, and live status badges ("Cached", "Live", "Compiling").
-
-> Refer to [`docs/worker/intelligence.mdx`](./docs/worker/intelligence.mdx) for architecture diagrams, schema specifications, and endpoint contracts.
-
----
-
-## 12. WebMCP (In-Browser Model Context Protocol)
-
-Kalidass Journal natively implements **WebMCP** (`document.modelContext` / `navigator.modelContext` / `window.modelContext`), enabling browser AI agents (Chrome built-in AI, Gemini Nano, OpenAI Operator, and extensions like **WebMCP – Model Context Tool Inspector**) to search and read research dispatches directly within the browser runtime without DOM scraping:
-
-- **`searchArticles({ query, tag })`**: Filter and search publication briefs by keyword or category tag. On `/story/:slug`, automatically isolates and returns **only the current article**; on catalog pages, returns up to 5 matching briefs.
-- **`readArticle({ slug })`**: Fetch canonical reading URL, path, and summary metadata. On `/story/:slug`, defaults to the current story slug if omitted.
+Kalidass Journal registers 7 structured WebMCP tools into `window.modelContext`, `document.modelContext`, and `navigator.modelContext`:
 
 ```javascript
-// Test directly in DevTools Console (F12):
-await window.modelContext.tools.searchArticles.execute({ query: "evals" });
-await window.modelContext.tools.readArticle.execute({ slug: "attention-as-routing" });
-```
+// Test directly in your browser DevTools Console (F12):
 
-> Validated with Chrome's **WebMCP – Model Context Tool Inspector** extension (`chrome://flags/#enable-webmcp-testing`). Refer to [`docs/webmcp.mdx`](./docs/webmcp.mdx) for architecture, schema declarations, and extension setup.
+// 1. Search publication articles
+const results = await window.modelContext.tools.searchArticles.execute({ query: "evals" });
+console.log("Search Results:", results);
+
+// 2. Read article canonical metadata
+const meta = await window.modelContext.tools.readArticle.execute({ slug: "attention-as-routing" });
+console.log("Article Meta:", meta);
+
+// 3. Inspect AI search grounding dossier (on /story/:slug)
+const aiOverview = await window.modelContext.tools.getStoryAiOverview.execute({});
+console.log("AI Overview:", aiOverview);
+
+// 4. Extract citations and references
+const citations = await window.modelContext.tools.getStoryCitations.execute({});
+console.log("Citations:", citations);
+
+// 5. Stage in-page content enhancements (authors & admins)
+await window.modelContext.tools.enhanceStoryContent.execute({
+  sectionHeading: "Introduction",
+  enhancedText: "Refined introductory thesis with empirical benchmarks.",
+  instruction: "Clarified introduction"
+});
+```
 
 ---
 
-## 13. Verification & Quality Gates
+## Automated Verification & Testing
+
+All test suites are hermetic with zero network or filesystem side-effects:
 
 ```bash
-# Frontend static type check (mandatory before deployment)
-cd blog_frontend && npm.cmd run typecheck
+# Typecheck frontend (TypeScript strict)
+cd blog_frontend
+node ./node_modules/typescript/bin/tsc --noEmit
+# Or: npm run typecheck / pnpm run typecheck / bun run typecheck
 
-# Run hermetic frontend UI test suite (jsdom, zero network, 100% mocked)
-cd blog_frontend && npm.cmd test
+# Run frontend UI tests (Vitest + jsdom)
+node ./node_modules/vitest/vitest.mjs run
+# Or: npm test / pnpm test / bun test
 
-# Run hermetic Worker Vitest test suite (zero network, 100% mocked)
-cd worker && npm.cmd test
+# Run worker API tests (Vitest)
+cd ../worker
+node ./node_modules/vitest/vitest.mjs run
+# Or: npm test / pnpm test / bun test
 
-# Validate unified Docs7 documentation suite
+# Validate documentation site structure (from repo root)
+cd ..
 node scripts/validate_docs.mjs docs
-
-# Clear build artifacts if cache is stale
-cd blog_frontend && npm run clear
 ```
-
-Automated verification runs on every push and pull request via [GitHub Actions CI](.github/workflows/ci.yml).
 
 ---
 
-## 14. Architecture Notes & Known Limitations
+## Documentation Site (Docs7)
 
-An honest assessment for contributors evaluating this codebase.
+Detailed architectural guides, data contracts, and operational runbooks are hosted in the `docs/` folder:
 
-### Strengths
-1. **Edge-Native Zero-Maintenance Storage**: Upstash Blob with a configurable root bucket eliminates database migrations; the in-memory fallback keeps local dev dependency-free.
-2. **Polymorphic Content Pipeline**: The 5-variant `Block` union renders cleanly across web and API clients without raw HTML parsing.
-3. **Agent-Native Publishing**: Standardized `POST /api/articles` payload and WebMCP in-browser tools let AI agents draft and read content through stable contracts.
-4. **Validated Documentation**: The Docs7 suite is machine-validated in CI, keeping docs synchronized with code.
-5. **Multi-Tier Edge Caching**: Upstash Redis integration caches intelligence dossiers and eval results with TTL expiration, eliminating duplicate compute.
+```bash
+# Preview documentation locally on port 3333:
+npx docs7 dev docs --port 3333
 
-### Known Limitations
-1. **Worker is untyped JavaScript**: The frontend is strict TypeScript, but the Worker (the security-critical surface) relies on JSDoc annotations only.
-2. **Whole-index read-modify-write**: Article listing loads and rewrites the full JSON index per mutation (guarded by `withIndexLock`); fine at personal-journal scale, a ceiling at high traffic.
-3. **Frontend tests are component-level only**: No end-to-end browser or visual regression tests; coverage focuses on render contracts of core components and the WebMCP registry.
-4. **Windows build limitation**: `npm run build` fails locally due to the `/story/:slug*` route colon; production builds run on Linux CI.
-5. **Single-region Worker**: Global edge storage runs across Cloudflare Workers and Upstash, but mutations serialize to a primary region.
+# Validate docs structure and Mermaid diagrams:
+node scripts/validate_docs.mjs docs
+```
 
-### Roadmap
-- **Dynamic SSG Fallback**: Pre-rendered static routes or a custom 404 rewrite fallback for local Windows builds.
-- **Worker Type Safety**: Migrate `worker/src` to TypeScript or add `checkJs` typechecking in CI.
-- **E2E Smoke Tests**: Browser-level publish/read flow against the memory store.
+---
 
+## License & Credits
+
+- **Author**: Amrit (@amrit)
+- **License**: MIT
+- **Theme**: Custom Neel palette with pigment spectrum tokens and Docusaurus 3.10.

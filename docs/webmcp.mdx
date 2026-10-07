@@ -125,6 +125,19 @@ Returns the hero (`article.videoUrl`) and inline body video blocks.
 Returns "People Also Ask" questions and answer snippets from the intelligence dossier.
 * **Returns**: `{ available, count, questions: [{ question, snippet, link }] }`.
 
+### `enhanceStoryContent`
+Stages in-browser content enhancements, section refinements, or code block additions to the currently viewed story.
+* **Target Resolution**: Purely internal via `window.location.pathname` (no manual `slug` argument needed). Rejects on non-story pages.
+* **Authorization**: Gated to the story author (`authorEmail`) or elevated administrator (`kalidass-admin-token`).
+* **Input Schema / Parameters**:
+  * `enhancedText` *(string, optional)*: Replacement or appended prose/markdown text.
+  * `sectionHeading` *(string, optional)*: Specific heading to target and update. Rejects actionably if the heading is not found.
+  * `blockIndex` *(number, optional)*: Exact block index to replace.
+  * `enhancedBlocks` *(Block[], optional)*: Direct replacement block array supporting `paragraph`, `heading`, `quote`, `image`, `video`, and `code` (with `language` and `title`).
+  * `instruction` *(string, optional)*: Summary message explaining the editorial modification.
+* **Returns**: `{ available: true, ok: true, staged: true, slug, dirtyIndices, updatedIndices, articleTitle, message }`.
+* **Behavior**: Composes consecutive edits incrementally on top of pending staged blocks. Dispatches `kalidass:stage-enhancement` custom event for live in-page diff preview in `StoryPage.tsx`.
+
 ---
 
 ## 4. Testing with WebMCP Inspector Extension
@@ -137,7 +150,7 @@ Kalidass Journal is validated with the **WebMCP – Model Context Tool Inspector
    - Open the **WebMCP Inspector** side panel.
 3. **Hard-Refresh Page**:
    - Press `Ctrl + Shift + R` (or `F5`) on `https://kalidass.amrit.fyi` or `http://localhost:3000`.
-   - The inspector will automatically list all six tools — `searchArticles`, `readArticle`, `getStoryAiOverview`, `getStoryCitations`, `getStoryVideoLinks`, and `getPeopleAlsoAsk` — along with their interactive schema forms.
+   - The inspector will automatically list all seven tools — `searchArticles`, `readArticle`, `getStoryAiOverview`, `getStoryCitations`, `getStoryVideoLinks`, `getPeopleAlsoAsk`, and `enhanceStoryContent` — along with their interactive schema forms.
 4. **Execute & Test with Gemini**:
    - Test manual JSON inputs directly in the inspector or attach a Gemini API key to run autonomous multi-step agent queries.
 

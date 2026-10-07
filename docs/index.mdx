@@ -33,6 +33,9 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
 - [Studio](/studio) — Web-based content creation, drafting, multi-block editing, and deletion interface.
 - [Media and Uploads](/media-uploads) — Video player resolution (YouTube, Vimeo, direct MP4) and Upstash Blob uploads.
 
+### WebMCP & AI Agents
+- [WebMCP (In-Browser AI Tools)](/webmcp) — Browser-native Model Context Protocol integration enabling AI agents and extensions to search, inspect, and enhance articles.
+
 ### Edge Worker & Storage
 - [Worker Overview](/worker/index) — Worker architecture, request dispatching, and cold-start seeding.
 - [REST Routing](/worker/routing) — Worker endpoint specifications, status queries, and payload schemas.
@@ -59,9 +62,12 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
     <Tree.Folder name="src" defaultOpen>
       <Tree.Folder name="client-modules">
         <Tree.File name="api-base.ts" />
+        <Tree.File name="webmcp.ts" highlight />
+        <Tree.File name="storyWebMcp.ts" highlight />
       </Tree.Folder>
       <Tree.Folder name="components">
         <Tree.File name="ArticleCard.tsx" highlight />
+        <Tree.File name="ArticleCodeBlock.tsx" highlight />
         <Tree.File name="StoryBody.tsx" highlight />
         <Tree.File name="StoryPage.tsx" highlight />
         <Tree.File name="VideoEmbed.tsx" />

@@ -42,9 +42,9 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 - **Slug Resolution**: The article slug is extracted from `location.pathname` and fetched via `getArticle(slug)`. Public articles resolve from the 24-hour Upstash Redis story cache (`kalidass:article:<id>` / `kalidass:slug:<slug>`) for near-zero latency edge delivery.
 - **Hero Header**: Full-width veil overlay with cover image, topic kicker tag, headline, subtitle, and author byline.
 - **Reader View Tabs**: The left reading column provides a two-tab ARIA `tablist` (keyboard-navigable via arrow keys, roving tabindex):
-  - **Article (default)**: Standard full-text essay reading experience rendered by `StoryBody`.
+  - **Article (default)**: Standard full-text essay reading experience rendered by `StoryBody`. Supports paragraphs, headings, blockquotes, images, video embeds, and `<ArticleCodeBlock />` with line numbers and multi-language Prism syntax highlighting (Python, Bash, Go, Rust, Java, C#, SQL, JSON, YAML, Ruby, Kotlin, Swift, Docker).
   - **AI Intel**: Live web search grounding dossier rendered by `IntelligencePanel`. Displays Google AI Overviews, Knowledge Graph entities, People Also Ask questions, organic citations, and videos. The dossier is lazy-fetched from `/api/articles/:slug/intel` on first tab activation (the tab badge is driven by the article's `has_intelligence` flag), with an authorized Fetch/Force Refresh action for authors/admins.
-- **Article Heuristics Sidebar**: Right-sidebar audit inspecting AI generation probability, technical rigor score, and content safety flags. Authenticated callers can trigger live re-evaluations.
+- **Article Heuristics Sidebar**: Right-sidebar audit inspecting AI generation probability, technical rigor score, content safety flags, and **Element Density** (paragraphs, quotes, images, videos, and code block counts). Authenticated callers can trigger live re-evaluations.
 - **Navigation Footer**: Direct link back to the main index (`← All briefs`).
 - **Authorization Gated Editorial Link (`Edit in studio →`)**:
   - The `Edit in studio →` link is strictly gated via `canEdit = isAuthenticated && (isAdmin || (authorEmail && userEmail === authorEmail))`.
