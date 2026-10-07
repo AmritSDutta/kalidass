@@ -2,6 +2,24 @@ import {themes as prismThemes} from "prism-react-renderer";
 import type {Config} from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 
+function resolveFaroCollectorUrl(): string {
+  if (process.env.FARO_COLLECTOR_URL) {
+    return process.env.FARO_COLLECTOR_URL.trim();
+  }
+  const endpoint = (process.env.FARO_ENDPOINT || "").trim();
+  const appId = (process.env.FARO_APP_ID || "").trim();
+  if (endpoint && appId) {
+    try {
+      const parsed = new URL(endpoint);
+      const host = parsed.hostname.replace(/^faro-api-/, "faro-collector-");
+      return `${parsed.protocol}//${host}/collect/${appId}`;
+    } catch {
+      return "";
+    }
+  }
+  return "";
+}
+
 const config: Config = {
   title: "Kalidass Journal",
   tagline: "Field notes from the neural heart.",
@@ -43,8 +61,16 @@ const config: Config = {
     adminEmails: process.env.ADMIN_EMAILS || "",
     // PRIVATE_APP=true hides Auth0 login entirely — admin-token unlock only
     privateApp: process.env.PRIVATE_APP === "true",
+    faroCollectorUrl: resolveFaroCollectorUrl(),
+    faroAppName: process.env.FARO_APP_NAME || "kalidass",
+    faroAppVersion: process.env.FARO_APP_VERSION || "1.0.0",
+    faroEnvironment: process.env.NODE_ENV || "production",
   },
-  clientModules: ["./src/client-modules/api-base.ts", "./src/client-modules/webmcp.ts"],
+  clientModules: [
+    "./src/client-modules/api-base.ts",
+    "./src/client-modules/webmcp.ts",
+    "./src/client-modules/faro.ts",
+  ],
   plugins: [
     function kalidassPlugin() {
       return {
@@ -56,8 +82,34 @@ const config: Config = {
             exact: false,
           });
         },
-        configureWebpack() {
+        configureWebpack(_config: any, isServer: boolean) {
+          const plugins: any[] = [];
+          const faroApiKey = process.env.FARO_API_KEY;
+          const faroEndpoint = process.env.FARO_ENDPOINT;
+          const faroAppId = process.env.FARO_APP_ID;
+          const faroStackId = process.env.FARO_STACK_ID;
+
+          if (!isServer && faroApiKey && faroEndpoint && faroAppId && faroStackId) {
+            try {
+              const FaroSourceMapUploaderPlugin = require("@grafana/faro-webpack-plugin");
+              plugins.push(
+                new FaroSourceMapUploaderPlugin({
+                  appName: process.env.FARO_APP_NAME || "kalidass",
+                  endpoint: faroEndpoint,
+                  appId: faroAppId,
+                  stackId: faroStackId,
+                  apiKey: faroApiKey,
+                  verbose: true,
+                  gzipContents: true,
+                })
+              );
+            } catch (pluginErr) {
+              console.warn("[Faro] Warning: Could not initialize FaroSourceMapUploaderPlugin:", pluginErr);
+            }
+          }
+
           return {
+            plugins,
             mergeStrategy: {"devServer.proxy": "replace"},
             devServer: {
               host: "0.0.0.0",

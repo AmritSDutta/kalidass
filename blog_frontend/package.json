@@ -20,6 +20,9 @@
     "@docusaurus/core": "3.10.2",
     "@docusaurus/faster": "3.10.2",
     "@docusaurus/preset-classic": "3.10.2",
+    "@grafana/faro-react": "^2.12.1",
+    "@grafana/faro-web-sdk": "^2.12.1",
+    "@grafana/faro-web-tracing": "^2.12.1",
     "@mdx-js/react": "^3.0.0",
     "@upstash/blob": "0.0.6-canary.20260914173111",
     "clsx": "^2.0.0",
@@ -31,11 +34,13 @@
     "@docusaurus/module-type-aliases": "3.10.2",
     "@docusaurus/tsconfig": "3.10.2",
     "@docusaurus/types": "3.10.2",
+    "@grafana/faro-webpack-plugin": "^0.14.1",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.0",
     "jsdom": "^25.0.1",
     "typescript": "~6.0.2",
+    "vite": "^8.3.3",
     "vitest": "^5.0.3"
   },
   "browserslist": {

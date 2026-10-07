@@ -43,6 +43,7 @@ The project is built as a unified monorepo bringing together a **Docusaurus 3.10
 
 ### ⚡ For Architects & Operators
 - **Zero-Trust Private Worker Architecture**: The backend Cloudflare Worker runs with `workers_dev = false` and has no public internet exposure. It is reached strictly in-memory via Cloudflare Pages Function Service Binding RPC.
+- **Frontend Observability & RUM (Grafana Faro)**: Live Real User Monitoring (RUM), Core Web Vitals tracking, unhandled React exception capture, OpenTelemetry HTTP request tracing, and automated production source map uploads to Grafana Cloud with zero client credentials checked into git.
 - **Multi-Tier Edge Caching**: 3-hour feed cache and 24-hour story & intelligence caches on Upstash Redis with content-hash ETag revalidation for sub-millisecond edge responses.
 - **Zero-Dependency Dev Mode**: Immediate offline local development using built-in in-memory storage — no cloud accounts or credentials required to get started.
 

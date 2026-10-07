@@ -56,9 +56,16 @@ npx wrangler deploy
 Build settings in Cloudflare Dashboard (**Workers & Pages** → **Create application** → **Pages**):
 
 - Root directory: `blog_frontend`
-- Build command: `npm install && npm run build`
+- Build command: `npm install --legacy-peer-deps && npm run build`
+  (`--legacy-peer-deps` is required: `@grafana/faro-react` peers on `react-router ^7.12 || ^8` while Docusaurus ships `react-router-dom@5`; the committed lockfile pins the working set)
 - Output directory: `build`
-- Environment variable: `NODE_VERSION=20`
+- Environment variables:
+  - `NODE_VERSION=22` (required by Vitest 5 / Vite 8 engines: Node `^22.12.0 || ^24.0.0`)
+  - `FARO_COLLECTOR_URL` (optional: Grafana Cloud RUM telemetry collector URL)
+  - `FARO_ENDPOINT` (optional: Grafana Cloud sourcemaps upload API URL)
+  - `FARO_APP_ID` (optional: Grafana Cloud App ID)
+  - `FARO_STACK_ID` (optional: Grafana Cloud Stack ID)
+  - `FARO_API_KEY` (optional: Grafana Cloud API token with `sourcemaps:write` scope)
 
 Configure the **Service Binding**:
 - Under Pages **Settings** → **Bindings** (or **Functions** → **Service bindings**):

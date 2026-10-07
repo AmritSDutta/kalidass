@@ -11,6 +11,15 @@ export default defineConfig({
       "@theme/CodeBlock": fileURLToPath(
         new URL("./src/test-utils/docusaurus-codeblock-stub.tsx", import.meta.url)
       ),
+      "@generated/docusaurus.config": fileURLToPath(
+        new URL("./src/test-utils/docusaurus-config-stub.ts", import.meta.url)
+      ),
+      "@docusaurus/useDocusaurusContext": fileURLToPath(
+        new URL("./src/test-utils/docusaurus-context-stub.ts", import.meta.url)
+      ),
+      "@docusaurus/ExecutionEnvironment": fileURLToPath(
+        new URL("./src/test-utils/docusaurus-execution-environment-stub.ts", import.meta.url)
+      ),
     },
   },
   test: {

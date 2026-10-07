@@ -240,3 +240,31 @@ Kalidass Journal exposes 7 structured tools on `window.modelContext`, `document.
 8. **Intelligence Concurrency Locks & Cache TTLs**:
    - In-flight lock `_intelInflightLocks` in `worker/src/intelligence/service.js` prevents duplicate container runs.
    - Redis cache keys: Feed = `kalidass:feed:public` (3h TTL), Story = `kalidass:article:<id>` (24h TTL), Intel = `kalidass:ai_intel:<id>` (24h TTL).
+
+---
+
+## 8. Grafana Faro Frontend Observability Architecture
+
+Kalidass Journal integrates Grafana Faro for browser Real User Monitoring (RUM), Web Vitals, console/error capture, distributed HTTP tracing, and build-time source map uploads:
+
+### Secret & Credential Invariants
+- **Zero Values Checked In**: Never commit any specific Faro endpoint, app ID, stack ID, or API key. All values are read dynamically from environment variables:
+  - `FARO_COLLECTOR_URL`: Ingestion endpoint for browser telemetry.
+  - `FARO_ENDPOINT`: Grafana Cloud source map upload API endpoint.
+  - `FARO_APP_ID`: Unique application identifier. Public by design — embedded in the client-visible collector URL when auto-derived (never confuse with `FARO_API_KEY`).
+  - `FARO_STACK_ID`: Stack identifier.
+  - `FARO_API_KEY`: Secret build token with `sourcemaps:write` scope.
+  - `FARO_APP_NAME`: Application name in Grafana (defaults to `kalidass`).
+
+### Automatic Collector URL Derivation
+- `resolveFaroCollectorUrl` in `docusaurus.config.ts` and `src/client-modules/faro.ts`:
+  - Uses explicit `FARO_COLLECTOR_URL` if defined.
+  - Falls back to deriving collector URL from `FARO_ENDPOINT` and `FARO_APP_ID` by transforming host (`faro-api-*` → `faro-collector-*`) and appending `/collect/${FARO_APP_ID}`.
+  - Gracefully returns empty string if unconfigured, keeping telemetry safely inactive.
+
+### Bundler & SSR Invariants
+- **Webpack 5 Client Only (`!isServer`)**: In `docusaurus.config.ts`, `@grafana/faro-webpack-plugin` is registered strictly during client compilation when all build variables are present.
+- **DOM Guard**: `src/client-modules/faro.ts` gates initialization with `ExecutionEnvironment.canUseDOM` to prevent Node.js static generation crashes.
+- **Trace Header CORS Isolation**: `TracingInstrumentation` limits W3C trace propagation to `/^\/api/` and `kalidass.amrit.fyi`.
+- **Root Error Boundary**: `src/theme/Root.tsx` wraps the application in `<FaroErrorBoundary>` with an accessible fallback screen.
+

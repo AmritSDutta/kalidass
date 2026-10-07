@@ -58,6 +58,7 @@
           "ci-cd",
           "testcases",
           "configuration",
+          "faro-observability",
           "deployment",
           "development",
           "learnings"
