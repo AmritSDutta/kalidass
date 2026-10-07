@@ -56,11 +56,10 @@ npx wrangler deploy
 Build settings in Cloudflare Dashboard (**Workers & Pages** → **Create application** → **Pages**):
 
 - Root directory: `blog_frontend`
-- Build command: `npm install --legacy-peer-deps && npm run build`
-  (`--legacy-peer-deps` is required: `@grafana/faro-react` peers on `react-router ^7.12 || ^8` while Docusaurus ships `react-router-dom@5`; the committed lockfile pins the working set)
+- Build command: `npm install && npm run build`
 - Output directory: `build`
 - Environment variables:
-  - `NODE_VERSION=22` (required by Vitest 5 / Vite 8 engines: Node `^22.12.0 || ^24.0.0`)
+  - `NODE_VERSION=22` (Node 20 is EOL; Vitest 5 / Vite 8 engines require Node `^22.12.0 || ^24.0.0`)
   - `FARO_COLLECTOR_URL` (optional: Grafana Cloud RUM telemetry collector URL)
   - `FARO_ENDPOINT` (optional: Grafana Cloud sourcemaps upload API URL)
   - `FARO_APP_ID` (optional: Grafana Cloud App ID)

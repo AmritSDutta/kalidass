@@ -3,7 +3,7 @@ import {render, screen} from "@testing-library/react";
 import Root from "../Root";
 
 describe("Root Theme Wrapper", () => {
-  it("renders children wrapped within AuthProvider and FaroErrorBoundary", () => {
+  it("renders children wrapped within AuthProvider and FaroAwareErrorBoundary", () => {
     render(
       <Root>
         <div data-testid="child-content">Kalidass Content</div>

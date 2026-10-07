@@ -31,7 +31,7 @@ flowchart TD
         RESOLVE["resolveFaroCollectorUrl() - Explicit FARO_COLLECTOR_URL or Auto-derived"]
         INIT["initializeFaro() - Web Vitals, Errors, Logs"]
         TRACE["TracingInstrumentation - propagateTraceHeaderCorsUrls: /api/"]
-        ROOT_EB["Root Wrapper (src/theme/Root.tsx) - FaroErrorBoundary"]
+        ROOT_EB["Root Wrapper (src/theme/Root.tsx) - FaroAwareErrorBoundary (pushError)"]
         COLLECTOR["Grafana Cloud Faro Collector (Telemetry Stream)"]
         DOM_CHECK --> RESOLVE
         RESOLVE --> INIT
@@ -95,8 +95,10 @@ Docusaurus pre-renders React components in Node.js where `window`, `document`, a
 
 ## 6. Root Error Boundary
 
-In `src/theme/Root.tsx`, `<FaroErrorBoundary>` wraps the top-level application component tree:
+In `src/theme/Root.tsx`, the custom `<FaroAwareErrorBoundary>` (`src/components/ErrorBoundary.tsx`) wraps the top-level application component tree:
 
 - Intercepts unhandled React rendering crashes.
-- Transmits component stack traces and error details to Grafana Cloud.
+- Transmits error details to Grafana Cloud via the core SDK's `api.pushError`.
 - Displays an accessible, brand-aligned fallback screen allowing readers to reload without breaking navigation.
+
+`@grafana/faro-react` is intentionally NOT used: its `react-router ^7 || ^8` peer dependency conflicts with Docusaurus's `react-router@5` and breaks `npm clean-install` on Cloudflare Pages. SPA route changes are tracked through the `onRouteDidUpdate` client-module lifecycle hook (`api.setView`) instead.

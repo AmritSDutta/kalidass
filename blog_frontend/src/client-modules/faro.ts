@@ -2,7 +2,6 @@ import ExecutionEnvironment from "@docusaurus/ExecutionEnvironment";
 import siteConfig from "@generated/docusaurus.config";
 import {initializeFaro, getWebInstrumentations, type Faro} from "@grafana/faro-web-sdk";
 import {TracingInstrumentation} from "@grafana/faro-web-tracing";
-import {ReactIntegration} from "@grafana/faro-react";
 
 let faroInstance: Faro | null = null;
 
@@ -60,11 +59,15 @@ if (ExecutionEnvironment.canUseDOM) {
               ],
             },
           }),
-          new ReactIntegration(),
         ],
       });
     } catch (err) {
       console.warn("[Faro] Failed to initialize Grafana Faro telemetry:", err);
     }
   }
+}
+
+/** Docusaurus client-module lifecycle: record each SPA navigation as a Faro view. */
+export function onRouteDidUpdate({location}: {location: {pathname: string}}): void {
+  faroInstance?.api.setView({name: location.pathname});
 }

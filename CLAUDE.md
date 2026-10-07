@@ -266,5 +266,9 @@ Kalidass Journal integrates Grafana Faro for browser Real User Monitoring (RUM),
 - **Webpack 5 Client Only (`!isServer`)**: In `docusaurus.config.ts`, `@grafana/faro-webpack-plugin` is registered strictly during client compilation when all build variables are present.
 - **DOM Guard**: `src/client-modules/faro.ts` gates initialization with `ExecutionEnvironment.canUseDOM` to prevent Node.js static generation crashes.
 - **Trace Header CORS Isolation**: `TracingInstrumentation` limits W3C trace propagation to `/^\/api/` and `kalidass.amrit.fyi`.
-- **Root Error Boundary**: `src/theme/Root.tsx` wraps the application in `<FaroErrorBoundary>` with an accessible fallback screen.
+- **No `@grafana/faro-react`**: Removed — its `react-router ^7 || ^8` peer conflicts with Docusaurus's `react-router@5` and breaks `npm clean-install` on Cloudflare Pages. Error capture uses `src/components/ErrorBoundary.tsx` (`FaroAwareErrorBoundary` → `getFaro()?.api.pushError`).
+- **Route View Tracking**: `src/client-modules/faro.ts` exports `onRouteDidUpdate` → `api.setView` per SPA navigation.
+- **Production Console Stripping**: Terser `pure_funcs` drops `console.log/info/debug/warn` from the production client bundle (`console.error` kept).
+- **Client Hardening (`src/client-modules/hardening.ts`)**: Production-only cosmetic deterrent — blocks context menu and devtools/view-source shortcuts (F12, Ctrl/Cmd+Shift+I/J/C, Ctrl/Cmd+U). Not a security boundary.
+- **Root Error Boundary**: `src/theme/Root.tsx` wraps the application in `<FaroAwareErrorBoundary>` with an accessible fallback screen.
 

@@ -70,6 +70,7 @@ const config: Config = {
     "./src/client-modules/api-base.ts",
     "./src/client-modules/webmcp.ts",
     "./src/client-modules/faro.ts",
+    "./src/client-modules/hardening.ts",
   ],
   plugins: [
     function kalidassPlugin() {
@@ -82,12 +83,24 @@ const config: Config = {
             exact: false,
           });
         },
-        configureWebpack(_config: any, isServer: boolean) {
+        configureWebpack(config: any, isServer: boolean, utils: any) {
           const plugins: any[] = [];
           const faroApiKey = process.env.FARO_API_KEY;
           const faroEndpoint = process.env.FARO_ENDPOINT;
           const faroAppId = process.env.FARO_APP_ID;
           const faroStackId = process.env.FARO_STACK_ID;
+
+          // Strip console noise from the production client bundle (keeps console.error).
+          if (!isServer && utils?.isProd && Array.isArray(config?.optimization?.minimizer)) {
+            for (const minimizer of config.optimization.minimizer) {
+              if (minimizer?.options?.terserOptions) {
+                minimizer.options.terserOptions.compress = {
+                  ...minimizer.options.terserOptions.compress,
+                  pure_funcs: ["console.log", "console.info", "console.debug", "console.warn"],
+                };
+              }
+            }
+          }
 
           if (!isServer && faroApiKey && faroEndpoint && faroAppId && faroStackId) {
             try {

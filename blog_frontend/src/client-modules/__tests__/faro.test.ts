@@ -18,16 +18,16 @@ describe("Faro Client Module", () => {
 
     it("auto-derives collector URL from FARO_ENDPOINT and FARO_APP_ID", () => {
       const result = resolveFaroCollectorUrl({
-        FARO_ENDPOINT: "https://faro-api-prod-ap-south-1.grafana.net/faro/api/v1",
-        FARO_APP_ID: "2322",
+        FARO_ENDPOINT: "https://faro-api-example.grafana.net/faro/api/v1",
+        FARO_APP_ID: "1234",
       });
-      expect(result).toBe("https://faro-collector-prod-ap-south-1.grafana.net/collect/2322");
+      expect(result).toBe("https://faro-collector-example.grafana.net/collect/1234");
     });
 
     it("returns empty string when required parameters are missing", () => {
       expect(resolveFaroCollectorUrl({})).toBe("");
       expect(resolveFaroCollectorUrl({FARO_ENDPOINT: "https://faro-api-prod.net"})).toBe("");
-      expect(resolveFaroCollectorUrl({FARO_APP_ID: "2322"})).toBe("");
+      expect(resolveFaroCollectorUrl({FARO_APP_ID: "1234"})).toBe("");
     });
   });
 });

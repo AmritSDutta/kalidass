@@ -20,7 +20,6 @@
     "@docusaurus/core": "3.10.2",
     "@docusaurus/faster": "3.10.2",
     "@docusaurus/preset-classic": "3.10.2",
-    "@grafana/faro-react": "^2.12.1",
     "@grafana/faro-web-sdk": "^2.12.1",
     "@grafana/faro-web-tracing": "^2.12.1",
     "@mdx-js/react": "^3.0.0",

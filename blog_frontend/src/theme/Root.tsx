@@ -1,10 +1,10 @@
 import React, {type ReactNode} from "react";
-import {FaroErrorBoundary} from "@grafana/faro-react";
+import FaroAwareErrorBoundary from "../components/ErrorBoundary";
 import {AuthProvider} from "../lib/auth";
 
 export default function Root({children}: {children: ReactNode}) {
   return (
-    <FaroErrorBoundary
+    <FaroAwareErrorBoundary
       fallback={
         <div style={{padding: "3rem 1.5rem", textAlign: "center", fontFamily: "var(--font-sans, sans-serif)"}}>
           <h2 style={{fontSize: "1.5rem", marginBottom: "0.5rem"}}>Something went wrong</h2>
@@ -34,6 +34,6 @@ export default function Root({children}: {children: ReactNode}) {
       }
     >
       <AuthProvider>{children}</AuthProvider>
-    </FaroErrorBoundary>
+    </FaroAwareErrorBoundary>
   );
 }
