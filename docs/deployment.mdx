@@ -27,12 +27,12 @@ flowchart TD
     JSON["kalidass/index.json and articles/:id.json"]
     Media["kalidass/media/* - Images, Clips, and Covers"]
   end
-  Browser -->|1. Loads SPA UI| Static
-  Browser -->|2. Client fetch /api/* (same-origin)| PagesFunction
-  PagesFunction -->|3. In-Memory Isolate RPC| ServiceBinding
+  Browser -->|"1. Loads SPA UI"| Static
+  Browser -->|"2. Client fetch /api/* (same-origin)"| PagesFunction
+  PagesFunction -->|"3. In-Memory Isolate RPC"| ServiceBinding
   ServiceBinding --> Worker
-  Worker -->|4. Read / Write Articles & Blobs| JSON
-  Worker -->|5. Store Blobs| Media
+  Worker -->|"4. Read / Write Articles & Blobs"| JSON
+  Worker -->|"5. Store Blobs"| Media
 ```
 
 ## Prerequisites Checklist

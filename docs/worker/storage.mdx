@@ -124,7 +124,7 @@ In addition to durable object storage in Upstash Blob, the worker incorporates a
 When a client queries `GET /api/articles` without status parameters:
 1. **Cache Lookup**: The worker queries `kalidass:feed:public` and `kalidass:feed:etag`.
 2. **ETag Revalidation**: If the client provides an `If-None-Match` header, `matchesEtag(clientHeader, etag)` validates the validator. It strips weak prefixes (`W/`) and splits comma-separated header lists per RFC 7232. On a match, the worker returns `304 Not Modified` with an empty body and `etag` header.
-3. **Full-Feed Folding**: The feed ETag is computed by hashing the count, lead ID, lead timestamp, and every article's ID and timestamp (`items.map(i => `${i.id}:${i.updatedAt || i.publishedAt}`).join("|")`). This guarantees that editing a non-lead article invalidates the ETag, eliminating stale 304 responses.
+3. **Full-Feed Folding**: The feed ETag is computed by hashing the count, lead ID, lead timestamp, and every article's ID and timestamp (`` `items.map(i => `${i.id}:${i.updatedAt || i.publishedAt}`).join("|")` ``). This guarantees that editing a non-lead article invalidates the ETag, eliminating stale 304 responses.
 4. **Deterministic Featured Stamping**: `ensureFeaturedDecided(items)` guarantees that exactly one lead story is marked `featured: true`. If no story is marked, the top story is stamped. If writing to Redis fails, stamping still occurs in-memory to prevent hero layout flicker.
 
 ### Story Caching & Isolation Policy
