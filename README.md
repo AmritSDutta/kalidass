@@ -15,9 +15,12 @@
 
 ---
 
-**Kalidass Journal** is an open-source, edge-native technical publication and systems research magazine. It explores the neural heart of modern computing: attention mechanisms, agent workflows, automated evaluations, multimodal plumbing, and distributed edge architectures.
+**Kalidass Journal** is a high-signal mixed human-AI publication at the intersection of agentic cognition, serverless, AI-native and distributed edge architectures—inspired by Kalidasa's writings. It encourages the future of writing, i.e., human-AI mixed authorship.
 
-The project is built as a unified monorepo bringing together a **Docusaurus 3.10 + React 19** static reader frontend, a private **Cloudflare Worker** REST API, **Upstash Blob & Redis** storage, and **Upstash Box** isolated cloud container sandboxes.
+The project is engineered as a unified monorepo bringing together a **Docusaurus 3.10 + React 19** static reader frontend, a private **Cloudflare Worker** REST API, **Upstash Blob & Redis** storage, **Upstash Box** isolated cloud container sandboxes, and **Grafana Faro** frontend observability.
+
+> [!NOTE]
+> **For AI Coding Agents**: If you are an autonomous coding assistant or LLM agent (Claude, Antigravity, etc.), please consult [`CLAUDE.md`](./CLAUDE.md) for non-negotiable operational invariants, machine-level execution toolchains, and data contracts. This README is curated specifically for human developers and systems engineers.
 
 ---
 

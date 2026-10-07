@@ -38,8 +38,21 @@ The frontend enforces relative same-origin routing for all client requests:
 
 The custom plugin implements two core lifecycle hooks:
 
-- **`configureWebpack`**: Replaces `devServer.proxy` with a proxy forwarding `/api` requests to `http://127.0.0.1:8787`. Configures host binding to `0.0.0.0` with `allowedHosts` support.
+- **`configureWebpack`**: Replaces `devServer.proxy` with a proxy forwarding `/api` requests to `http://127.0.0.1:8787`. Configures host binding to `0.0.0.0` with `allowedHosts` support. Additionally registers `@grafana/faro-webpack-plugin` strictly during client compilation (`!isServer`) when source map upload secrets are set.
 - **`contentLoaded`**: Registers the dynamic client-side route `/story/:slug*` mapping directly to `@site/src/components/StoryPage`.
+
+## Observability & Client Telemetry
+
+Browser telemetry and source map upload configuration in `docusaurus.config.ts`:
+
+- **`faroCollectorUrl`**: Telemetry ingestion URL (`FARO_COLLECTOR_URL`), or auto-derived from `FARO_ENDPOINT` and `FARO_APP_ID`.
+- **`faroAppName`**: Application identifier in Grafana Cloud (`FARO_APP_NAME`, default: `kalidass`).
+- **Webpack Source Map Upload**: When all required build variables (`FARO_API_KEY`, `FARO_ENDPOINT`, `FARO_APP_ID`, `FARO_STACK_ID`) are defined, `@grafana/faro-webpack-plugin` is registered strictly during client compilation (`!isServer`) to upload `.js.map` bundles to Grafana Cloud.
+- **Client Modules**:
+  - `src/client-modules/faro.ts`: Initializes Faro with Core Web Vitals, console error logging, and W3C trace propagation limited to same-origin `/api/` calls.
+  - `src/client-modules/hardening.ts`: Cosmetic deterrent blocking devtools shortcuts and context menus in production builds.
+  - `src/client-modules/api-base.ts`: Dynamic same-origin `/api` resolver.
+  - `src/client-modules/webmcp.ts`: In-browser WebMCP tool definitions and `window.modelContext` registry.
 
 ## Theme & CSS Custom Properties
 

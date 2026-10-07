@@ -14,9 +14,9 @@ description: Master documentation for the Kalidass Journal static frontend, admi
   which translates to: 
   "Knowledge or instruction yields fruit only when imparted to a receptive and worthy mind."
 
-Field notes from the neural heart. Kalidass Journal is a colorful research publication exploring AI systems: attention architectures, agent workflows, evals, and multimodal plumbing.
+Field notes from the neural heart. Kalidass Journal is a high-signal mixed human-AI publication at the intersection of agentic cognition, serverless, AI-native and distributed edge architectures—inspired by Kalidasa's writings. It encourages the future of writing, i.e., human-AI mixed authorship.
 
-The codebase is organized as a combined monorepo containing a Docusaurus 3.10 static UI, an edge Cloudflare Worker REST API, and Upstash Blob storage.
+The codebase is organized as a unified monorepo bringing together a Docusaurus 3.10 static UI, an edge Cloudflare Worker REST API, Upstash Blob & Redis storage, Upstash Box sandboxes, and Grafana Faro observability.
 
 ## Documentation Index
 
@@ -47,6 +47,7 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
 - [Upstash Box AI Article Generator](/worker/upstash-box-generator) — Sandboxed agent generation, runtimes, and cover-image synthesis.
 
 ### Operations & Deployment
+- [Grafana Faro Observability](/faro-observability) — Real User Monitoring (RUM), Core Web Vitals, OpenTelemetry request tracing, and automated sourcemap uploads.
 - [API Client Reference](/api) — Frontend client methods, Bearer auth, and fallback pipelines.
 - [CI/CD Pipeline](/ci-cd) — GitHub Actions CI automation, static typing, and quality gates.
 - [Automated Test Cases](/testcases) — 100% hermetic Vitest test suite, heuristic evaluations, and API contracts.
@@ -62,12 +63,17 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
     <Tree.Folder name="src" defaultOpen>
       <Tree.Folder name="client-modules">
         <Tree.File name="api-base.ts" />
+        <Tree.File name="faro.ts" highlight />
+        <Tree.File name="hardening.ts" />
         <Tree.File name="webmcp.ts" highlight />
         <Tree.File name="storyWebMcp.ts" highlight />
+        <Tree.File name="webmcpShared.ts" />
       </Tree.Folder>
       <Tree.Folder name="components">
         <Tree.File name="ArticleCard.tsx" highlight />
         <Tree.File name="ArticleCodeBlock.tsx" highlight />
+        <Tree.File name="ErrorBoundary.tsx" highlight />
+        <Tree.File name="KalidasaEpigraph.tsx" highlight />
         <Tree.File name="StoryBody.tsx" highlight />
         <Tree.File name="StoryPage.tsx" highlight />
         <Tree.File name="VideoEmbed.tsx" />
@@ -82,6 +88,13 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
         <Tree.File name="admin.tsx" highlight />
         <Tree.File name="generate_article.tsx" highlight />
       </Tree.Folder>
+      <Tree.Folder name="theme">
+        <Tree.File name="Root.tsx" highlight />
+      </Tree.Folder>
+    </Tree.Folder>
+    <Tree.Folder name="static">
+      <Tree.File name="_headers" highlight />
+      <Tree.File name="_redirects" />
     </Tree.Folder>
     <Tree.File name="docusaurus.config.ts" highlight />
     <Tree.File name="package.json" />
@@ -121,6 +134,7 @@ The codebase is organized as a combined monorepo containing a Docusaurus 3.10 st
   <Tree.Folder name="docs" defaultOpen>
     <Tree.File name="docs.json" highlight />
     <Tree.File name="custom.css" />
+    <Tree.File name="faro-observability.mdx" highlight />
     <Tree.File name="ci-cd.mdx" highlight />
     <Tree.File name="testcases.mdx" highlight />
     <Tree.Folder name="worker">

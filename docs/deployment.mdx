@@ -51,6 +51,12 @@ Before initiating deployment, gather and configure the following credentials:
 | **`JOURNAL_WORKER`** | Cloudflare Pages Binding | Direct edge RPC binding to `kalidass-journal-worker` |
 | **`NODE_VERSION`** | Cloudflare Pages Env | Specifies Node.js `20` or `22` for build runtime |
 | **`PRIVATE_APP`** | Cloudflare Pages Env | *(Optional)* Set to `true` to disable Auth0 and require admin token |
+| **`FARO_COLLECTOR_URL`** | Cloudflare Pages Env | *(Optional)* RUM telemetry collector ingestion URL |
+| **`FARO_ENDPOINT`** | Cloudflare Pages Env | *(Optional)* Grafana Cloud source map upload endpoint |
+| **`FARO_APP_ID`** | Cloudflare Pages Env | *(Optional)* Grafana Application identifier |
+| **`FARO_STACK_ID`** | Cloudflare Pages Env | *(Optional)* Grafana Stack identifier |
+| **`FARO_API_KEY`** | Cloudflare Pages Secret | *(Optional)* Build token with `sourcemaps:write` permission |
+| **`FARO_APP_NAME`** | Cloudflare Pages Env | *(Optional)* Application name in Grafana (default: `kalidass`) |
 
 ---
 
@@ -210,6 +216,7 @@ The frontend is a static Docusaurus site that hydrates dynamically in the client
    - `AUTH0_AUDIENCE`: `https://api.kalidass.amrit.fyi`
    - `NODE_VERSION`: `20`
    - `PRIVATE_APP`: `false` *(or `true` if operating in solo token mode)*
+   - *(Optional Grafana Faro)*: `FARO_COLLECTOR_URL`, `FARO_ENDPOINT`, `FARO_APP_ID`, `FARO_STACK_ID`, `FARO_API_KEY`, `FARO_APP_NAME`
 
 Click **Save and Deploy**.
 

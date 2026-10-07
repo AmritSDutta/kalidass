@@ -1,6 +1,9 @@
 # CLAUDE.md — Agent Operations & Technical Reference
 
-Authoritative technical specification and operational invariants for AI coding agents working in the **Kalidass Journal** codebase.
+Authoritative technical specification, operational invariants, and machine-level contracts for autonomous AI coding agents (Claude, Antigravity, etc.) working in the **Kalidass Journal** codebase.
+
+> [!NOTE]
+> **Human Developers**: Please refer to [`README.md`](./README.md) for human-focused onboarding, design rationale, and quickstart guides. This document is strictly an invariant-driven operational manual for AI agents.
 
 ---
 
@@ -69,16 +72,23 @@ Authoritative technical specification and operational invariants for AI coding a
 kalidass/
 ├── blog_frontend/                    # Docusaurus 3.10 + React 19 Frontend
 │   ├── functions/api/[[route]].ts   # Cloudflare Pages Function Service Binding proxy
+│   ├── static/
+│   │   ├── _headers                 # Enterprise security headers & CSP (connect-src *.grafana.net)
+│   │   └── _redirects               # SPA fallback (/story/* -> /index.html 200)
 │   ├── src/
 │   │   ├── client-modules/
 │   │   │   ├── api-base.ts          # Dynamic /api resolution (SSR safe)
+│   │   │   ├── faro.ts              # Grafana Faro client module & route change observer
+│   │   │   ├── hardening.ts         # Cosmetic deterrent against devtools shortcuts in prod
 │   │   │   ├── webmcp.ts            # WebMCP core tools & modelContext registry
 │   │   │   ├── storyWebMcp.ts       # Story-scoped WebMCP tools & stage enhancement
 │   │   │   └── webmcpShared.ts      # Shared WebMCP types & URL slug extractor
 │   │   ├── components/
 │   │   │   ├── ArticleCard.tsx      # Magazine & index card preview with AI badge
 │   │   │   ├── ArticleCodeBlock.tsx # Reusable syntax-highlighted code block
+│   │   │   ├── ErrorBoundary.tsx    # FaroAwareErrorBoundary wrapping UI with crash reporting
 │   │   │   ├── IntelligencePanel/   # SerpApi search grounding accordion dossier
+│   │   │   ├── KalidasaEpigraph.tsx # Prologue verse banner from Mālavikāgnimitra
 │   │   │   ├── StoryBody.tsx        # Polymorphic block renderer (all 6 types)
 │   │   │   ├── StoryPage.tsx        # Dynamic reader (/story/:slug) + outline metrics
 │   │   │   └── VideoEmbed.tsx       # YouTube, Vimeo, and direct MP4 player
@@ -91,8 +101,10 @@ kalidass/
 │   │   │   ├── magazine.tsx         # Issue archive with search & dynamic tag filter
 │   │   │   ├── admin.tsx            # Studio CMS (Compose, Drafts, Published, Delete)
 │   │   │   └── generate_article.tsx # AI agent article generation form
+│   │   ├── theme/
+│   │   │   └── Root.tsx             # Root wrapper injecting FaroAwareErrorBoundary & AuthProvider
 │   │   └── test-utils/              # Vitest webpack stubs (@docusaurus/Link, @theme/CodeBlock)
-│   ├── docusaurus.config.ts          # Dynamic route plugin, Prism languages, proxy
+│   ├── docusaurus.config.ts          # Dynamic route plugin, Prism languages, Faro uploader plugin
 │   ├── vitest.config.ts             # Vitest jsdom configuration & module aliases
 │   └── package.json
 ├── worker/                           # Cloudflare Worker REST API
@@ -122,14 +134,15 @@ kalidass/
 ├── docs/                             # Docs7 Documentation Site
 │   ├── docs.json                     # Docs7 config with filterSidebar & navigation groups
 │   ├── custom.css                    # Diagram frame widening for strict-mode Mermaid
+│   ├── faro-observability.mdx        # Grafana Faro RUM, Web Vitals & sourcemap guide
 │   └── *.mdx                         # Architectural & operational documentation
 ├── scripts/
 │   └── validate_docs.mjs             # Docs7 automated structural validator
 ├── AGENTS.md                         # Canonical agent guidelines & entry points
 ├── AI_AGENT_PUBLISH.md               # Machine-to-machine API publishing specification
-├── CLAUDE.md                         # This file
+├── CLAUDE.md                         # This file: Authoritative technical contract for AI agents
 ├── DEPLOY.md                         # Cloudflare production deployment runbook
-└── README.md                         # Human-centric project guide & quickstart
+└── README.md                         # Human-centric project guide & quickstart for engineers
 ```
 
 ---

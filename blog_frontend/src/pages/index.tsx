@@ -2,6 +2,7 @@ import {useEffect, useState, type ReactNode} from "react";
 import Link from "@docusaurus/Link";
 import Layout from "@theme/Layout";
 import ArticleCard from "@site/src/components/ArticleCard";
+import KalidasaEpigraph from "@site/src/components/KalidasaEpigraph";
 import {listArticles} from "@site/src/lib/api";
 import type {ArticleSummary} from "@site/src/lib/types";
 import styles from "./index.module.css";
@@ -38,9 +39,9 @@ export default function Home(): ReactNode {
             <em> the neural heart.</em>
           </h1>
           <p className={styles.lede}>
-            Kalidass Journal is a high-signal mixed human ai publication at the intersection of
+            Kalidass Journal is a high-signal mixed human-AI publication at the intersection of
             agentic cognition, serverless, AI-native and distributed edge architectures—inspired
-            by Kalidasa&apos;s writings. It encourges the future of writing i.e human-AI mix authorship.
+            by Kalidasa&apos;s writings. It encourages the future of writing, i.e., human-AI mixed authorship.
           </p>
           <div className={styles.actions}>
             <Link className={styles.primary} to="/magazine">
@@ -54,6 +55,8 @@ export default function Home(): ReactNode {
         </section>
 
         {error ? <p className={styles.error}>{error}</p> : null}
+
+        <KalidasaEpigraph />
 
         {featured ? (
           <section className={styles.featureSection}>
