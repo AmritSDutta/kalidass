@@ -1101,7 +1101,9 @@ function AdminInner(): ReactNode {
                           {draftEval.safety.verdict === "safe" ? "✓ Safety: Passed" : "✕ Safety: Violations"}
                         </span>
                         <span className={styles.readinessBadge}>
-                          {draftEval.metrics.editorialReadiness.choice}
+                          {typeof draftEval.metrics.editorialReadiness?.choice === "string"
+                            ? draftEval.metrics.editorialReadiness.choice
+                            : String(draftEval.metrics.editorialReadiness?.choice || "")}
                         </span>
                       </div>
 
@@ -1119,7 +1121,7 @@ function AdminInner(): ReactNode {
                             {draftEval.metrics.accuracy.score.toFixed(1)}/5
                           </span>
                           <span className={styles.auditKey}>
-                            Rigor ({draftEval.metrics.accuracy.level})
+                            Rigor ({typeof draftEval.metrics.accuracy?.level === "string" ? draftEval.metrics.accuracy.level : "competent"})
                           </span>
                         </div>
                         <div className={styles.auditItem}>

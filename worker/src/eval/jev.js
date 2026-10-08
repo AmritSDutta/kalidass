@@ -95,11 +95,25 @@ export async function evaluateJev(text, options = {}, env = {}) {
   const sexual = extractNoulVal(data.risk_sexual, 0.01);
   const antisocial = extractNoulVal(data.risk_antisocial, 0.01);
 
-  const extractScoreObj = (item, defaultScore = 3.5, defaultLevel = "competent") => {
+  const extractScoreObj = (item, labels, defaultScore = 3.5, defaultLevel = "competent") => {
     if (!item) return {score: defaultScore, level: defaultLevel, confidence: 0.85};
     if (typeof item === "number") return {score: item, level: defaultLevel, confidence: 0.85};
-    const score = typeof item.score === "number" ? item.score : defaultScore;
-    const level = item.level || item.legend || item.choice || defaultLevel;
+
+    const maxScore = Array.isArray(labels) && labels.length > 0 ? labels.length : 5;
+    const rawScore = typeof item.score === "number" ? item.score : (typeof item.value === "number" ? item.value : null);
+
+    const score = rawScore !== null && Number.isFinite(rawScore) ? rawScore : defaultScore;
+    const levelIndex = Math.min(Math.max(Math.round(score), 0), maxScore - 1);
+
+    let level = defaultLevel;
+    if (typeof item.level === "string") {
+      level = item.level;
+    } else if (item.legend && typeof item.legend === "object" && typeof item.legend[String(levelIndex)] === "string") {
+      level = item.legend[String(levelIndex)];
+    } else if (Array.isArray(labels) && typeof labels[levelIndex] === "string") {
+      level = labels[levelIndex];
+    }
+
     const confidence = typeof item.confidence === "number" ? item.confidence : 0.88;
     return {score, level, confidence};
   };
@@ -107,13 +121,20 @@ export async function evaluateJev(text, options = {}, env = {}) {
   const extractChoiceObj = (item, defaultChoice = "ready_for_publication") => {
     if (!item) return {choice: defaultChoice, confidence: 0.88};
     if (typeof item === "string") return {choice: item, confidence: 0.88};
-    const choice = item.choice || item.selected || defaultChoice;
+    let choice = defaultChoice;
+    if (typeof item.choice === "string") {
+      choice = item.choice;
+    } else if (typeof item.selected === "string") {
+      choice = item.selected;
+    } else if (typeof item.value === "string") {
+      choice = item.value;
+    }
     const confidence = typeof item.confidence === "number" ? item.confidence : 0.88;
     return {choice, confidence};
   };
 
-  const acc = extractScoreObj(data.technical_accuracy, 3.5, "competent");
-  const eng = extractScoreObj(data.engagement, 3.5, "clear");
+  const acc = extractScoreObj(data.technical_accuracy, ACCURACY_LABELS, 3.5, "competent");
+  const eng = extractScoreObj(data.engagement, ENGAGEMENT_LABELS, 3.5, "clear");
   const edit = extractChoiceObj(data.editorial_readiness, "ready_for_publication");
 
   return createEvalResult({

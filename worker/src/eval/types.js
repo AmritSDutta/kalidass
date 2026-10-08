@@ -115,21 +115,21 @@ export function createEvalResult({
       },
       accuracy: {
         score: Number(accuracyScore.toFixed(2)),
-        level: accuracyLevel,
+        level: typeof accuracyLevel === "string" ? accuracyLevel : "competent",
         confidence: Number(accuracyConf.toFixed(2)),
       },
       engagement: {
         score: Number(engagementScore.toFixed(2)),
-        level: engagementLevel,
+        level: typeof engagementLevel === "string" ? engagementLevel : "clear",
         confidence: Number(engagementConf.toFixed(2)),
       },
       editorialReadiness: {
-        choice: readinessChoice,
+        choice: typeof readinessChoice === "string" ? readinessChoice : "ready_for_publication",
         confidence: Number(readinessConf.toFixed(2)),
       },
     },
     summary:
       summary ||
-      `Article heuristics: ${accuracyLevel} accuracy, ${engagementLevel} prose, ${isAiProb > 0.6 ? "AI-drafted" : "Human-authored"}. Safety: ${verdict}.`,
+      `Article heuristics: ${typeof accuracyLevel === "string" ? accuracyLevel : "competent"} accuracy, ${typeof engagementLevel === "string" ? engagementLevel : "clear"} prose, ${isAiProb > 0.6 ? "AI-drafted" : "Human-authored"}. Safety: ${verdict}.`,
   };
 }
