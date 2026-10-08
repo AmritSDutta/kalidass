@@ -83,17 +83,17 @@ flowchart LR
         Memory["In-Memory Store (Dev Fallback)"]
     end
 
-    Reader -->|Browse & Read| Pages
-    Pages -->|Same-Origin fetch /api/*| Proxy
-    Studio -->|Bearer Auth /api/*| Proxy
-    WebMCP -->|Tool Calls| Pages
-    Proxy ==>|env.JOURNAL_WORKER.fetch (Isolate RPC)| Worker
+    Reader -->|"Browse & Read"| Pages
+    Pages -->|"Same-Origin fetch /api/*"| Proxy
+    Studio -->|"Bearer Auth /api/*"| Proxy
+    WebMCP -->|"Tool Calls"| Pages
+    Proxy == "env.JOURNAL_WORKER.fetch (Isolate RPC)" ==> Worker
     Worker --> EvalEngine
     Worker -->|"Box.create"| BoxGen
     Worker -->|"Box.create"| BoxIntel
-    Worker -->|Persistent Mode| Blob
-    Worker -->|Cache Hits/Writes| Redis
-    Worker -->|Fallback Mode| Memory
+    Worker -->|"Persistent Mode"| Blob
+    Worker -->|"Cache Hits/Writes"| Redis
+    Worker -->|"Fallback Mode"| Memory
 ```
 
 ---
@@ -371,7 +371,9 @@ node scripts/validate_docs.mjs docs
 ---
 
 
-## Developer's Digest
+## Digest from creator
+I do believe future Jornal projects will welcome AI-HUMAN partership for reading and writing.
+Havving said that , here is my take -
 
 - **Dynamic Reading Over Static Text**: Kalidass is necessary because almost no technical sites offer dynamic reading—most provide only static text. To quench their thirst for deeper knowledge, readers are usually forced to leave for external search engines or AI chats.
 - **Dual Perspective (Traditional + AI Intel)**: SerpApi fuels the concept of mixed authorship: every piece features a traditional longform research essay on one side, and live AI Intelligence grounding as the other side of the coin.
