@@ -109,7 +109,11 @@ kalidass/
 │   └── package.json
 ├── worker/                           # Cloudflare Worker REST API
 │   ├── src/
-│   │   ├── index.js                  # Main router, auth verification, CORS, dispatch
+│   │   ├── index.js                  # Main router, route dispatch, fetch guard
+│   │   ├── helper/                   # Core modular service helpers
+│   │   │   ├── auth.js               # AuthHelper: Auth0 JWT, constant-time token match
+│   │   │   ├── response.js           # ResponseHelper: CORS headers, JSON formatting, options
+│   │   │   └── storage.js            # StorageHelper: Blob/memory persistence, models, index lock
 │   │   ├── eval/
 │   │   │   ├── heuristic.js         # Whole-word regex safety & editorial readiness
 │   │   │   ├── jev.js / clef.js     # External eval provider adaptors
@@ -253,6 +257,10 @@ Kalidass Journal exposes 7 structured tools on `window.modelContext`, `document.
 8. **Intelligence Concurrency Locks & Cache TTLs**:
    - In-flight lock `_intelInflightLocks` in `worker/src/intelligence/service.js` prevents duplicate container runs.
    - Redis cache keys: Feed = `kalidass:feed:public` (3h TTL), Story = `kalidass:article:<id>` (24h TTL), Intel = `kalidass:ai_intel:<id>` (24h TTL).
+9. **Constant-Time Secret Comparison Invariant**:
+   - In `worker/src/helper/auth.js`, `matchesAdminToken` must compare secrets via `timingSafeEqual` over SHA-256 digests (`node:crypto`) to prevent timing side channels.
+10. **Isolate Index Mutation Mutex**:
+    - `withIndexLock` in `worker/src/helper/storage.js` serializes all async index read-modify-write operations within each Cloudflare Worker isolate.
 
 ---
 

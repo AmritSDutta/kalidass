@@ -5,16 +5,16 @@ description: How the worker selects between Upstash Blob and the in-memory fallb
 
 # Storage Abstraction
 
-The worker supports two storage backends selected at startup by `blobClient(env)`. Both backends expose the same `get`, `put`, and `del` interface, making the rest of the worker storage-agnostic.
+The worker supports two storage backends selected at startup by `StorageHelper.blobClient(env)`. Both backends expose the same `get`, `put`, and `del` interface, making the rest of the worker storage-agnostic.
 
 ## Backend Selection
 
 ```mermaid
 flowchart TD
-  EnvCheck["blobClient: env.UPSTASH_BLOB_TOKEN present?"]
+  EnvCheck["StorageHelper.blobClient: env.UPSTASH_BLOB_TOKEN present?"]
   UpstashMode["mode = 'upstash' - new Bucket with token"]
   MemoryMode["mode = 'memory' - memoryBucket from memory.js"]
-  SeedCheck["ensureSeed: read getIndexPath(env)"]
+  SeedCheck["StorageHelper.ensureSeed: read getIndexPath(env)"]
   Populated["Index exists and non-empty - serve as-is"]
   Empty["Index missing or empty - bootstrap empty index"]
   EnvCheck -->|"Yes"| UpstashMode
@@ -142,11 +142,11 @@ Public story reads (`GET /api/articles/:idOrSlug`) query `kalidass:article:<id>`
 
 ## JSON Helpers
 
-Two thin wrappers handle JSON serialization uniformly:
+Two thin wrappers in `StorageHelper` handle JSON serialization uniformly:
 
 ```js
 // Read with fallback on any error (missing key, network, parse failure)
-async function readJson(bucket, path, fallback = null) {
+static async readJson(bucket, path, fallback = null) {
   try {
     const res = await bucket.get(path);
     return await new Response(res.body).json();
@@ -156,7 +156,7 @@ async function readJson(bucket, path, fallback = null) {
 }
 
 // Write with no-store cache hint and 2-space pretty print
-function putJson(bucket, path, value) {
+static putJson(bucket, path, value) {
   return bucket.put(path, JSON.stringify(value, null, 2), {
     contentType: "application/json",
     cache: "no-store",

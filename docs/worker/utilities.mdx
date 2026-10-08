@@ -1,129 +1,131 @@
 ---
-title: Utility Functions
-description: Reference for all pure utility functions in the worker — slug generation, deduplication, read-time estimation, article building, index summarization, and authentication.
+title: Worker Helper Classes & Utilities
+description: Comprehensive reference for ResponseHelper, AuthHelper, and StorageHelper in the Kalidass Journal Cloudflare Worker.
 ---
 
-# Utility Functions
+# Worker Helper Classes & Utilities
 
-The worker defines six pure utility functions used across the request handlers. None of these functions perform I/O directly.
+To maintain a clean separation of concerns and keep `index.js` focused strictly on routing and request dispatching, all supporting business logic is encapsulated in three dedicated helper classes in `worker/src/helper/`.
 
-## `slugify(value)`
-
-Converts any string into a URL-safe slug.
-
-**Algorithm:**
-1. Coerce to string; default to `"brief"` if empty.
-2. Lowercase.
-3. Unicode normalize via `NFKD` (decompose accented characters).
-4. Strip non-word, non-space, non-dash characters (`[^\w\s-]`).
-5. Trim whitespace.
-6. Replace runs of spaces, underscores, or dashes with a single dash.
-7. Strip leading and trailing dashes.
-8. Truncate to 72 characters.
-9. Fallback to `"brief-<timestamp>"` if the result is empty.
-
-**Examples:**
-
-| Input | Output |
-| --- | --- |
-| `"The Geometry of Attention"` | `"the-geometry-of-attention"` |
-| `"Évolution des Modèles"` | `"evolution-des-modeles"` |
-| `""` | `"brief-1727677200000"` |
-| `"  AI / ML Systems: 2026  "` | `"ai-ml-systems-2026"` |
+```mermaid
+flowchart TD
+  Index["Worker Entrypoint (index.js)"]
+  Resp["ResponseHelper (helper/response.js)"]
+  Auth["AuthHelper (helper/auth.js)"]
+  Storage["StorageHelper (helper/storage.js)"]
+  Index -->|"CORS & JSON formatting"| Resp
+  Index -->|"JWT & Constant-time Admin Auth"| Auth
+  Index -->|"Blob I/O & Index Mutex"| Storage
+```
 
 ---
 
-## `uniqueSlug(index, slug, ignoreId?)`
+## 1. StorageHelper (`worker/src/helper/storage.js`)
 
-Ensures the candidate slug is unique within the current article index.
+`StorageHelper` manages article persistence, metadata projection, slug generation, read-time calculation, and per-isolate concurrency locking.
+
+### `withIndexLock(task)`
+
+Serializes asynchronous index read-modify-write cycles within each Cloudflare Worker isolate.
 
 ```js
-function uniqueSlug(index, slug, ignoreId) {
-  let next = slug;
-  let i = 2;
-  while (index.some((item) => item.slug === next && item.id !== ignoreId)) {
-    next = `${slug}-${i}`;
-    i += 1;
-  }
-  return next;
+static withIndexLock(task) {
+  const result = _indexLock.then(() => task(), () => task());
+  _indexLock = result.then(() => {}, () => {});
+  return result;
 }
 ```
 
-- On **create** (`POST`): `ignoreId` is `undefined` — any slug collision produces a suffix.
-- On **update** (`PUT`): `ignoreId` is the existing article's `id` — the article's own slug does not count as a collision.
+- Guarantees that concurrent mutations within an isolate execute sequentially.
+- Prevents lost updates and index corruption during rapid consecutive article operations.
 
-**Example**: If `"agent-memory"` exists, a new article with the same title gets `"agent-memory-2"`. A third gets `"agent-memory-3"`.
+### `slugify(value)`
+
+Converts any string into a URL-safe, normalized slug (truncated to 72 characters, decomposed via `NFKD`).
+
+### `uniqueSlug(index, slug, ignoreId?)`
+
+Ensures the candidate slug is unique within the article index:
+- On **create** (`POST`): `ignoreId` is omitted — any collision appends `-2`, `-3`, etc.
+- On **update** (`PUT`): `ignoreId` is the existing article's `id` — self-matches are permitted.
+
+### `estimateReadTime(blocks)`
+
+Estimates reading time in minutes by concatenating text/captions across blocks, dividing by 180 wpm, with a minimum floor of 3 minutes.
+
+### `buildArticle(body, existing?, user?)`
+
+Merges an incoming payload with existing article state and caller identity:
+- Server-stamps immutable `authorEmail` and `userId` from verified credentials.
+- Defaults `published: true`, `private: true`, and `featured: false`.
+- Records creation and update timestamps.
+
+### `summarize(article)`
+
+Projects a full article object into the lightweight `ArticleSummary` format stored in `index.json` and returned in feed lists.
+
+### `ensureSeed(bucket, env)` & `reconstructIndex(bucket, env)`
+
+Self-healing storage bootstrap:
+- Checks canonical `kalidass/index.json`.
+- Falls back to scanning individual article JSON files in the bucket (`bucket.list`) if the index is missing.
+- Reconstructs and writes the index sorted chronologically.
 
 ---
 
-## `estimateReadTime(blocks)`
+## 2. AuthHelper (`worker/src/helper/auth.js`)
 
-Estimates reading time in minutes from a `blocks` array.
+`AuthHelper` handles user authentication, Auth0 JWT validation, user profile resolution, and constant-time secret comparison.
+
+### `matchesAdminToken(candidate, env)`
+
+Performs a **timing-safe, constant-time comparison** of candidate admin tokens against `env.ADMIN_TOKEN`:
 
 ```js
-function estimateReadTime(blocks) {
-  const text = (blocks || [])
-    .map((block) => block.text || block.caption || "")
-    .join(" ");
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-  return Math.max(3, Math.round(words / 180) || 3);
+static matchesAdminToken(candidate, env) {
+  if (!candidate || !env?.ADMIN_TOKEN) return false;
+  const target = String(env.ADMIN_TOKEN).trim().replace(/^["']|["']$/g, "").trim();
+  const input = String(candidate).trim().replace(/^["']|["']$/g, "").trim();
+  if (!target || !input) return false;
+
+  const hashTarget = createHash("sha256").update(target).digest();
+  const hashInput = createHash("sha256").update(input).digest();
+  return timingSafeEqual(hashTarget, hashInput);
 }
 ```
 
-- Concatenates `text` (from `paragraph`, `heading`, `quote`) and `caption` (from `image`, `video`) fields.
-- Divides word count by 180 (average adult reading speed, wpm).
-- Minimum result is **3 minutes** regardless of content length.
+- Hashes both strings with SHA-256 before comparing with `node:crypto.timingSafeEqual`.
+- Prevents byte-by-byte timing attacks and length leakage.
+
+### `getAuthUser(request, env)`
+
+Extracts and validates credentials from `Authorization: Bearer <token>` or `x-admin-token`:
+1. **Super-Admin Token**: Direct match against `ADMIN_TOKEN` grants `role: "admin"` for automated M2M publishing.
+2. **Auth0 JWT**: Validates against Auth0's remote JWKS (`getJWKS`) using `jose`. Resolves user email, nickname, and avatar (with `/userinfo` fallback).
+3. **Step-Up Elevation**: Verifies `x-admin-token` for authors listed in `ADMIN_EMAILS` to elevate to `role: "admin"`.
 
 ---
 
-## `buildArticle(body, existing?)`
+## 3. ResponseHelper (`worker/src/helper/response.js`)
 
-Merges a request body with an optionally existing article record to produce a full article object. Used by both `POST /api/articles` and `PUT /api/articles/:id`.
+`ResponseHelper` centralizes HTTP response generation, CORS header synthesis, and origin resolution.
 
-**Merge strategy (body wins over existing, existing wins over defaults):**
+### `corsHeaders(origin, extra?)`
 
-| Field | Source Priority |
-| --- | --- |
-| `id` | `existing.id` → `crypto.randomUUID()` |
-| `slug` | Set by caller after `slugify` + `uniqueSlug` |
-| `title` | `body.title` → `existing.title` → `"Untitled brief"` |
-| `subtitle`, `excerpt`, `coverImage`, `videoUrl` | `body.*` → `existing.*` → `""` |
-| `author.name`, `.role`, `.avatar` | `body.author.*` → `existing.author.*` → defaults |
-| `tags` | `body.tags` (filtered) → `existing.tags` → `[]` |
-| `accent` | `body.accent` → `existing.accent` → `"#22d3ee"` |
-| `published` | `body.published` → `existing.published` → `true` |
-| `private` | `body.private` → `existing.private` → `true` |
-| `aiGenerated` | `body.aiGenerated` → `existing.aiGenerated` → `false` |
-| `publishedAt` | `body.publishedAt` → `existing.publishedAt` → now (if publishing) → `""` |
-| `featured` | `body.featured` → `existing.featured` → `false` |
-| `blocks` | `body.blocks` (if array) → `existing.blocks` → `[]` |
-| `createdAt` | `existing.createdAt` → now |
-| `updatedAt` | Always set to now |
+Constructs standard access-control headers including allowed methods, preflight max-age (86,400s), and custom headers (`x-admin-token`, `x-typesafe-key`, `x-eval-provider`).
 
----
+### `json(data, status = 200, origin = "*", extraHeaders = {})`
 
-## `summarize(article)`
+Constructs a standard JSON `Response` with `content-type: application/json; charset=utf-8` and CORS headers attached.
 
-Projects a full article object to the lighter `ArticleSummary` shape stored in `<rootBucket>/index.json`.
+### `options(origin)`
 
-Included fields: `id`, `slug`, `title`, `subtitle`, `excerpt`, `coverImage`, `videoUrl`, `author`, `tags`, `accent`, `publishedAt`, `readTime`, `featured`, `published`, `private`, `aiGenerated`, `updatedAt`.
+Returns an immediate `204 No Content` response for `OPTIONS` preflight requests.
 
-Excluded fields: `blocks`, `createdAt` (the full article has these; the index does not).
+### `withCors(response, origin)`
 
----
+Wraps an existing `Response` (e.g. from `@upstash/blob` upload handler) with appropriate CORS headers.
 
-## `adminOk(request, env)`
+### `resolveOrigin(request, env)`
 
-Returns `true` if the request is authorized to perform an admin operation.
-
-```js
-function adminOk(request, env) {
-  if (!env.ADMIN_TOKEN) return false;
-  const auth = request.headers.get("authorization") || "";
-  return auth === `Bearer ${env.ADMIN_TOKEN}`;
-}
-```
-
-- **Fail-Closed Security**: If `ADMIN_TOKEN` is not configured, write endpoints fail closed by returning `false`.
-- **Bearer Token Verification**: When configured, the header must be exactly `Authorization: Bearer <token>`.
-- Returns `401 { error: "Unauthorized" }` on failure.
+Resolves the `Origin` header against permitted domains (`kalidass.amrit.fyi`, `kalidass.pages.dev`, `localhost:3000`) or falls back to `env.CORS_ORIGIN`.
