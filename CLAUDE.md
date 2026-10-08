@@ -86,21 +86,27 @@ kalidass/
 │   │   ├── components/
 │   │   │   ├── ArticleCard.tsx      # Magazine & index card preview with AI badge
 │   │   │   ├── ArticleCodeBlock.tsx # Reusable syntax-highlighted code block
+│   │   │   ├── AuthNavbarItem.tsx   # Auth0-aware navbar login/logout control
+│   │   │   ├── BooksPanel/          # Amazon book suggestions panel (read-only in reader)
 │   │   │   ├── ErrorBoundary.tsx    # FaroAwareErrorBoundary wrapping UI with crash reporting
+│   │   │   ├── HomepageFeatures/    # Landing page feature cards
 │   │   │   ├── IntelligencePanel/   # SerpApi search grounding accordion dossier
 │   │   │   ├── KalidasaEpigraph.tsx # Prologue verse banner from Mālavikāgnimitra
 │   │   │   ├── StoryBody.tsx        # Polymorphic block renderer (all 6 types)
 │   │   │   ├── StoryPage.tsx        # Dynamic reader (/story/:slug) + outline metrics
 │   │   │   └── VideoEmbed.tsx       # YouTube, Vimeo, and direct MP4 player
 │   │   ├── lib/
-│   │   │   ├── api.ts               # Typed client methods (CRUD, intel, eval, upload)
+│   │   │   ├── api.ts               # Typed client methods (CRUD, intel, books, eval, upload)
+│   │   │   ├── auth.tsx             # AuthProvider & useAuth hook (Auth0 / admin token)
+│   │   │   ├── config.ts            # Runtime config & customFields resolution
 │   │   │   ├── media.ts             # Video player URL parser & embed resolvers
-│   │   │   └── types.ts             # Canonical Block union, Article, and Auth types
+│   │   │   └── types.ts             # Canonical Block union, Article, Books, and Auth types
 │   │   ├── pages/
 │   │   │   ├── index.tsx            # Lead Dispatch featured hero & issue index
-│   │   │   ├── magazine.tsx         # Issue archive with search & dynamic tag filter
+│   │   │   ├── magazine.tsx         # Issue archive with search, tag filter & pagination
 │   │   │   ├── admin.tsx            # Studio CMS (Compose, Drafts, Published, Delete)
-│   │   │   └── generate_article.tsx # AI agent article generation form
+│   │   │   ├── generate_article.tsx # AI agent article generation form
+│   │   │   └── markdown-page.mdx    # Static markdown page example
 │   │   ├── theme/
 │   │   │   └── Root.tsx             # Root wrapper injecting FaroAwareErrorBoundary & AuthProvider
 │   │   └── test-utils/              # Vitest webpack stubs (@docusaurus/Link, @theme/CodeBlock)
@@ -114,22 +120,34 @@ kalidass/
 │   │   │   ├── auth.js               # AuthHelper: Auth0 JWT, constant-time token match
 │   │   │   ├── response.js           # ResponseHelper: CORS headers, JSON formatting, options
 │   │   │   └── storage.js            # StorageHelper: Blob/memory persistence, models, index lock
+│   │   ├── books/                    # Amazon book suggestions subsystem
+│   │   │   ├── service.js           # Orchestration, Redis/Blob cache, read-only peek
+│   │   │   ├── serpapi.js           # SerpApi amazon-engine client
+│   │   │   └── scorer.js            # Jev/Clef/heuristic ranking (top 3)
 │   │   ├── eval/
+│   │   │   ├── index.js             # Dispatcher & provider cascade (jev -> clef -> heuristic)
 │   │   │   ├── heuristic.js         # Whole-word regex safety & editorial readiness
-│   │   │   ├── jev.js / clef.js     # External eval provider adaptors
+│   │   │   ├── jev.js               # TypeSafe Jev System One provider
+│   │   │   ├── clef.js              # Cloudflare Clef provider (REST or env.AI)
 │   │   │   └── types.js             # Evaluation schemas and risk thresholds
 │   │   ├── generator/
+│   │   │   ├── index.js             # Generator entry & orchestration
 │   │   │   ├── box_based_generator.js # Upstash Box article generation orchestration
 │   │   │   ├── agent_python.js      # Python agent script harness & LangChain runner
 │   │   │   ├── agent_node.js        # Node agent script harness
 │   │   │   ├── schemas.js           # Zod schemas for article & block validation
-│   │   │   └── prompts.js           # Editorial research brief prompt templates
+│   │   │   ├── prompts.js           # Editorial research brief prompt templates
+│   │   │   └── types.js             # Generator shared types
 │   │   ├── intelligence/
 │   │   │   ├── service.js           # Dossier orchestration & in-flight lock manager
-│   │   │   ├── runner.js            # Upstash Box Python research script execution
-│   │   │   └── storage.js           # Dossier persistence in Upstash Blob
+│   │   │   ├── box_runner.js        # Upstash Box Python research script execution
+│   │   │   └── python_script.js     # In-box SerpApi extraction script builder
 │   │   ├── redis/
-│   │   │   └── cache.js             # Upstash Redis client with memory fallback
+│   │   │   ├── cache.js             # Feed/story/intel/books cache & ETag helpers
+│   │   │   ├── index.js             # getRedisClient (Upstash or in-memory)
+│   │   │   ├── upstash_adapter.js   # @upstash/redis adapter
+│   │   │   ├── memory_adapter.js    # In-memory TTL adapter
+│   │   │   └── types.js             # Redis adapter contracts
 │   │   ├── memory.js                 # In-memory storage adapter fallback
 │   │   └── seed.js                  # Initial bootstrap seed (empty by default)
 │   ├── test/                         # 100% hermetic Vitest suites
@@ -138,15 +156,17 @@ kalidass/
 ├── docs/                             # Docs7 Documentation Site
 │   ├── docs.json                     # Docs7 config with filterSidebar & navigation groups
 │   ├── custom.css                    # Diagram frame widening for strict-mode Mermaid
+│   ├── books-suggestions.mdx         # Amazon book recommendations pipeline guide
 │   ├── faro-observability.mdx        # Grafana Faro RUM, Web Vitals & sourcemap guide
 │   └── *.mdx                         # Architectural & operational documentation
 ├── scripts/
 │   └── validate_docs.mjs             # Docs7 automated structural validator
+├── .agents/skills/                   # Vendored agent skill packs
 ├── AGENTS.md                         # Canonical agent guidelines & entry points
-├── AI_AGENT_PUBLISH.md               # Machine-to-machine API publishing specification
 ├── CLAUDE.md                         # This file: Authoritative technical contract for AI agents
 ├── DEPLOY.md                         # Cloudflare production deployment runbook
-└── README.md                         # Human-centric project guide & quickstart for engineers
+├── README.md                         # Human-centric project guide & quickstart for engineers
+└── skills-lock.json                  # Pinned agent skill versions
 ```
 
 ---
@@ -209,8 +229,12 @@ export type Block =
 - **`ArticleDraft`**: Input payload for `createArticle` / `updateArticle`:
   - `title`, `subtitle`, `excerpt`, `coverImage`, `videoUrl`, `author`, `tags`, `accent`, `featured`, `blocks`, `published`, `private`, `aiGenerated`, `slug`.
   - Server-managed fields (`id`, `authorEmail`, `publishedAt`, `readTime`, `createdAt`, `updatedAt`) are stripped by client and set server-side.
-- **`ArticleSummary`**: Card and list view projection containing immutable `authorEmail`, `has_intelligence: boolean`, and formatted `readTime`.
-- **`Article`**: Full record including `blocks: Block[]`, `authorEmail`, and `has_intelligence`.
+- **`ArticleSummary`**: Card and list view projection containing immutable `authorEmail`, `has_intelligence: boolean`, `has_books: boolean`, and formatted `readTime`.
+- **`Article`**: Full record including `blocks: Block[]`, `authorEmail`, `has_intelligence`, `has_books`, and (authenticated `?books=true` variant only) `books_suggestions: BooksSuggestionData | null`.
+
+### Books Suggestions Models (`blog_frontend/src/lib/types.ts` & `worker/src/books/`)
+- **`BooksSuggestionData`**: `query`, `topic`, `amazon_domain`, `fetchedAt`, `scoredBy` (`"jev" | "clef" | "heuristic"`), and `books: BookSuggestionItem[]` (max 3).
+- **`BookSuggestionItem`**: `title`, `link`, optional `thumbnail`, `price`, `rating`, `reviews_count`, `authors[]`, `asin`, `badge`, plus scorer fields `score`, `isBookConfidence`, `topicSimilarity`.
 
 ### Operational & Visibility Flags
 - `published: false` = Draft. Requires Bearer authentication. Authors see only their own drafts; admins see all.
@@ -228,11 +252,11 @@ Kalidass Journal exposes 8 structured tools on `window.modelContext`, `document.
 |---|---|---|---|
 | `searchArticles` | Global / Story | `query?: string`, `tag?: string` | Returns up to 5 matching articles, or isolates to the active story on `/story/:slug`. |
 | `readArticle` | Global / Story | `slug?: string` | Returns direct URL and metadata. Resolves automatically from `location.pathname` on `/story/:slug`. |
-| `getStoryAiOverview` | Story-scoped | none | Returns Google AI Overview text, query, and cited research references from the dossier. |
-| `getStoryCitations` | Story-scoped | none | Extracts attribution quotes and references from the story body. |
-| `getStoryVideoLinks` | Story-scoped | none | Returns hero and inline body video players and captions. |
-| `getPeopleAlsoAsk` | Story-scoped | none | Returns searcher questions and answer snippets from the dossier. |
-| `getStoryBookSuggestions` | Story-scoped | none | Returns curated Amazon book recommendations and relevant literature for the active story. |
+| `getStoryAiOverview` | Story-scoped | `slug?` | Returns Google AI Overview text, query, and cited research references from the dossier. |
+| `getStoryCitations` | Story-scoped | `slug?` | Extracts attribution quotes and references from the story body. |
+| `getStoryVideoLinks` | Story-scoped | `slug?` | Returns hero and inline body video players and captions. |
+| `getPeopleAlsoAsk` | Story-scoped | `slug?` | Returns searcher questions and answer snippets from the dossier. |
+| `getStoryBookSuggestions` | Story-scoped | `slug?` | Returns curated Amazon book recommendations and relevant literature for the active story. |
 | `enhanceStoryContent` | Story-scoped (Auth) | `enhancedText?`, `sectionHeading?`, `addNewSection?`, `blockIndex?`, `enhancedBlocks?`, `instruction?` | Stages in-browser content modifications with live preview bar. Resolves route internally via `window.location`. |
 
 ### Staging Lifecycle Events
@@ -265,6 +289,13 @@ Kalidass Journal exposes 8 structured tools on `window.modelContext`, `document.
    - In `worker/src/helper/auth.js`, `matchesAdminToken` must compare secrets via `timingSafeEqual` over SHA-256 digests (`node:crypto`) to prevent timing side channels.
 10. **Isolate Index Mutation Mutex**:
     - `withIndexLock` in `worker/src/helper/storage.js` serializes all async index read-modify-write operations within each Cloudflare Worker isolate.
+11. **Books Suggestion Invariants**:
+    - Redis key `books_suggestion:<id>` (`kalidass:books_suggestion:<id>`, 24h TTL) plus Blob object `<rootBucket>/books/<id>.json`; both invalidated by `invalidateArticleCaches`.
+    - `worker/src/books/scorer.js` cascades jev -> clef -> heuristic, filters on `score >= 0.40 && isBookConfidence >= 0.40`, and caps to the top 3. A model's zero-match verdict is preserved (never resurrected by the heuristic fallback).
+    - `POST /api/articles/:id/books` is owner/admin only; `GET /api/articles/:id/books` mirrors the article draft/private gating.
+12. **Eval Provider Cascade Invariant**:
+    - `EVAL_PROVIDER` defaults to `"jev"` (`worker/wrangler.toml`). `runQualityEvaluation` (`worker/src/eval/index.js`) cascades jev -> clef -> heuristic on missing keys or upstream outage.
+    - The safety verdict is only ever `"safe"` or `"rejected"`; article writes are rejected with `422` when the verdict is not safe.
 
 ---
 

@@ -97,6 +97,7 @@ All object paths in Upstash Blob are namespaced under the configurable `ROOT_BUC
 | Article index | `<rootBucket>/index.json` (e.g. `kalidass/index.json`) | `ArticleSummary[]` JSON |
 | Full article | `<rootBucket>/articles/<id>.json` | `Article` JSON |
 | Article intelligence | `<rootBucket>/intelligence/<id>.json` | `AiIntelligence` JSON |
+| Book suggestions | `<rootBucket>/books/<id>.json` | `BooksSuggestionData` JSON |
 | Uploaded media | `<rootBucket>/media/<filename>-<unique-suffix>` | Image or video binary |
 
 The `uniquePath` template tag from `@upstash/blob` generates collision-safe media paths inside `<rootBucket>/media/`.
@@ -118,6 +119,7 @@ In addition to durable object storage in Upstash Blob, the worker incorporates a
 | `kalidass:article:<id>` | 24 hours (86,400s) | `Article` JSON | Cached public article payload for fast reader delivery |
 | `kalidass:slug:<slug>` | 24 hours (86,400s) | `string` (article ID) | Slug-to-ID pointer for fast URL resolution |
 | `kalidass:ai_intel:<id>` | 24 hours (86,400s) | `AiIntelligence` JSON | Cached SerpApi search dossier |
+| `kalidass:books_suggestion:<id>` | 24 hours (86,400s) | `BooksSuggestionData` JSON | Cached Amazon book suggestions |
 
 ### Feed Delivery & RFC 7232 ETag Revalidation
 

@@ -23,8 +23,8 @@ flowchart TD
     InstallWorker["3a. Install Worker Dependencies"]
     InstallFrontend["3b. Install Frontend Dependencies"]
     GateTypecheck["Gate 1: Static Typecheck - tsc"]
-    GateVitest["Gate 2: Hermetic Vitest - 20 tests"]
-    GateDocs["Gate 3: Docs7 Validation - 26 pages"]
+    GateVitest["Gate 2: Hermetic Vitest - 171 tests"]
+    GateDocs["Gate 3: Docs7 Validation - 29 pages"]
   end
   subgraph Deploy["Production Delivery (Manual / Git Integration)"]
     PagesDeploy["Cloudflare Pages - Frontend Edge"]
@@ -55,11 +55,14 @@ Every CI execution runs through three automated quality gates:
 - **Scope**: Validates all React 19 pages, polymorphic block renderers (`StoryBody`, `ArticleCard`), client modules (`api-base`, `webmcp`), and API client bindings.
 - **Invariant**: Catches missing properties, invalid block unions, or improper DOM API usages at compile time.
 
-### Gate 2: Hermetic Worker Vitest Suite
-- **Command**: `npm --prefix worker test`
-- **Engine**: Vitest in isolated Node.js environment.
-- **Scope**: 69 hermetic test cases across 9 test suites:
+### Gate 2: Hermetic Test Suites
+- **Commands**: `npm --prefix blog_frontend test` and `npm --prefix worker test`
+- **Engine**: Vitest in isolated jsdom (frontend) and Node.js (worker) environments.
+- **Scope**: 171 hermetic test cases across 23 suites (70 frontend / 101 worker):
+  - **Frontend (jsdom)**: renderers, `BooksPanel`, `IntelligencePanel`, `ErrorBoundary`, `KalidasaEpigraph`, WebMCP registry, Faro, hardening, magazine pagination, and `Root`.
   - Safety heuristics & word-boundary Scunthorpe defense (`test/eval_heuristic.test.js`).
+  - TypeSafe Jev (`test/eval_jev.test.js`) and Cloudflare Clef (`test/eval_clef.test.js`) provider mapping and cascade.
+  - Book suggestions pipeline — SerpApi transform, scorer cascade, caching, and auth gating (`test/books.test.js`).
   - In-memory storage adapter mechanics (`test/memory_store.test.js`).
   - Draft normalization and schema sanitization (`test/schemas.test.js`).
   - Worker REST API endpoint contracts & auth guards (`test/worker_api.test.js`).
@@ -68,7 +71,7 @@ Every CI execution runs through three automated quality gates:
   - WebMCP route isolation & slug resolution (`test/webmcp.test.js`).
   - Box generator prompt construction, Firecrawl/Tavily (70/30) search & grounding (`test/prompts.test.js`).
   - Upstash Redis multi-user feed delivery, 3h ETag revalidation & story cache (`test/redis_cache.test.js`).
-- **Invariant**: 100% mocked and hermetic with zero external network calls and sub-second execution (~750ms).
+- **Invariant**: 100% mocked and hermetic with zero external network calls.
 
 ### Gate 3: Portable Docs7 Documentation Validator
 - **Command**: `node scripts/validate_docs.mjs docs`
@@ -113,6 +116,9 @@ jobs:
 
       - name: Frontend Static Typecheck
         run: npm --prefix blog_frontend run typecheck
+
+      - name: Frontend Hermetic UI Test Suite
+        run: npm --prefix blog_frontend test
 
       - name: Worker Hermetic Vitest Test Suite
         run: npm --prefix worker test

@@ -108,7 +108,7 @@ Send a JSON `ArticleDraft` payload. For automated agent submissions, explicitly 
 | --- | --- |
 | `slug` | Optional. If omitted, automatically slugified from `title` (max 72 chars) with deduplication suffixes (`-2`, `-3`). |
 | `id`, `createdAt`, `updatedAt`, `readTime`, `publishedAt` | **Server-owned fields**. Never include these in the draft payload. `readTime` is calculated server-side from block word counts. |
-| `blocks[].type` | Must match one of `paragraph`, `heading`, `quote`, `image`, `video`. |
+| `blocks[].type` | Must match one of `paragraph`, `heading`, `quote`, `image`, `video`, `code`. |
 | `tags` | Array of strings; empty values are filtered out automatically. |
 | Field Defaults | Default values if omitted are `published: true`, `private: true`, and `aiGenerated: false`. AI agents should always pass all three explicitly. |
 

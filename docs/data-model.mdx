@@ -87,6 +87,8 @@ Used in index feeds, search results, and Studio summary listings:
 - `aiGenerated?: boolean` — Displays the `AI` badge across cards and headers.
 - `userId?: string` — Auth0 subject identifier or system user ID.
 - `updatedAt?: string` — ISO timestamp of last modification.
+- `has_intelligence?: boolean` — Lightweight flag indicating a compiled AI intelligence dossier exists.
+- `has_books?: boolean` — Lightweight flag indicating compiled book suggestions exist.
 
 ### `Article`
 
@@ -94,6 +96,7 @@ The complete article payload returned by `getArticle()` and consumed by `StoryPa
 - All properties of `ArticleSummary`.
 - `blocks: Block[]` — Array of body content blocks.
 - `createdAt?: string` — ISO record creation timestamp.
+- `books_suggestions?: BooksSuggestionData | null` — Embedded book dossier (authenticated `?books=true` variant only).
 
 ### `ArticleDraft`
 
@@ -166,6 +169,15 @@ export interface AiIntelligence {
     link: string;
     snippet: string;
   }>;
+  answer_box?: {
+    title?: string;
+    snippet?: string;
+    link?: string;
+  } | null;
+  news?: Array<{ title: string; source: string; date: string; link: string }>;
+  books_shopping?: Array<{ title: string; price: string; source: string; link: string }>;
+  jobs_results?: Array<{ title: string; company_name: string; location: string; via: string }>;
+  discussions_and_forums?: Array<{ title: string; link: string; forum: string }>;
   fetchedAt?: string;
 }
 ```
@@ -182,7 +194,7 @@ export interface QualityEvalResult {
     violence: number;
     sexual: number;
     antisocial: number;
-    verdict: "safe" | "flagged" | "rejected";
+    verdict: "safe" | "rejected";
     violations: string[];
   };
   metrics: {
@@ -192,6 +204,36 @@ export interface QualityEvalResult {
     editorialReadiness: { choice: string; confidence: number };
   };
   summary: string;
+}
+```
+
+## Books Suggestion Schema (`BooksSuggestionData`)
+
+Amazon book recommendations compiled per article (see [Books Suggestions](/books-suggestions)):
+
+```typescript
+export interface BooksSuggestionData {
+  query: string;
+  topic: string;
+  amazon_domain: string;
+  fetchedAt: string;
+  scoredBy: "jev" | "clef" | "heuristic" | string;
+  books: BookSuggestionItem[];
+}
+
+export interface BookSuggestionItem {
+  title: string;
+  link: string;
+  thumbnail?: string;
+  price?: string;
+  rating?: number;
+  reviews_count?: number;
+  authors?: string[];
+  asin?: string;
+  badge?: string;
+  score?: number;
+  isBookConfidence?: number;
+  topicSimilarity?: number;
 }
 ```
 

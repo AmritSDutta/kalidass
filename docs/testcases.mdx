@@ -5,7 +5,7 @@ description: 100% hermetic, zero-network test suite architecture covering heuris
 
 # Automated Test Cases & Hermetic Testing
 
-Kalidass Journal incorporates a **100% hermetic automated test suite** powered by **Vitest**. The test suite runs in isolated Node.js environments with zero external network dependencies, zero real cloud secrets, and zero persistent disk mutations, delivering deterministic pass/fail results in under 300 milliseconds.
+Kalidass Journal incorporates a **100% hermetic automated test suite** powered by **Vitest**. The test suite runs in isolated Node.js environments with zero external network dependencies, zero real cloud secrets, and zero persistent disk mutations, delivering fast, deterministic pass/fail results.
 
 ---
 
@@ -15,21 +15,26 @@ Kalidass Journal incorporates a **100% hermetic automated test suite** powered b
 flowchart TD
   subgraph TestRunner["Vitest Runner (worker/vitest.config.js)"]
     HeuristicSuite["eval_heuristic.test.js - 5 tests"]
+    JevSuite["eval_jev.test.js - 4 tests"]
+    ClefSuite["eval_clef.test.js - 9 tests"]
     MemorySuite["memory_store.test.js - 4 tests"]
-    SchemaSuite["schemas.test.js - 5 tests"]
+    SchemaSuite["schemas.test.js - 7 tests"]
     WorkerApiSuite["worker_api.test.js - 9 tests"]
     ConcurrencySuite["concurrency.test.js - 2 tests"]
     IntelligenceSuite["intelligence.test.js - 12 tests"]
     WebMcpSuite["webmcp.test.js - 9 tests"]
     PromptsSuite["prompts.test.js - 8 tests"]
     RedisSuite["redis_cache.test.js - 17 tests"]
+    BooksSuite["books.test.js - 15 tests"]
   end
   subgraph SystemUnderTest["Worker Engine Under Test"]
     HeuristicEngine["eval/heuristic.js (Regex Word Boundaries)"]
+    EvalEngine["eval/jev.js + eval/clef.js"]
     MemoryAdapter["memory.js (memoryBucket & getMemoryObject)"]
     SchemaNormalizer["generator/schemas.js (sanitizeArticleDraft)"]
-    WorkerRouter["index.js (fetch dispatcher, auth, CRUD, /intel)"]
+    WorkerRouter["index.js (fetch dispatcher, auth, CRUD, /intel, /books)"]
     IntelService["intelligence/service.js (peek & generate cascade)"]
+    BooksService["books/service.js + books/scorer.js"]
     RedisAdapters["redis/ (Upstash + memory adapters)"]
   end
   subgraph MockEnv["Mock Runtime Context"]
@@ -38,12 +43,15 @@ flowchart TD
     MockProvider["env.EVAL_PROVIDER - heuristic"]
   end
   HeuristicSuite --> HeuristicEngine
+  JevSuite --> EvalEngine
+  ClefSuite --> EvalEngine
   MemorySuite --> MemoryAdapter
   SchemaSuite --> SchemaNormalizer
   WorkerApiSuite --> MockEnv
   MockEnv --> WorkerRouter
   IntelligenceSuite --> IntelService
   IntelligenceSuite --> RedisAdapters
+  BooksSuite --> BooksService
   RedisSuite --> RedisAdapters
 ```
 
@@ -57,6 +65,9 @@ The test files reside inside `worker/test/` and are organized by functional doma
   <Tree.Folder name="worker" defaultOpen>
     <Tree.Folder name="test" defaultOpen>
       <Tree.File name="eval_heuristic.test.js" highlight />
+      <Tree.File name="eval_jev.test.js" highlight />
+      <Tree.File name="eval_clef.test.js" highlight />
+      <Tree.File name="books.test.js" highlight />
       <Tree.File name="memory_store.test.js" highlight />
       <Tree.File name="schemas.test.js" highlight />
       <Tree.File name="worker_api.test.js" highlight />
@@ -201,14 +212,21 @@ Verifies the Redis feed and story delivery tier, 3-hour caching, RFC 7232 ETag v
 
 ## 4. Frontend jsdom Suite (`blog_frontend`)
 
-The Docusaurus UI ships its own hermetic Vitest/jsdom suite (`npm.cmd test` in `blog_frontend/`, 4 files / 38 tests):
+The Docusaurus UI ships its own hermetic Vitest/jsdom suite (`npm.cmd test` in `blog_frontend/`, 11 files / 70 tests):
 
 | Test File | Covers |
 | :--- | :--- |
-| `src/components/__tests__/StoryBody.test.tsx` | Block rendering across the 5-variant `Block` union. |
+| `src/components/__tests__/StoryBody.test.tsx` | Block rendering across the 6-variant `Block` union and canonical code indentation. |
 | `src/components/__tests__/ArticleCard.test.tsx` | Card interactivity, AI banner, author row. |
-| `src/client-modules/__tests__/webmcp.registry.test.ts` | Registry auto-registration of all 6 tools, story-route isolation, `StoryWebMcp` tools (lazy dossier fetch, degradation reasons, explicit slug, lookup-failure discrimination). |
+| `src/components/__tests__/BooksPanel.test.tsx` | Books panel states (unfetched, read-only, loaded, loading, error) and Amazon link targets. |
 | `src/components/__tests__/IntelligencePanel.test.tsx` | Accordion laziness (content renders on expand), section rendering, Force Refresh wiring. |
+| `src/components/__tests__/ErrorBoundary.test.tsx` | Faro-aware fallback rendering and error reporting. |
+| `src/components/__tests__/KalidasaEpigraph.test.tsx` | Sanskrit verse, translation, and play attribution. |
+| `src/client-modules/__tests__/webmcp.registry.test.ts` | Registry auto-registration of all 8 tools, story-route isolation, `StoryWebMcp` tools (lazy dossier fetch, degradation reasons, explicit slug, lookup-failure discrimination). |
+| `src/client-modules/__tests__/hardening.test.ts` | Production devtools-keyboard deterrent guards. |
+| `src/client-modules/__tests__/faro.test.ts` | Collector URL derivation and telemetry gating. |
+| `src/pages/__tests__/magazine.test.tsx` | Pagination and recency ordering (9 briefs per page). |
+| `src/theme/__tests__/Root.test.tsx` | `AuthProvider` + `FaroAwareErrorBoundary` wrapper. |
 
 ---
 
@@ -227,9 +245,8 @@ npm.cmd --prefix blog_frontend test
 
 Execution output (worker):
 ```text
- Test Files  9 passed (9)
-      Tests  71 passed (71)
-   Duration  ~750ms
+ Test Files  12 passed (12)
+      Tests  101 passed (101)
 ```
 
 ---

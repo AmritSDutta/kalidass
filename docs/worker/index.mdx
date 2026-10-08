@@ -16,6 +16,8 @@ The Kalidass Journal Worker is a lightweight Cloudflare Worker that serves as th
 - **CORS Negotiation**: Respond to `OPTIONS` preflight requests and add access-control headers to all responses.
 - **Health Reporting**: Expose `/api/health` to report server availability with HTTP `200 { "ok": true }`.
 - **Cold-Start Seeding**: Bootstrap an empty index on first request (the seed list is currently empty).
+- **Quality & Safety Evaluation**: `POST /api/eval/quality` runs the provider cascade (jev → clef → heuristic) and gates writes on the safety verdict. See [Quality & Safety Evaluation](/worker/quality-eval).
+- **Book Suggestions**: Compiles per-article Amazon recommendations via SerpApi, ranked by the same eval scorer. See [Books Suggestions](/books-suggestions).
 
 ## Tech Stack
 
@@ -38,7 +40,13 @@ The Kalidass Journal Worker is a lightweight Cloudflare Worker that serves as th
         <Tree.File name="response.js" highlight />
         <Tree.File name="storage.js" highlight />
       </Tree.Folder>
+      <Tree.Folder name="books">
+        <Tree.File name="service.js" />
+        <Tree.File name="serpapi.js" />
+        <Tree.File name="scorer.js" />
+      </Tree.Folder>
       <Tree.Folder name="eval">
+        <Tree.File name="index.js" />
         <Tree.File name="heuristic.js" />
         <Tree.File name="jev.js" />
         <Tree.File name="clef.js" />
@@ -48,17 +56,22 @@ The Kalidass Journal Worker is a lightweight Cloudflare Worker that serves as th
         <Tree.File name="box_based_generator.js" />
         <Tree.File name="agent_python.js" />
         <Tree.File name="agent_node.js" />
+        <Tree.File name="index.js" />
         <Tree.File name="schemas.js" />
         <Tree.File name="prompts.js" />
+        <Tree.File name="types.js" />
       </Tree.Folder>
       <Tree.Folder name="intelligence">
         <Tree.File name="service.js" />
-        <Tree.File name="runner.js" />
-        <Tree.File name="storage.js" />
+        <Tree.File name="box_runner.js" />
+        <Tree.File name="python_script.js" />
       </Tree.Folder>
       <Tree.Folder name="redis" defaultOpen>
         <Tree.File name="cache.js" highlight />
         <Tree.File name="index.js" />
+        <Tree.File name="upstash_adapter.js" />
+        <Tree.File name="memory_adapter.js" />
+        <Tree.File name="types.js" />
       </Tree.Folder>
       <Tree.File name="memory.js" highlight />
       <Tree.File name="seed.js" highlight />

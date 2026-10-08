@@ -42,6 +42,7 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
 ### Frontend & Reader
 - [Data Model](/data-model) — TypeScript types for Authors, Block unions, Summaries, and ArticleDrafts.
 - [Reading Experience](/reading-experience) — Dynamic rendering on Home (`/`), Magazine (`/magazine`), and Reader (`/story/:slug`).
+- [Books Suggestions](/books-suggestions) — AI-ranked Amazon book recommendations compiled per article via SerpApi and the eval scorer.
 - [Studio](/studio) — Web-based content creation, drafting, multi-block editing, and deletion interface.
 - [Media and Uploads](/media-uploads) — Video player resolution (YouTube, Vimeo, direct MP4) and Upstash Blob uploads.
 
@@ -57,6 +58,7 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
 - [Worker Utilities](/worker/utilities) — Response formatting, CORS headers, and slug generators.
 - [Quality & Safety Evaluation](/worker/quality-eval) — Provider cascade, evaluation dimensions, and pre-submit safety guardrails.
 - [Upstash Box AI Article Generator](/worker/upstash-box-generator) — Sandboxed agent generation, runtimes, and cover-image synthesis.
+- [Article Intelligence Engine](/worker/intelligence) — SerpApi grounding compiled in Upstash Box with multi-tier caching.
 
 ### Operations & Deployment
 - [Grafana Faro Observability](/faro-observability) — Real User Monitoring (RUM), Core Web Vitals, OpenTelemetry request tracing, and automated sourcemap uploads.
@@ -84,7 +86,14 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
       <Tree.Folder name="components">
         <Tree.File name="ArticleCard.tsx" highlight />
         <Tree.File name="ArticleCodeBlock.tsx" highlight />
+        <Tree.File name="AuthNavbarItem.tsx" />
         <Tree.File name="ErrorBoundary.tsx" highlight />
+        <Tree.Folder name="BooksPanel">
+          <Tree.File name="BooksPanel.tsx" highlight />
+        </Tree.Folder>
+        <Tree.Folder name="IntelligencePanel">
+          <Tree.File name="IntelligencePanel.tsx" highlight />
+        </Tree.Folder>
         <Tree.File name="KalidasaEpigraph.tsx" highlight />
         <Tree.File name="StoryBody.tsx" highlight />
         <Tree.File name="StoryPage.tsx" highlight />
@@ -92,6 +101,9 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
       </Tree.Folder>
       <Tree.Folder name="lib">
         <Tree.File name="api.ts" highlight />
+        <Tree.File name="auth.tsx" />
+        <Tree.File name="config.ts" />
+        <Tree.File name="media.ts" />
         <Tree.File name="types.ts" highlight />
       </Tree.Folder>
       <Tree.Folder name="pages">
@@ -104,6 +116,11 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
         <Tree.File name="Root.tsx" highlight />
       </Tree.Folder>
     </Tree.Folder>
+    <Tree.Folder name="functions">
+      <Tree.Folder name="api">
+        <Tree.File name="[[route]].ts" highlight />
+      </Tree.Folder>
+    </Tree.Folder>
     <Tree.Folder name="static">
       <Tree.File name="_headers" highlight />
       <Tree.File name="_redirects" />
@@ -114,30 +131,60 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
   <Tree.Folder name="worker" defaultOpen>
     <Tree.Folder name="src" defaultOpen>
       <Tree.File name="index.js" highlight />
-      <Tree.Folder name="eval" defaultOpen>
+      <Tree.Folder name="helper" defaultOpen>
+        <Tree.File name="auth.js" />
+        <Tree.File name="response.js" />
+        <Tree.File name="storage.js" />
+      </Tree.Folder>
+      <Tree.Folder name="books">
+        <Tree.File name="service.js" />
+        <Tree.File name="serpapi.js" />
+        <Tree.File name="scorer.js" />
+      </Tree.Folder>
+      <Tree.Folder name="eval">
+        <Tree.File name="index.js" />
         <Tree.File name="heuristic.js" highlight />
         <Tree.File name="jev.js" />
+        <Tree.File name="clef.js" />
         <Tree.File name="types.js" />
       </Tree.Folder>
-      <Tree.Folder name="generator" defaultOpen>
+      <Tree.Folder name="generator">
         <Tree.File name="box_based_generator.js" highlight />
         <Tree.File name="agent_python.js" highlight />
         <Tree.File name="agent_node.js" />
+        <Tree.File name="index.js" />
+        <Tree.File name="schemas.js" />
         <Tree.File name="prompts.js" />
+        <Tree.File name="types.js" />
+      </Tree.Folder>
+      <Tree.Folder name="intelligence">
+        <Tree.File name="service.js" />
+        <Tree.File name="box_runner.js" />
+        <Tree.File name="python_script.js" />
+      </Tree.Folder>
+      <Tree.Folder name="redis" defaultOpen>
+        <Tree.File name="cache.js" highlight />
+        <Tree.File name="index.js" />
+        <Tree.File name="upstash_adapter.js" />
+        <Tree.File name="memory_adapter.js" />
+        <Tree.File name="types.js" />
       </Tree.Folder>
       <Tree.File name="memory.js" />
       <Tree.File name="seed.js" />
     </Tree.Folder>
     <Tree.Folder name="test" defaultOpen>
+      <Tree.File name="books.test.js" highlight />
       <Tree.File name="eval_heuristic.test.js" highlight />
+      <Tree.File name="eval_jev.test.js" />
+      <Tree.File name="eval_clef.test.js" />
       <Tree.File name="memory_store.test.js" />
       <Tree.File name="schemas.test.js" />
       <Tree.File name="worker_api.test.js" highlight />
-      <Tree.File name="concurrency.test.js" highlight />
-      <Tree.File name="intelligence.test.js" highlight />
-      <Tree.File name="webmcp.test.js" highlight />
-      <Tree.File name="prompts.test.js" highlight />
-      <Tree.File name="redis_cache.test.js" highlight />
+      <Tree.File name="concurrency.test.js" />
+      <Tree.File name="intelligence.test.js" />
+      <Tree.File name="webmcp.test.js" />
+      <Tree.File name="prompts.test.js" />
+      <Tree.File name="redis_cache.test.js" />
     </Tree.Folder>
     <Tree.File name="vitest.config.js" highlight />
     <Tree.File name="wrangler.toml" highlight />
@@ -146,6 +193,7 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
   <Tree.Folder name="docs" defaultOpen>
     <Tree.File name="docs.json" highlight />
     <Tree.File name="custom.css" />
+    <Tree.File name="books-suggestions.mdx" highlight />
     <Tree.File name="faro-observability.mdx" highlight />
     <Tree.File name="ci-cd.mdx" highlight />
     <Tree.File name="testcases.mdx" highlight />
@@ -153,9 +201,16 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
       <Tree.File name="index.mdx" />
       <Tree.File name="routing.mdx" />
       <Tree.File name="storage.mdx" />
+      <Tree.File name="environment.mdx" />
+      <Tree.File name="wrangler.mdx" />
+      <Tree.File name="utilities.mdx" />
       <Tree.File name="quality-eval.mdx" highlight />
       <Tree.File name="upstash-box-generator.mdx" highlight />
+      <Tree.File name="intelligence.mdx" />
     </Tree.Folder>
+  </Tree.Folder>
+  <Tree.Folder name=".agents">
+    <Tree.Folder name="skills" />
   </Tree.Folder>
   <Tree.Folder name=".github" defaultOpen>
     <Tree.Folder name="workflows">
@@ -168,7 +223,8 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
   <Tree.File name="README.md" highlight />
   <Tree.File name="CLAUDE.md" />
   <Tree.File name="AGENTS.md" />
-  <Tree.File name="AI_AGENT_PUBLISH.md" />
+  <Tree.File name="DEPLOY.md" />
+  <Tree.File name="skills-lock.json" />
 </Tree>
 
 ## Local Development Quickstart

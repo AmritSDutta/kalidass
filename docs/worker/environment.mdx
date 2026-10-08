@@ -14,7 +14,7 @@ The worker reads configuration from two sources: **Cloudflare secrets** (set via
 | `UPSTASH_BLOB_TOKEN` | Secret | For persistence | *(absent)* | Upstash Blob read/write token. When absent, the worker falls back to in-memory storage and articles do not persist across restarts. |
 | `ADMIN_TOKEN` | Secret | Optional | *(absent)* | Legacy/M2M Bearer token for Super-Admin and AI Agent automated publishing. Write endpoints require valid Auth0 JWT or `ADMIN_TOKEN`. |
 | `UPSTASH_BOX_API_KEY` | Secret | For Box features | *(absent)* | Upstash Box API key required for autonomous article generation (`/api/generate`) and Python intelligence runs. |
-| `SERPAPI_API_KEY` | Secret | For intelligence | *(absent)* | SerpApi key (`SERPAPI_API_KEY` or `SERP_API_KEY`) dedicated exclusively to extracting Google search intelligence, Knowledge Graphs, and AI Overviews in the `/intel` cascade. |
+| `SERPAPI_API_KEY` | Secret | For intelligence & books | *(absent)* | SerpApi key (`SERPAPI_API_KEY` or `SERP_API_KEY`) used for Google search intelligence (Knowledge Graphs, AI Overviews) in the `/intel` cascade and for Amazon book suggestions in the [Books Suggestions](/books-suggestions) pipeline. |
 | `FIRECRAWL_API_KEY` | Secret | For Box generator | *(absent)* | Firecrawl API key injected into Upstash Box (`api.firecrawl.dev`) for deep web research and markdown extraction during article generation. |
 | `FIRECRAWL_SEARCH_WEIGHT` | Var / Secret | Optional | `"70"` | Percentage weighting for Firecrawl vs. Tavily during article generation (defaults to 70% Firecrawl, 30% Tavily). Accepts `70` or `0.7` — values ≤ 1.0 are scaled ×100. |
 | `GEMINI_API_KEY` | Secret | For Box generator | *(absent)* | Google Gemini API key injected into Upstash Box (`generativelanguage.googleapis.com` via `x-goog-api-key`) for primary article synthesis. |
@@ -25,8 +25,8 @@ The worker reads configuration from two sources: **Cloudflare secrets** (set via
 | `UPSTASH_REDIS_REST_URL` | Var / Secret | For caching | *(absent)* | Upstash Redis REST endpoint URL. When absent, the worker falls back to an in-memory Map cache. |
 | `UPSTASH_REDIS_REST_TOKEN` | Secret | For caching | *(absent)* | Upstash Redis REST authentication token. |
 | `EVAL_PROVIDER` | Var / Secret | Optional | `"jev"` | Active quality evaluation provider (`"jev"`, `"clef"`, or `"heuristic"`). Cascades on failure. |
-| `JEV_API_KEY` | Secret | For Jev eval | *(absent)* | TypeSafe AI Jev decision API key used by the quality & safety evaluation pipeline. |
-| `CLEF_API_KEY` | Secret | For Clef eval | *(absent)* | Cloudflare API token with Workers AI permission for the Cloudflare Clef decision model (`@cf/cloudflare/clef`). May also be supplied per-request via the `x-clef-key` header. |
+| `TYPESAFE_API_KEY` | Secret | For Jev eval | *(absent)* | TypeSafe AI Jev decision API key used by the quality & safety evaluation pipeline and the books scorer. `JEV_API_KEY` is accepted as an alias. |
+| `CLEF_API_KEY` | Secret | For Clef eval | *(absent)* | Cloudflare API token with Workers AI permission for the Cloudflare Clef decision model (`@cf/cloudflare/clef`). `CLOUDFLARE_API_KEY` is accepted as an alias. May also be supplied per-request via the `x-clef-key` header. |
 | `CLOUDFLARE_ACCOUNT_ID` | Var / Secret | For Clef eval | *(absent)* | Cloudflare account ID used to build the Clef REST endpoint (`/client/v4/accounts/{id}/ai/run/@cf/cloudflare/{model}`). Required for API-key mode. |
 | `CLEF_MODEL` | Var / Secret | Optional | `"clef-flash"` | Clef model selector: `"clef-flash"` (9B, fastest) or `"clef"` (27B, highest precision). Overridable per-request via `body.clefModel` / `x-cf-model`. |
 | `OPENAI_API_KEY` | Secret | For Box generator | *(absent)* | OpenAI API key passed to Upstash Box containers for agent content authoring and gpt-image-1 cover infographics. |
@@ -65,11 +65,12 @@ cp .dev.vars.example .dev.vars
 UPSTASH_BLOB_TOKEN=replace-with-upstash-blob-token
 ADMIN_TOKEN=
 ROOT_BUCKET=kalidass
-# Cloudflare Clef (API-key mode)
-CLOUDFLARE_ACCOUNT_ID=
+# Quality evaluation providers (Jev is the default)
+TYPESAFE_API_KEY=
 CLEF_API_KEY=
+CLOUDFLARE_ACCOUNT_ID=
 CLEF_MODEL=clef-flash
-EVAL_PROVIDER=clef
+EVAL_PROVIDER=jev
 ```
 
 > [!IMPORTANT]

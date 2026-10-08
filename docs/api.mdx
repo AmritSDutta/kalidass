@@ -24,10 +24,18 @@ The frontend interacts with the Cloudflare Worker API via the client library in 
 | `DELETE` | `/api/articles/:idOrSlug` | `removeArticle(id)` | **Yes** | Deletes article object from Upstash storage. Enforces ownership (`403 Forbidden` for non-owners). |
 | `POST` | `/api/upload` | Direct Upstash SDK | **Yes** | Upstash Blob direct browser upload route. Requires authenticated author or admin. |
 | `POST` | `/api/objects` | `uploadObject(file)` | **Yes** | Direct binary upload (`FormData` with `file` field) persisted to Upstash Blob. Returns `{ url, name }`. |
+| `GET` | `/api/upload` | Direct Upstash SDK | **Yes** | Upstash Blob direct upload token route (requires `UPSTASH_BLOB_TOKEN` and an authenticated author or admin). |
+| `GET` | `/api/blob/:path` | `getMemoryObject` | **Yes** | Serves in-memory blob bytes in dev mode (only active when no `UPSTASH_BLOB_TOKEN` is set). |
 | `POST` | `/api/eval/quality` | `evaluateQuality(req)` | **Yes** | Runs AI detection, accuracy, engagement, and safety evaluation. Requires Bearer token. |
 | `POST` | `/api/generate` | `generateArticle(req)` | **Yes** | Triggers containerized Upstash Box article authoring run. Requires Bearer token. |
+| `POST` | `/api/admin/reset` | Direct request | **Yes** | Flushes the article index to an empty state (Super-Admin only). |
+| `POST` | `/api/admin/reindex` | Direct request | **Yes** | Rebuilds `index.json` from stored objects and invalidates all caches (Super-Admin only). |
+| `GET` / `POST` | `/api/ai_search_insight` | Direct request | **Yes** | Ad-hoc Google AI Overview lookup for a query (`q`/`query`). Returns `{ ok, query, ai_overview, organic_results, search_metadata }`. |
 | `GET` | `/api/articles/:idOrSlug/intel` | `getIntel(slug)` | Conditional | Public read-only intelligence sub-resource (reads from Redis/Blob cache, never spawns Box). |
 | `GET` | `/api/articles/:idOrSlug?intelligence=true` | `getArticleWithIntel(slug)` | **Yes** | Compiles or refreshes live SerpApi search intelligence in Upstash Box. Requires author or admin. |
+| `GET` | `/api/articles/:idOrSlug/books` | `getArticleBooks(slug)` | Conditional | Public read-only book-suggestion sub-resource (Redis/Blob only, never generates). Gated by draft/private state. |
+| `POST` | `/api/articles/:idOrSlug/books` | `triggerArticleBooks(slug)` | **Yes** | Generates/refreshes Amazon book suggestions via SerpApi and the eval scorer. Requires author or admin. |
+| `GET` | `/api/articles/:idOrSlug?books=true` | Direct request | **Yes** | Returns the article with an embedded `books_suggestions` payload; honors `refresh=true`. |
 
 ## Authentication
 

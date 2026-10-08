@@ -29,6 +29,26 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 - **Dynamic Tag Filter**: Generates a tag filter bar from the union of all article tags, prefixed with `All`.
 - **Card Grid**: Renders all matching public articles as cards, updating instantly as search queries change.
 
+```mermaid
+flowchart TD
+  Source["Public articles from listArticles()"]
+  Query["Search box query - title, excerpt, tags"]
+  Tag["Tag filter - All or selected tag"]
+  Filter["Client-side filter and narrow"]
+  Result["Matching public articles"]
+  Grid["Card grid - 9 briefs per page"]
+  Pager["Pagination controls"]
+  Source --> Query
+  Source --> Tag
+  Query --> Filter
+  Tag --> Filter
+  Filter --> Result
+  Result --> Grid
+  Grid --> Pager
+```
+
+Changing the query string or the active tag resets pagination to page 1; the controls are hidden when the result set fits on a single page.
+
 ## ArticleCard Component (`src/components/ArticleCard.tsx`)
 
 - **Interactive Card**: The entire card functions as a clickable navigation link tinted by the `--card-accent` CSS variable.
@@ -41,9 +61,10 @@ Kalidass Journal renders reading views purely client-side within the Docusaurus 
 - **Dynamic Route**: The dynamic path `/story/:slug*` is registered via `kalidassPlugin.contentLoaded` using `actions.addRoute` in `docusaurus.config.ts`.
 - **Slug Resolution**: The article slug is extracted from `location.pathname` and fetched via `getArticle(slug)`. Public articles resolve from the 24-hour Upstash Redis story cache (`kalidass:article:<id>` / `kalidass:slug:<slug>`) for near-zero latency edge delivery.
 - **Hero Header**: Full-width veil overlay with cover image, topic kicker tag, headline, subtitle, and author byline.
-- **Reader View Tabs**: The left reading column provides a two-tab ARIA `tablist` (keyboard-navigable via arrow keys, roving tabindex):
+- **Reader View Tabs**: The left reading column provides a three-tab ARIA `tablist` (keyboard-navigable via arrow keys, roving tabindex):
   - **Article (default)**: Standard full-text essay reading experience rendered by `StoryBody`. Supports paragraphs, headings, blockquotes, images, video embeds, and `<ArticleCodeBlock />` with line numbers and multi-language Prism syntax highlighting (Python, Bash, Go, Rust, Java, C#, SQL, JSON, YAML, Ruby, Kotlin, Swift, Docker).
   - **AI Intel**: Live web search grounding dossier rendered by `IntelligencePanel`. Displays Google AI Overviews, Knowledge Graph entities, People Also Ask questions, organic citations, and videos. The dossier is lazy-fetched from `/api/articles/:slug/intel` on first tab activation (the tab badge is driven by the article's `has_intelligence` flag), with an authorized Fetch/Force Refresh action for authors/admins.
+  - **Books suggestion**: Read-only dossier rendered by `BooksPanel`, showing up to three AI-ranked Amazon book recommendations (title, authors, rating, price, buy link). Lazy-fetched from `/api/articles/:slug/books` on first activation; the tab badge is driven by the article's `has_books` flag. See [Books Suggestions](/books-suggestions).
 - **Article Heuristics Sidebar**: Right-sidebar audit inspecting AI generation probability, technical rigor score, content safety flags, and **Element Density** (paragraphs, quotes, images, videos, and code block counts). Authenticated callers can trigger live re-evaluations.
 - **Navigation Footer**: Direct link back to the main index (`← All briefs`).
 - **Authorization Gated Editorial Link (`Edit in studio →`)**:

@@ -53,7 +53,7 @@ The active evaluator is determined by `env.EVAL_PROVIDER` (or per-request overri
 - **`clef`**: Evaluates via the Cloudflare Clef decision model on Workers AI (`@cf/cloudflare/clef` / `clef-flash`), using Cloudflare API-key auth (REST `/ai/run`) or the `env.AI` binding.
 - **`heuristic`**: Evaluates via deterministic offline rule engine.
 
-If the primary provider encounters missing credentials or a network outage, the dispatcher automatically cascades to the next available provider, ensuring publishing workflows and reader audits are never blocked.
+If the primary provider encounters missing credentials or a network outage, the dispatcher automatically cascades to the next available provider, ensuring publishing workflows and reader audits are never blocked. The same provider selection and cascade also power the [Books Suggestions](/books-suggestions) scorer, which ranks Amazon candidates with the active model.
 
 ---
 

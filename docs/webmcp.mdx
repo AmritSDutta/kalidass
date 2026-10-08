@@ -103,9 +103,9 @@ Gets the direct canonical reading URL, path, and summary metadata for a specific
 
 ## 3. Story-Scoped Tools (`storyWebMcp.ts`)
 
-Four additional tools are registered by the `StoryWebMcp` class (`blog_frontend/src/client-modules/storyWebMcp.ts`). They resolve the active story from an explicit `slug` argument or, by default, from the current `/story/:slug` route (`getBrowserStorySlug`), and the intelligence dossier is lazy-fetched from `/api/articles/:slug/intel` only when the article carries the `has_intelligence` flag.
+Six additional tools are registered by the `StoryWebMcp` class (`blog_frontend/src/client-modules/storyWebMcp.ts`). They resolve the active story from an explicit `slug` argument or, by default, from the current `/story/:slug` route (`getBrowserStorySlug`). Every story tool accepts an optional `slug`; the intelligence dossier is lazy-fetched from `/api/articles/:slug/intel` only when the article carries the `has_intelligence` flag, and the book dossier is lazy-fetched from `/api/articles/:slug/books` when the article carries `has_books`.
 
-All four return a **discriminated availability union**: `{ available: true, ...data }` on success, or `{ available: false, error | reason }` — `error` distinguishes *no story context* (`"Tool only available on a story page (/story/:slug)."`) from *lookup failures* (`"Story lookup failed for '<slug>'"`), while `reason` reports section-level absences (e.g. `"No video embeds or links in this story."`).
+All six return a **discriminated availability union**: `{ available: true, ...data }` on success, or `{ available: false, error | reason }` — `error` distinguishes *no story context* (`"Tool only available on a story page (/story/:slug)."`) from *lookup failures* (`"Story lookup failed for '<slug>'"`), while `reason` reports section-level absences (e.g. `"No video embeds or links in this story."`).
 
 ### `getStoryAiOverview`
 Returns the Google AI Overview text and cited research sources for the current story.
@@ -124,6 +124,11 @@ Returns the hero (`article.videoUrl`) and inline body video blocks.
 ### `getPeopleAlsoAsk`
 Returns "People Also Ask" questions and answer snippets from the intelligence dossier.
 * **Returns**: `{ available, count, questions: [{ question, snippet, link }] }`.
+
+### `getStoryBookSuggestions`
+Returns curated Amazon book recommendations and relevant literature for the current story, compiled by the [Books Suggestions](/books-suggestions) pipeline.
+* **Input Schema / Parameters**: `slug` *(string, optional)* — defaults to the active story on `/story/:slug`.
+* **Returns**: `{ available, query, topic, total, scoredBy?, books: [{ title, authors?, price?, rating?, reviews_count?, link, thumbnail? }] }`, or `{ available: false, reason: "No book suggestions available for this story." }` when none has been compiled.
 
 ### `enhanceStoryContent`
 Stages in-browser content enhancements, section refinements, or code block additions to the currently viewed story.
@@ -150,7 +155,7 @@ Kalidass Journal is validated with the **WebMCP – Model Context Tool Inspector
    - Open the **WebMCP Inspector** side panel.
 3. **Hard-Refresh Page**:
    - Press `Ctrl + Shift + R` (or `F5`) on `https://kalidass.amrit.fyi` or `http://localhost:3000`.
-   - The inspector will automatically list all seven tools — `searchArticles`, `readArticle`, `getStoryAiOverview`, `getStoryCitations`, `getStoryVideoLinks`, `getPeopleAlsoAsk`, and `enhanceStoryContent` — along with their interactive schema forms.
+   - The inspector will automatically list all eight tools — `searchArticles`, `readArticle`, `getStoryAiOverview`, `getStoryCitations`, `getStoryVideoLinks`, `getPeopleAlsoAsk`, `getStoryBookSuggestions`, and `enhanceStoryContent` — along with their interactive schema forms.
 4. **Execute & Test with Gemini**:
    - Test manual JSON inputs directly in the inspector or attach a Gemini API key to run autonomous multi-step agent queries.
 
@@ -176,6 +181,10 @@ console.log("Article Metadata & URL:", article);
 // 4. Story-scoped tool (on /story/:slug; lazy-fetches the intel dossier)
 const overview = await window.modelContext.tools.getStoryAiOverview.execute({});
 console.log("AI Overview:", overview);
+
+// 5. Story-scoped book recommendations (on /story/:slug; lazy-fetches the books dossier)
+const books = await window.modelContext.tools.getStoryBookSuggestions.execute({});
+console.log("Book Suggestions:", books);
 ```
 
 ---

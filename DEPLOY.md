@@ -41,6 +41,7 @@ Set secrets (do not commit them to Git):
 ```bash
 npx wrangler secret put UPSTASH_BLOB_TOKEN
 npx wrangler secret put ADMIN_TOKEN  # Password for Studio writes and M2M agent publishing
+npx wrangler secret put SERPAPI_API_KEY  # Live AI Intel dossiers and Amazon book suggestions
 ```
 
 Deploy:
@@ -102,6 +103,7 @@ Without `UPSTASH_BLOB_TOKEN`, the Worker's in-memory store starts empty. Direct 
 - `/admin` composes text, image, and video blocks.
 - With a Blob token, files go browser -> Upstash (Worker only signs the upload).
 - Published articles are JSON objects at `kalidass/articles/<id>.json` plus `kalidass/index.json`.
+- Compiled reader dossiers are stored at `kalidass/intelligence/<id>.json` (AI Intel) and `kalidass/books/<id>.json` (book suggestions).
 - Optional `ADMIN_TOKEN`: in the browser console or Studio prompt, enter the token to unlock.
 
 ## 6. Verification Checklist

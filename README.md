@@ -32,6 +32,7 @@ The project is engineered as a unified monorepo bringing together a **Docusaurus
 - **Interactive Story Outline & Density**: Sticky table of contents tracking reading progress, section word counts, and element density metrics (paragraphs, quotes, images, videos, and code snippets).
 - **First-Class Multi-Language Code Blocks**: Reusable `<ArticleCodeBlock />` with line numbers and Prism syntax highlighting across 13+ languages (Python, Bash, Go, Rust, Java, C#, SQL, JSON, YAML, Ruby, Kotlin, Swift, Docker).
 - **Live Search Grounding (`AI Intel`)**: In-reader dossier powered by SerpApi and Upstash Box displaying Google AI Overviews, source citations, Knowledge Graphs, and "People Also Ask" questions.
+- **Curated Books Suggestions**: A dedicated reader tab surfaces up to three AI-ranked Amazon book recommendations for each story, with cover art, ratings, prices, and direct buy links.
 
 ### ✍️ For Writers & Editorial Teams
 - **Studio CMS (`/admin`)**: Clean web-based dashboard with 4 tab modes: **Compose**, **Drafts**, **Published**, and **Delete**.
@@ -41,7 +42,7 @@ The project is engineered as a unified monorepo bringing together a **Docusaurus
 
 ### 🤖 For AI Agents & Tooling
 - **Autonomous Article Generation (`/generate_article`)**: Ephemeral containerized agents running in Upstash Box research topics on the web, synthesize 1,200+ word essays, and generate custom 16:9 infographic cover art.
-- **In-Browser WebMCP Tools**: Full W3C Web Model Context Protocol implementation exposing 7 in-page tools (`window.modelContext`) for browser AI agents (Gemini, Claude, Chrome built-in AI) to search, read, inspect citations, and stage inline edits.
+- **In-Browser WebMCP Tools**: Full W3C Web Model Context Protocol implementation exposing 8 in-page tools (`window.modelContext`) for browser AI agents (Gemini, Claude, Chrome built-in AI) to search, read, inspect citations, fetch book suggestions, and stage inline edits.
 - **Machine-to-Machine REST API**: Direct programmatic publishing via `POST /api/articles` with Bearer token authentication.
 
 ### ⚡ For Architects & Operators
@@ -276,7 +277,7 @@ npx wrangler pages deploy build --project-name=kalidass-journal
 
 ## WebMCP (In-Browser AI Tools)
 
-Kalidass Journal registers 7 structured WebMCP tools into `window.modelContext`, `document.modelContext`, and `navigator.modelContext`:
+Kalidass Journal registers 8 structured WebMCP tools into `window.modelContext`, `document.modelContext`, and `navigator.modelContext`:
 
 ```javascript
 // Test directly in your browser DevTools Console (F12):
@@ -303,6 +304,10 @@ await window.modelContext.tools.enhanceStoryContent.execute({
   enhancedText: "Refined introductory thesis with empirical benchmarks.",
   instruction: "Clarified introduction"
 });
+
+// 6. Fetch AI-ranked Amazon book recommendations (on /story/:slug)
+const books = await window.modelContext.tools.getStoryBookSuggestions.execute({});
+console.log("Book Suggestions:", books);
 ```
 
 ---

@@ -13,7 +13,7 @@ This document provides a technical assessment of the Kalidass Journal architectu
 Using Upstash Blob with a configurable root bucket (`kalidass/*`) eliminates database migrations while delivering low-latency global reads. Both JSON documents (`kalidass/articles/<id>.json`, `kalidass/index.json`) and media assets (`kalidass/media/*`) live in the same object store namespace.
 
 ### 2. Polymorphic Content Pipeline
-Structured JSON blocks render cleanly across web and API clients without raw HTML parsing. The polymorphic `Block` union supports `paragraph`, `heading`, `quote`, `image`, and `video` variants with strict TypeScript validation.
+Structured JSON blocks render cleanly across web and API clients without raw HTML parsing. The polymorphic `Block` union supports `paragraph`, `heading`, `quote`, `image`, `video`, and `code` variants with strict TypeScript validation.
 
 ### 3. Autonomous AI Agent Ready
 Standardized `POST /api/articles` payload enables AI agents and automated pipelines to draft and publish articles directly via HTTP without browser interaction.
