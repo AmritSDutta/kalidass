@@ -1,5 +1,13 @@
 import {createEvalResult} from "./types.js";
 
+const ACCURACY_LABELS = ["misleading", "elementary", "competent", "rigorous", "expert"];
+const ENGAGEMENT_LABELS = ["dry", "clear", "engaging", "captivating"];
+const EDITORIAL_CRITERIA = {
+  needs_major_revision: "Requires substantial restructuring, fact-checking, or rewriting.",
+  needs_minor_polish: "Sound draft that needs light copy and clarity edits.",
+  ready_for_publication: "Polished and ready to publish as-is.",
+};
+
 /**
  * Evaluates text using the TypeSafe AI Jev System One decision model.
  * @param {string} text
@@ -26,17 +34,17 @@ export async function evaluateJev(text, options = {}, env = {}) {
       technical_accuracy: {
         type: "score",
         instructions: "Rate the technical rigor, factual depth, and engineering precision of systems claims.",
-        levels: ["misleading", "elementary", "competent", "rigorous", "expert"],
+        criteria: ACCURACY_LABELS,
       },
       engagement: {
         type: "score",
         instructions: "How engaging, well-paced, and compelling is this article for engineering and research readers?",
-        levels: ["dry", "clear", "engaging", "captivating"],
+        criteria: ENGAGEMENT_LABELS,
       },
       editorial_readiness: {
         type: "choice",
         instructions: "What is the editorial readiness of this draft for publication?",
-        choices: ["needs_major_revision", "needs_minor_polish", "ready_for_publication"],
+        criteria: EDITORIAL_CRITERIA,
       },
       risk_violence: {
         type: "noul",
@@ -53,6 +61,8 @@ export async function evaluateJev(text, options = {}, env = {}) {
     },
   };
 
+  console.log(`[TypeSafe Jev] Calling System One (${payload.model}) with ${Object.keys(payload.questions).length} questions...`);
+
   const response = await fetch("https://api.typesafe.ai/v1/systemone", {
     method: "POST",
     headers: {
@@ -64,11 +74,13 @@ export async function evaluateJev(text, options = {}, env = {}) {
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error(`[TypeSafe Jev] API error HTTP ${response.status}: ${errorText}`);
     throw new Error(`TypeSafe Jev API HTTP ${response.status}: ${errorText}`);
   }
 
   const raw = await response.json();
-  const data = raw.results || raw;
+  console.log(`[TypeSafe Jev] System One call succeeded (model: ${raw.model || "jev"})`);
+  const data = raw.results || raw.answers || raw;
 
   const extractNoulVal = (item, fallback = 0.01) => {
     if (typeof item === "number") return item;

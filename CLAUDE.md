@@ -222,7 +222,7 @@ export type Block =
 
 ## 6. WebMCP In-Browser AI Tools Specification
 
-Kalidass Journal exposes 7 structured tools on `window.modelContext`, `document.modelContext`, and `navigator.modelContext`:
+Kalidass Journal exposes 8 structured tools on `window.modelContext`, `document.modelContext`, and `navigator.modelContext`:
 
 | Tool | Scope | Parameters | Description |
 |---|---|---|---|
@@ -232,6 +232,7 @@ Kalidass Journal exposes 7 structured tools on `window.modelContext`, `document.
 | `getStoryCitations` | Story-scoped | none | Extracts attribution quotes and references from the story body. |
 | `getStoryVideoLinks` | Story-scoped | none | Returns hero and inline body video players and captions. |
 | `getPeopleAlsoAsk` | Story-scoped | none | Returns searcher questions and answer snippets from the dossier. |
+| `getStoryBookSuggestions` | Story-scoped | none | Returns curated Amazon book recommendations and relevant literature for the active story. |
 | `enhanceStoryContent` | Story-scoped (Auth) | `enhancedText?`, `sectionHeading?`, `addNewSection?`, `blockIndex?`, `enhancedBlocks?`, `instruction?` | Stages in-browser content modifications with live preview bar. Resolves route internally via `window.location`. |
 
 ### Staging Lifecycle Events

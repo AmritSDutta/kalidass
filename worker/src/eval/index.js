@@ -37,14 +37,21 @@ export async function runQualityEvaluation(input, options = {}, env = {}) {
 
   // 1. If Jev is requested or defaulted
   if (requestedProvider === "jev") {
-    try {
-      const jevOptions = {
-        ...options,
-        apiKey: options.jevApiKey || options.apiKey || env?.TYPESAFE_API_KEY || env?.JEV_API_KEY,
-      };
-      return await evaluateJev(text, jevOptions, env);
-    } catch (err) {
-      console.warn("Jev evaluation failed, cascading to fallback:", err.message);
+    const effectiveKey = options.jevApiKey || options.apiKey || env?.TYPESAFE_API_KEY || env?.JEV_API_KEY;
+    if (!effectiveKey) {
+      console.warn("[Quality Eval] Provider 'jev' requested, but TYPESAFE_API_KEY is missing in environment variables. Falling back to alternative provider.");
+    } else {
+      try {
+        const jevOptions = {
+          ...options,
+          apiKey: effectiveKey,
+        };
+        const result = await evaluateJev(text, jevOptions, env);
+        console.log(`[Quality Eval] TypeSafe Jev evaluation completed successfully (verdict: ${result?.safety?.verdict})`);
+        return result;
+      } catch (err) {
+        console.warn("[Quality Eval] Jev evaluation failed, cascading to fallback:", err.message);
+      }
     }
   }
 

@@ -153,7 +153,11 @@ export async function invalidateArticleCaches(redis, { id, slug, oldSlug } = {})
       redis.del("feed:public"),
       redis.del("feed:etag"),
     ];
-    if (id) tasks.push(redis.del(`article:${id}`));
+    if (id) {
+      tasks.push(redis.del(`article:${id}`));
+      tasks.push(redis.del(`ai_intel:${id}`));
+      tasks.push(redis.del(`books_suggestion:${id}`));
+    }
     if (slug) tasks.push(redis.del(`slug:${slug}`));
     if (oldSlug && oldSlug !== slug) tasks.push(redis.del(`slug:${oldSlug}`));
     await Promise.all(tasks);

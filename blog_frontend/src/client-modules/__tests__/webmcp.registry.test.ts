@@ -5,6 +5,7 @@ const apiMocks = vi.hoisted(() => ({
   listArticles: vi.fn(),
   getArticle: vi.fn(),
   getArticleIntelligence: vi.fn(),
+  getArticleBooks: vi.fn(),
   getAuthMe: vi.fn(),
 }));
 vi.mock("../../lib/api", () => apiMocks);
@@ -68,6 +69,24 @@ const sampleArticle = {
       },
     ],
   },
+  books_suggestions: {
+    query: "Books on: Attention as Routing",
+    topic: "Attention as Routing",
+    amazon_domain: "amazon.in",
+    fetchedAt: "2026-10-01T00:00:00Z",
+    scoredBy: "heuristic",
+    books: [
+      {
+        title: "Deep Learning Architectures",
+        authors: ["Ian Goodfellow"],
+        price: "₹1,200",
+        rating: 4.8,
+        reviews_count: 500,
+        link: "https://amazon.in/dp/B001",
+        thumbnail: "https://amazon.in/cover1.jpg",
+      },
+    ],
+  },
 };
 
 describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
@@ -76,9 +95,10 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
     apiMocks.listArticles.mockReset();
     apiMocks.getArticle.mockReset();
     apiMocks.getArticleIntelligence.mockReset();
+    apiMocks.getArticleBooks.mockReset();
   });
 
-  it("auto-registers all 7 tools on the model context registry", async () => {
+  it("auto-registers all 8 tools on the model context registry", async () => {
     const registry = window.modelContext;
     expect(registry).toBeTruthy();
     const tools = await registry!.listTools();
@@ -87,6 +107,7 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
       "enhanceStoryContent",
       "getPeopleAlsoAsk",
       "getStoryAiOverview",
+      "getStoryBookSuggestions",
       "getStoryCitations",
       "getStoryVideoLinks",
       "readArticle",
@@ -141,6 +162,9 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
 
       const paaRes = (await window.modelContext!.tools.getPeopleAlsoAsk.execute({})) as any;
       expect(paaRes.available).toBe(false);
+
+      const booksRes = (await window.modelContext!.tools.getStoryBookSuggestions.execute({})) as any;
+      expect(booksRes.available).toBe(false);
     });
 
     it("getStoryAiOverview extracts text and references on /story/:slug", async () => {
@@ -198,6 +222,17 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
       );
     });
 
+    it("getStoryBookSuggestions extracts books recommendations on /story/:slug", async () => {
+      window.history.pushState(null, "", "/story/attention-as-routing");
+      apiMocks.getArticle.mockResolvedValue(sampleArticle);
+
+      const res = (await window.modelContext!.tools.getStoryBookSuggestions.execute({})) as any;
+      expect(res.available).toBe(true);
+      expect(res.total).toBe(1);
+      expect(res.books[0].title).toBe("Deep Learning Architectures");
+      expect(res.books[0].price).toBe("₹1,200");
+    });
+
     it("reports available: false with reason when section is absent", async () => {
       window.history.pushState(null, "", "/story/minimal-story");
       apiMocks.getArticle.mockResolvedValue({
@@ -206,6 +241,7 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
         videoUrl: "",
         blocks: [{type: "paragraph", text: "Plain text"}],
         ai_intelligence: null,
+        books_suggestions: null,
       });
 
       const videoRes = (await window.modelContext!.tools.getStoryVideoLinks.execute({})) as any;
@@ -219,6 +255,22 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
       const paaRes = (await window.modelContext!.tools.getPeopleAlsoAsk.execute({})) as any;
       expect(paaRes.available).toBe(false);
       expect(paaRes.reason).toMatch(/no 'people also ask'/i);
+
+      const booksRes = (await window.modelContext!.tools.getStoryBookSuggestions.execute({})) as any;
+      expect(booksRes.available).toBe(false);
+      expect(booksRes.reason).toMatch(/no book/i);
+    });
+
+    it("lazy-fetches book suggestions when the article carries only has_books", async () => {
+      window.history.pushState(null, "", "/story/attention-as-routing");
+      const {books_suggestions: embeddedBooks, ...flagOnly} = sampleArticle as any;
+      apiMocks.getArticle.mockResolvedValue({...flagOnly, has_books: true, books_suggestions: null});
+      apiMocks.getArticleBooks.mockResolvedValue(embeddedBooks);
+
+      const res = (await window.modelContext!.tools.getStoryBookSuggestions.execute({})) as any;
+      expect(apiMocks.getArticleBooks).toHaveBeenCalledWith("attention-as-routing");
+      expect(res.available).toBe(true);
+      expect(res.books[0].title).toBe("Deep Learning Architectures");
     });
 
     it("lazy-fetches the dossier when the article carries only has_intelligence", async () => {

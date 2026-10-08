@@ -10,6 +10,7 @@ import type {
   AiSearchInsightResponse,
   QualityEvalRequest,
   QualityEvalResult,
+  BooksSuggestionData,
 } from "./types";
 
 export type TokenProvider = () => Promise<string | null> | string | null;
@@ -111,6 +112,18 @@ export function getArticle(
 // Public read-only dossier fetch (lazy): called when the AI Intel tab activates.
 export function getArticleIntelligence(idOrSlug: string) {
   return request<AiIntelligence>(`/api/articles/${encodeURIComponent(idOrSlug)}/intel`);
+}
+
+// Public read-only books suggestion fetch (lazy): called when Books suggestion tab activates.
+export function getArticleBooks(idOrSlug: string) {
+  return request<BooksSuggestionData>(`/api/articles/${encodeURIComponent(idOrSlug)}/books`);
+}
+
+// Authenticated generation/refresh of book suggestions.
+export function triggerArticleBooks(idOrSlug: string) {
+  return request<BooksSuggestionData>(`/api/articles/${encodeURIComponent(idOrSlug)}/books`, {
+    method: "POST",
+  });
 }
 
 export function createArticle(draft: ArticleDraft) {

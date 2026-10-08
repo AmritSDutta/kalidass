@@ -4,11 +4,12 @@ import Link from "@docusaurus/Link";
 import {useLocation} from "@docusaurus/router";
 import StoryBody, {headingSlug} from "@site/src/components/StoryBody";
 import VideoEmbed from "@site/src/components/VideoEmbed";
-import {evaluateQuality, getArticle, getArticleIntelligence, updateArticle} from "@site/src/lib/api";
+import {evaluateQuality, getArticle, getArticleIntelligence, getArticleBooks, triggerArticleBooks, updateArticle} from "@site/src/lib/api";
 import {useAuth} from "@site/src/lib/auth";
 import {formatDate} from "@site/src/lib/media";
-import type {Article, QualityEvalResult, AiIntelligence} from "@site/src/lib/types";
+import type {Article, QualityEvalResult, AiIntelligence, BooksSuggestionData} from "@site/src/lib/types";
 import {IntelligencePanel} from "@site/src/components/IntelligencePanel/IntelligencePanel";
+import {BooksPanel} from "@site/src/components/BooksPanel/BooksPanel";
 import styles from "./StoryPage.module.css";
 
 interface HeadingItem {
@@ -36,13 +37,18 @@ export default function StoryPage(): ReactNode {
   const [isSavingStaged, setIsSavingStaged] = useState<boolean>(false);
 
   // Tab navigation state for left reading column
-  const [activeTab, setActiveTab] = useState<"article" | "intel">("article");
+  const [activeTab, setActiveTab] = useState<"article" | "intel" | "books">("article");
   const [intelligence, setIntelligence] = useState<AiIntelligence | null>(null);
   const [loadingIntel, setLoadingIntel] = useState<boolean>(false);
   const [intelError, setIntelError] = useState<string | null>(null);
+  const [booksData, setBooksData] = useState<BooksSuggestionData | null>(null);
+  const [loadingBooks, setLoadingBooks] = useState<boolean>(false);
+  const [booksError, setBooksError] = useState<string | null>(null);
   const articleTabRef = useRef<HTMLButtonElement>(null);
   const intelTabRef = useRef<HTMLButtonElement>(null);
+  const booksTabRef = useRef<HTMLButtonElement>(null);
   const intelRequested = useRef<boolean>(false);
+  const booksRequested = useRef<boolean>(false);
 
   useEffect(() => {
     const handleStageEvent = (e: Event) => {
@@ -245,21 +251,58 @@ export default function StoryPage(): ReactNode {
       .finally(() => setLoadingIntel(false));
   };
 
-  const switchTab = (tab: "article" | "intel") => {
+  const handleFetchBooks = async () => {
+    if (!slug) return;
+    setLoadingBooks(true);
+    setBooksError(null);
+    try {
+      const data = await triggerArticleBooks(slug);
+      setBooksData(data);
+      setArticle((prev) => (prev ? {...prev, books_suggestions: data, has_books: true} : null));
+    } catch (err) {
+      setBooksError(err instanceof Error ? err.message : "Failed to fetch book suggestions.");
+    } finally {
+      setLoadingBooks(false);
+    }
+  };
+
+  // Lazy public fetch: books load once, on first Books suggestion tab activation.
+  const loadBooksOnce = () => {
+    if (booksRequested.current || !slug) return;
+    booksRequested.current = true;
+    setLoadingBooks(true);
+    getArticleBooks(slug)
+      .then((data) => {
+        setBooksData(data);
+        setArticle((prev) => (prev ? {...prev, books_suggestions: data, has_books: true} : null));
+      })
+      .catch(() => undefined)
+      .finally(() => setLoadingBooks(false));
+  };
+
+  const tabsList: Array<"article" | "intel" | "books"> = ["article", "intel", "books"];
+
+  const switchTab = (tab: "article" | "intel" | "books") => {
     setActiveTab(tab);
     if (tab === "intel") {
       loadIntelligenceOnce();
+    } else if (tab === "books") {
+      loadBooksOnce();
     }
-    (tab === "article" ? articleTabRef : intelTabRef).current?.focus();
+    const targetRef = tab === "article" ? articleTabRef : tab === "intel" ? intelTabRef : booksTabRef;
+    targetRef.current?.focus();
   };
 
   const handleTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const currentIndex = tabsList.indexOf(activeTab);
     if (event.key === "ArrowRight") {
       event.preventDefault();
-      switchTab("intel");
+      const nextIndex = (currentIndex + 1) % tabsList.length;
+      switchTab(tabsList[nextIndex]);
     } else if (event.key === "ArrowLeft") {
       event.preventDefault();
-      switchTab("article");
+      const prevIndex = (currentIndex - 1 + tabsList.length) % tabsList.length;
+      switchTab(tabsList[prevIndex]);
     }
   };
 
@@ -433,6 +476,24 @@ export default function StoryPage(): ReactNode {
                     </span>
                   )}
                 </button>
+                <button
+                  ref={booksTabRef}
+                  type="button"
+                  role="tab"
+                  id="story-tab-books"
+                  aria-controls="story-panel-books"
+                  aria-selected={activeTab === "books"}
+                  tabIndex={activeTab === "books" ? 0 : -1}
+                  className={`${styles.tabBtn} ${activeTab === "books" ? styles.tabBtnActive : ""}`}
+                  onClick={() => switchTab("books")}
+                >
+                  Books suggestion
+                  {(booksData || article.has_books) && (
+                    <span className={styles.tabBadge} title="Book suggestions available">
+                      ✓
+                    </span>
+                  )}
+                </button>
               </div>
 
               {activeTab === "article" ? (
@@ -455,7 +516,7 @@ export default function StoryPage(): ReactNode {
                     </div>
                   ) : null}
                 </div>
-              ) : (
+              ) : activeTab === "intel" ? (
                 <div
                   className={styles.intelTabWrap}
                   role="tabpanel"
@@ -467,6 +528,21 @@ export default function StoryPage(): ReactNode {
                     onFetch={canEdit ? handleFetchIntelligence : undefined}
                     loading={loadingIntel}
                     error={intelError}
+                    readOnly={!canEdit}
+                  />
+                </div>
+              ) : (
+                <div
+                  className={styles.intelTabWrap}
+                  role="tabpanel"
+                  id="story-panel-books"
+                  aria-labelledby="story-tab-books"
+                >
+                  <BooksPanel
+                    booksData={booksData || article.books_suggestions || null}
+                    onFetch={canEdit ? handleFetchBooks : undefined}
+                    loading={loadingBooks}
+                    error={booksError}
                     readOnly={!canEdit}
                   />
                 </div>

@@ -53,6 +53,8 @@ export type ArticleSummary = {
   evaluation?: QualityEvalResult | null;
   isFallback?: boolean;
   fallbackNotice?: string;
+  /** Server flag: stored book recommendations exist (fetched lazily via /books). */
+  has_books?: boolean;
 };
 
 export type Article = ArticleSummary & {
@@ -61,6 +63,9 @@ export type Article = ArticleSummary & {
   ai_intelligence?: AiIntelligence | null;
   /** Server flag: a stored dossier exists (fetched lazily via /intel). */
   has_intelligence?: boolean;
+  /** Server flag: stored book recommendations exist (fetched lazily via /books). */
+  has_books?: boolean;
+  books_suggestions?: BooksSuggestionData | null;
 };
 
 export type ArticleDraft = {
@@ -252,6 +257,30 @@ export interface AiIntelligence {
     snippet: string;
   }>;
   fetchedAt?: string;
+}
+
+export interface BookSuggestionItem {
+  title: string;
+  link: string;
+  thumbnail?: string;
+  price?: string;
+  rating?: number;
+  reviews_count?: number;
+  authors?: string[];
+  asin?: string;
+  badge?: string;
+  score?: number;
+  isBookConfidence?: number;
+  topicSimilarity?: number;
+}
+
+export interface BooksSuggestionData {
+  query: string;
+  topic: string;
+  amazon_domain: string;
+  fetchedAt: string;
+  scoredBy: "jev" | "clef" | "heuristic" | string;
+  books: BookSuggestionItem[];
 }
 
 

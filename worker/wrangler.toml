@@ -15,6 +15,6 @@ CORS_ORIGIN = "https://kalidass.amrit.fyi"
 ROOT_BUCKET = "kalidass"
 CLEF_MODEL = "clef-flash"
 EVAL_PROVIDER = "jev"
-# AUTH0_DOMAIN, AUTH0_AUDIENCE, ADMIN_EMAILS, CLEF_API_KEY, and CLOUDFLARE_ACCOUNT_ID
+# AUTH0_DOMAIN, AUTH0_AUDIENCE, ADMIN_EMAILS, TYPESAFE_API_KEY, CLEF_API_KEY, and CLOUDFLARE_ACCOUNT_ID
 # are configured via wrangler secret / .dev.vars
 

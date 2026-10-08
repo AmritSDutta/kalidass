@@ -1,11 +1,12 @@
-import {getArticle, getArticleIntelligence, getAuthMe} from "../lib/api";
-import type {Article, AiIntelligence, Block} from "../lib/types";
+import {getArticle, getArticleIntelligence, getArticleBooks, getAuthMe} from "../lib/api";
+import type {Article, AiIntelligence, BooksSuggestionData, Block} from "../lib/types";
 import type {WebMcpTool} from "./webmcpShared";
 import {getBrowserStorySlug} from "./webmcpShared";
 
 export interface StoryWebMcpDeps {
   getArticleFn?: typeof getArticle;
   getIntelligenceFn?: typeof getArticleIntelligence;
+  getArticleBooksFn?: typeof getArticleBooks;
   getAuthMeFn?: typeof getAuthMe;
   currentPathname?: string;
   adminTokenOverride?: string | null;
@@ -342,6 +343,69 @@ export class StoryWebMcp {
   }
 
   /**
+   * Tool: getStoryBookSuggestions
+   * Returns curated Amazon book recommendations and literature details for the current story.
+   */
+  async getStoryBookSuggestions(args?: {slug?: string}): Promise<
+    StoryToolResult<{
+      query: string;
+      topic: string;
+      total: number;
+      scoredBy?: string;
+      books: Array<{
+        title: string;
+        authors?: string[];
+        price?: string;
+        rating?: number;
+        reviews_count?: number;
+        link: string;
+        thumbnail?: string;
+      }>;
+    }>
+  > {
+    const resolved = await this.resolveForTool(args?.slug);
+    if (!resolved.ok) {
+      return {available: false, error: resolved.error};
+    }
+    const {article} = resolved.data;
+    const targetSlug = args?.slug || article.slug || getBrowserStorySlug(this.deps.currentPathname) || "";
+
+    let booksData: BooksSuggestionData | null = article.books_suggestions || null;
+    if (!booksData && targetSlug) {
+      const getBooksFn = this.deps.getArticleBooksFn || getArticleBooks;
+      try {
+        booksData = await getBooksFn(targetSlug);
+      } catch {
+        booksData = null;
+      }
+    }
+
+    if (!booksData || !booksData.books || booksData.books.length === 0) {
+      return {
+        available: false,
+        reason: "No book suggestions available for this story.",
+      };
+    }
+
+    return {
+      available: true,
+      query: booksData.query,
+      topic: booksData.topic,
+      total: booksData.books.length,
+      scoredBy: booksData.scoredBy,
+      books: booksData.books.map((b) => ({
+        title: b.title,
+        authors: b.authors,
+        price: b.price,
+        rating: b.rating,
+        reviews_count: b.reviews_count,
+        link: b.link,
+        thumbnail: b.thumbnail,
+      })),
+    };
+  }
+
+  /**
    * Tool 5: enhanceStoryContent
    * Enhances textual blog content (headings, paragraphs, quotes) on the story page.
    * Target story is strictly resolved from window.location (/story/:slug).
@@ -633,6 +697,14 @@ export class StoryWebMcp {
         inputSchema: baseSlugSchema,
         parameters: baseSlugSchema,
         execute: (args?: {slug?: string}) => this.getPeopleAlsoAsk(args),
+      },
+      {
+        name: "getStoryBookSuggestions",
+        description:
+          "Returns curated Amazon book recommendations and relevant literature for the current story page (/story/:slug).",
+        inputSchema: baseSlugSchema,
+        parameters: baseSlugSchema,
+        execute: (args?: {slug?: string}) => this.getStoryBookSuggestions(args),
       },
       {
         name: "enhanceStoryContent",

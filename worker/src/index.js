@@ -3,6 +3,7 @@ import {seedArticles} from "./seed.js";
 import {runQualityEvaluation, extractArticleText} from "./eval/index.js";
 import {generateArticle} from "./generator/index.js";
 import {getOrGenerateArticleIntelligence, peekArticleIntelligence} from "./intelligence/service.js";
+import {getOrGenerateArticleBooks, peekArticleBooks} from "./books/service.js";
 import {
   getRedisClient,
   getCachedPublicFeed,
@@ -494,13 +495,82 @@ export default {
         return ResponseHelper.json(intel, 200, origin);
       }
 
+      // Books suggestion sub-resource (GET = public peek, POST = auth generate/refresh)
+      const booksMatch = url.pathname.match(/^\/api\/articles\/([^/]+)\/books$/);
+      if (booksMatch) {
+        const key = decodeURIComponent(booksMatch[1]);
+        const index = await StorageHelper.ensureSeed(bucket, env);
+        const meta = index.find((item) => item.id === key || item.slug === key);
+        if (!meta) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+
+        if (request.method === "GET") {
+          if (meta.published === false || meta.private === true) {
+            const user = await AuthHelper.getAuthUser(request, env);
+            if (!user) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+            const isOwner =
+              Boolean(meta.authorEmail) &&
+              meta.authorEmail.toLowerCase() === user.email.toLowerCase();
+            if (user.role !== "admin" && !isOwner) {
+              return ResponseHelper.json({error: "Article not found"}, 404, origin);
+            }
+          }
+
+          const books = await peekArticleBooks(meta.id, env, {
+            bucket,
+            readJson: (...args) => StorageHelper.readJson(...args),
+          });
+          if (!books) return ResponseHelper.json({error: "No book suggestions compiled for this article"}, 404, origin);
+          return ResponseHelper.json(books, 200, origin);
+        }
+
+        if (request.method === "POST") {
+          const user = await AuthHelper.getAuthUser(request, env);
+          if (!user) return ResponseHelper.json({error: "Unauthorized: Authentication required"}, 401, origin);
+          const isOwner =
+            Boolean(meta.authorEmail) &&
+            meta.authorEmail.toLowerCase() === user.email.toLowerCase();
+          if (user.role !== "admin" && !isOwner) {
+            return ResponseHelper.json({error: "Forbidden: You can only generate book suggestions for your own articles"}, 403, origin);
+          }
+
+          let article = await StorageHelper.readJson(bucket, StorageHelper.getArticleObject(meta.id, env), null);
+          if (!article) {
+            article = seedArticles.find((item) => item.id === meta.id || item.slug === meta.slug) || null;
+          }
+          if (!article) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+          if (!article.id) article.id = meta.id;
+
+          try {
+            const result = await getOrGenerateArticleBooks(
+              article,
+              env,
+              {
+                bucket,
+                readJson: (...args) => StorageHelper.readJson(...args),
+                putJson: (...args) => StorageHelper.putJson(...args),
+              },
+              {refresh: true}
+            );
+            const redis = getRedisClient(env);
+            await invalidateOnlyArticleCache(redis, { id: meta.id, slug: meta.slug });
+            return ResponseHelper.json(result, 201, origin);
+          } catch (err) {
+            console.error("[Books Generation Error]:", err);
+            return ResponseHelper.json({
+              error: err?.message || "Failed to generate book suggestions. Please try again later.",
+            }, 500, origin);
+          }
+        }
+      }
+
       const articleMatch = url.pathname.match(/^\/api\/articles\/([^/]+)$/);
       if (articleMatch) {
         const key = decodeURIComponent(articleMatch[1]);
         const redis = getRedisClient(env);
         const isIntelRequest = url.searchParams.get("intelligence") === "true";
+        const isBooksRequest = url.searchParams.get("books") === "true";
 
-        if (request.method === "GET" && !isIntelRequest) {
+        if (request.method === "GET" && !isIntelRequest && !isBooksRequest) {
           const cachedArticle = await getCachedArticle(redis, key);
           if (cachedArticle) {
             if (cachedArticle.published === false || cachedArticle.private === true) {
@@ -572,10 +642,49 @@ export default {
             }
           }
 
-          // Public readers lazy-fetch the dossier via /intel; expose only a
-          // lightweight existence flag so the tab badge renders without the payload.
+          if (url.searchParams.get("books") === "true") {
+            const user = await AuthHelper.getAuthUser(request, env);
+            if (!user) return ResponseHelper.json({error: "Unauthorized: Authentication required"}, 401, origin);
+            const isOwner =
+              Boolean(meta.authorEmail) &&
+              meta.authorEmail.toLowerCase() === user.email.toLowerCase();
+            if (user.role !== "admin" && !isOwner) {
+              return ResponseHelper.json({error: "Forbidden: You can only view book suggestions for your own articles"}, 403, origin);
+            }
+
+            const refresh = url.searchParams.get("refresh") === "true";
+
+            try {
+              const books = await getOrGenerateArticleBooks(
+                article,
+                env,
+                {
+                  bucket,
+                  readJson: (...args) => StorageHelper.readJson(...args),
+                  putJson: (...args) => StorageHelper.putJson(...args),
+                },
+                {refresh}
+              );
+              await invalidateOnlyArticleCache(redis, { id: meta.id, slug: meta.slug });
+              return ResponseHelper.json({...article, books_suggestions: books}, 200, origin);
+            } catch (booksErr) {
+              console.error("[Books Error]:", booksErr);
+              return ResponseHelper.json({
+                error: "Failed to fetch book suggestions. Please try again later.",
+              }, 500, origin);
+            }
+          }
+
+          // Public readers lazy-fetch the dossier via /intel and books via /books; expose only
+          // lightweight existence flags so the tab badges render without full payloads.
           const cachedIntel = article.ai_intelligence ||
             (await peekArticleIntelligence(meta.id, env, {
+              bucket,
+              readJson: (...args) => StorageHelper.readJson(...args),
+            }));
+
+          const cachedBooks = article.books_suggestions ||
+            (await peekArticleBooks(meta.id, env, {
               bucket,
               readJson: (...args) => StorageHelper.readJson(...args),
             }));
@@ -583,6 +692,7 @@ export default {
           const responseArticle = {
             ...article,
             has_intelligence: Boolean(cachedIntel),
+            has_books: Boolean(cachedBooks),
           };
           if (responseArticle.published !== false && responseArticle.private !== true) {
             await setCachedArticle(redis, responseArticle);
