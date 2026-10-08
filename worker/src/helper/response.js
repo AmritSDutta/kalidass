@@ -3,7 +3,7 @@ export class ResponseHelper {
     return {
       "access-control-allow-origin": origin,
       "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS",
-      "access-control-allow-headers": "content-type,authorization,x-admin-token,x-typesafe-key,x-jev-key,x-clef-key,x-eval-provider",
+      "access-control-allow-headers": "content-type,authorization,x-admin-token,x-typesafe-key,x-jev-key,x-clef-key,x-eval-provider,x-cf-model",
       "access-control-max-age": "86400",
       ...extra,
     };

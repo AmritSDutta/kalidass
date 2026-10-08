@@ -36,6 +36,9 @@ routes = [
 # CORS origin for allowed client origins
 CORS_ORIGIN = "https://kalidass.amrit.fyi"
 ROOT_BUCKET = "kalidass"
+# Quality evaluation provider and default Cloudflare Clef model selector
+EVAL_PROVIDER = "clef"
+CLEF_MODEL = "clef-flash"
 ```
 
 ## Key Fields Explained
@@ -51,6 +54,8 @@ ROOT_BUCKET = "kalidass"
 | `routes` | `api.kalidass.amrit.fyi/*` | Binds worker directly to custom zone subdomain `api.kalidass.amrit.fyi`. |
 | `CORS_ORIGIN` | `"https://kalidass.amrit.fyi"` | Value of the `Access-Control-Allow-Origin` response header. |
 | `ROOT_BUCKET` | `"kalidass"` | Root folder prefix inside Upstash Blob for article JSON and media objects. |
+| `EVAL_PROVIDER` | `"clef"` | Active quality & safety evaluation provider (`clef`, `jev`, or `heuristic`). See [Quality & Safety Evaluation](/worker/quality-eval). |
+| `CLEF_MODEL` | `"clef-flash"` | Cloudflare Clef model selector — `clef-flash` (9B, lowest latency) or `clef` (27B, highest precision). |
 
 ## `.wranglerignore`
 

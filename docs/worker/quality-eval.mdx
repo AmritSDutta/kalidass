@@ -57,6 +57,24 @@ If the primary provider encounters missing credentials or a network outage, the 
 
 ---
 
+## Cloudflare Clef Provider
+
+Clef is Cloudflare's open decision model on Workers AI (`@cf/cloudflare/clef`, `@cf/cloudflare/clef-flash`), following the same System One schema as Jev. `worker/src/eval/clef.js` submits the same seven typed questions (`noul`, `score`, `choice`) and normalizes the returned `answers` into a `cloudflare-clef` result.
+
+Clef supports two access modes. The REST path takes precedence whenever an API key is present:
+
+| Mode | Required configuration | Call |
+| --- | --- | --- |
+| **API key (REST)** | `CLEF_API_KEY` + `CLOUDFLARE_ACCOUNT_ID` | `POST https://api.cloudflare.com/client/v4/accounts/{id}/ai/run/@cf/cloudflare/{model}` with `Authorization: Bearer` |
+| **Workers AI binding** | `[ai]` binding named `AI` in `wrangler.toml` | `env.AI.run("@cf/cloudflare/{model}", payload)` |
+
+- **Model selector**: `CLEF_MODEL` = `clef-flash` (default — 9B, lowest latency) or `clef` (27B, highest precision).
+- **Per-request overrides**: `x-clef-key` (API key), `x-eval-provider` (provider), and `x-cf-model` (model) headers, or the `clefApiKey` / `provider` / `clefModel` request-body fields.
+- **Score normalization**: Clef returns a probability-weighted, 0-based `score`; the adapter maps it onto the canonical `1..N` scale before `createEvalResult` clamps it.
+- **Fallback**: a missing key in REST mode, a missing `CLOUDFLARE_ACCOUNT_ID`, or any upstream error cascades to `local-heuristic`.
+
+---
+
 ## Evaluation Dimensions & Decision Primitives
 
 | Dimension | Primitive | Range / Values | Purpose |
