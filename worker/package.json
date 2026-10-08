@@ -2,6 +2,7 @@
   "name": "kalidass-journal-worker",
   "version": "1.0.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --port 8787 --ip 0.0.0.0",

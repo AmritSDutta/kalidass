@@ -374,5 +374,13 @@ Having said that , here is my take -
 ## License & Credits
 
 - **Author**: Amrit (@amrit)
-- **License**: MIT
+- **License**: [GNU Affero General Public License v3.0](./LICENSE) (`AGPL-3.0-only`)
 - **Theme**: Custom Neel palette with pigment spectrum tokens and Docusaurus 3.10.
+
+### Reuse & Copyleft
+
+Kalidass Journal is strong copyleft software. If you use, modify, or build on any part of this
+codebase, the AGPL requires your derivative work to be released as open source under the same
+license. Because the AGPL specifically covers network software, this obligation applies **even if
+you only run a modified version as a hosted/online service** — you must offer the complete
+corresponding source of your version to its users. See [`LICENSE`](./LICENSE) for the exact terms.
