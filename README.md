@@ -357,7 +357,7 @@ node scripts/validate_docs.mjs docs
 
 ## Digest from creator
 I do believe future Jornal projects will welcome AI-HUMAN partership for reading and writing.
-Havving said that , here is my take -
+Having said that , here is my take -
 
 - **Dynamic Reading Over Static Text**: Kalidass is necessary because almost no technical sites offer dynamic reading—most provide only static text. To quench their thirst for deeper knowledge, readers are usually forced to leave for external search engines or AI chats.
 - **Dual Perspective (Traditional + AI Intel)**: SerpApi fuels the concept of mixed authorship: every piece features a traditional longform research essay on one side, and live AI Intelligence grounding as the other side of the coin. Also Jev diagnose the Serapi output for relvent books on topic, is real winning strategy.
