@@ -16,6 +16,7 @@ export {extractArticleText};
  * @param {string} [options.apiKey] - Generic API key (defaults to Jev)
  * @param {string} [options.jevApiKey] - Scoped TypeSafe Jev API key
  * @param {string} [options.clefApiKey] - Scoped Cloudflare Clef API key
+ * @param {string} [options.clefModel] - Clef model selector ('clef' | 'clef-flash')
  * @param {number} [options.threshold]
  * @param {any} [env]
  * @returns {Promise<import("./types.js").QualityEvalResult>}
@@ -56,6 +57,7 @@ export async function runQualityEvaluation(input, options = {}, env = {}) {
       const clefOptions = {
         ...options,
         clefApiKey: options.clefApiKey || env?.CLEF_API_KEY || env?.CLOUDFLARE_API_KEY,
+        clefModel: options.clefModel || env?.CLEF_MODEL,
       };
       return await evaluateClef(text, clefOptions, env);
     } catch (err) {

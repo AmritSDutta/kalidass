@@ -26,6 +26,9 @@ The worker reads configuration from two sources: **Cloudflare secrets** (set via
 | `UPSTASH_REDIS_REST_TOKEN` | Secret | For caching | *(absent)* | Upstash Redis REST authentication token. |
 | `EVAL_PROVIDER` | Var / Secret | Optional | `"jev"` | Active quality evaluation provider (`"jev"`, `"clef"`, or `"heuristic"`). Cascades on failure. |
 | `JEV_API_KEY` | Secret | For Jev eval | *(absent)* | TypeSafe AI Jev decision API key used by the quality & safety evaluation pipeline. |
+| `CLEF_API_KEY` | Secret | For Clef eval | *(absent)* | Cloudflare API token with Workers AI permission for the Cloudflare Clef decision model (`@cf/cloudflare/clef`). May also be supplied per-request via the `x-clef-key` header. |
+| `CLOUDFLARE_ACCOUNT_ID` | Var / Secret | For Clef eval | *(absent)* | Cloudflare account ID used to build the Clef REST endpoint (`/client/v4/accounts/{id}/ai/run/@cf/cloudflare/{model}`). Required for API-key mode. |
+| `CLEF_MODEL` | Var / Secret | Optional | `"clef-flash"` | Clef model selector: `"clef-flash"` (9B, fastest) or `"clef"` (27B, highest precision). Overridable per-request via `body.clefModel` / `x-cf-model`. |
 | `OPENAI_API_KEY` | Secret | For Box generator | *(absent)* | OpenAI API key passed to Upstash Box containers for agent content authoring and gpt-image-1 cover infographics. |
 | `TAVILY_API_KEY` | Secret | For Box generator | *(absent)* | Tavily API key passed to Upstash Box containers for search grounding (30% share in Firecrawl/Tavily hybrid). |
 | `AUTH0_DOMAIN` | Var / Secret | Optional | `""` | Auth0 tenant domain (e.g. `dev-xxx.us.auth0.com`) used for JWKS remote signature verification. |
@@ -62,6 +65,11 @@ cp .dev.vars.example .dev.vars
 UPSTASH_BLOB_TOKEN=replace-with-upstash-blob-token
 ADMIN_TOKEN=
 ROOT_BUCKET=kalidass
+# Cloudflare Clef (API-key mode)
+CLOUDFLARE_ACCOUNT_ID=
+CLEF_API_KEY=
+CLEF_MODEL=clef-flash
+EVAL_PROVIDER=clef
 ```
 
 > [!IMPORTANT]
@@ -77,6 +85,12 @@ npx wrangler secret put UPSTASH_BLOB_TOKEN
 
 npx wrangler secret put ADMIN_TOKEN
 # Enter a secure passphrase or secret Bearer token
+
+npx wrangler secret put CLEF_API_KEY
+# Paste a Cloudflare API token with Workers AI permission
+
+npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
+# Paste your Cloudflare account ID (used to build the Clef REST endpoint)
 ```
 
 Secrets are bound to the named worker (`kalidass-journal-worker`) and are available on `env` in the `fetch` handler.

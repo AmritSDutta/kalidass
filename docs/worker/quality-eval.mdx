@@ -50,7 +50,7 @@ The evaluator is structured into provider-specific modules behind a unified inte
 ### Provider Selection & Cascading
 The active evaluator is determined by `env.EVAL_PROVIDER` (or per-request override via `options.provider` / `x-eval-provider` header):
 - **`jev` (default)**: Evaluates via TypeSafe AI Jev System One decision API.
-- **`clef`**: Evaluates via Cloudflare Clef / Workers AI (placeholder stub — cascades to heuristic until activated).
+- **`clef`**: Evaluates via the Cloudflare Clef decision model on Workers AI (`@cf/cloudflare/clef` / `clef-flash`), using Cloudflare API-key auth (REST `/ai/run`) or the `env.AI` binding.
 - **`heuristic`**: Evaluates via deterministic offline rule engine.
 
 If the primary provider encounters missing credentials or a network outage, the dispatcher automatically cascades to the next available provider, ensuring publishing workflows and reader audits are never blocked.

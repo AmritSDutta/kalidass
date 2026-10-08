@@ -257,12 +257,15 @@ export default {
           body.clefApiKey ||
           request.headers.get("x-clef-key");
 
+        const clefModel = body.clefModel || request.headers.get("x-cf-model") || undefined;
+
         const rawProvider = (body.provider || request.headers.get("x-eval-provider") || "").toLowerCase().trim();
         const provider = ["jev", "clef", "heuristic"].includes(rawProvider) ? rawProvider : undefined;
 
         const options = {
           jevApiKey,
           clefApiKey,
+          clefModel,
           provider,
         };
 
