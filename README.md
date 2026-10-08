@@ -108,30 +108,9 @@ You can run Kalidass Journal locally using your choice of package manager (`npm`
 
 ---
 
-### Option 1: One-Line Concurrent Startup (Recommended)
+### Running Services in Separate Terminals
 
-From the repository root:
-
-**Linux / macOS / Git Bash:**
-```bash
-chmod +x start.sh
-./start.sh
-```
-
-**Windows PowerShell:**
-```powershell
-# Starts worker in background and launches frontend
-Start-Process -FilePath "node" -ArgumentList "./node_modules/wrangler/bin/wrangler.js dev --ip 0.0.0.0 --port 8787" -WorkingDirectory "worker"
-Set-Location blog_frontend; node ./node_modules/@docusaurus/core/bin/docusaurus.mjs start --port 3000
-```
-
-Once running:
-- **Frontend Reader & Studio**: [http://localhost:3000](http://localhost:3000)
-- **Worker API**: [http://localhost:8787/api/health](http://localhost:8787/api/health)
-
----
-
-### Option 2: Running Services in Separate Terminals
+Start the backend Worker API and frontend SPA in separate terminals:
 
 #### Terminal 1 — Cloudflare Worker API (Port 8787)
 Navigate to the `worker/` directory and install dependencies:

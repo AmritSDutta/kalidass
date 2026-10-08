@@ -95,12 +95,6 @@ npm install
 npm run start
 ```
 
-Or from the repo root:
-
-```bash
-./start.sh
-```
-
 Without `UPSTASH_BLOB_TOKEN`, the Worker's in-memory store starts empty. Direct browser uploads to Upstash (`/api/upload`) require the token.
 
 ## 5. Studio Notes

@@ -182,8 +182,11 @@ cd blog_frontend && npm run typecheck && npm test
 # Worker
 cd worker && npm test
 
-# Local full stack concurrent launch
-./start.sh
+# Local development startup (separate terminals)
+# Terminal 1 (Worker API on :8787):
+cd worker && npm run dev
+# Terminal 2 (Frontend SPA on :3000):
+cd blog_frontend && npm run start
 ```
 
 ---
