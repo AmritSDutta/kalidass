@@ -1005,3 +1005,18 @@
   margin-top: 0.75rem;
 }
 
+.judgingModelRow {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--border-subtle);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.judgingModelLabel {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--ink-mute);
+  letter-spacing: 0.02em;
+}
+

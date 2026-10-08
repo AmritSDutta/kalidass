@@ -17,6 +17,7 @@
  * @typedef {Object} QualityEvalResult
  * @property {boolean} ok
  * @property {"typesafe-jev" | "cloudflare-clef" | "local-heuristic"} source
+ * @property {string} [judging_model]
  * @property {QualitySafetyRisks} safety
  * @property {QualityEditorialMetrics} metrics
  * @property {string} summary
@@ -67,6 +68,7 @@ export function extractArticleText(payload) {
  */
 export function createEvalResult({
   source = "local-heuristic",
+  judging_model,
   violence = 0.01,
   sexual = 0.01,
   antisocial = 0.01,
@@ -98,9 +100,18 @@ export function createEvalResult({
         ? "Hybrid / AI-Assisted"
         : "Human-Authored");
 
+  const resolvedModel =
+    judging_model ||
+    (source === "typesafe-jev"
+      ? "jev-latest"
+      : source === "cloudflare-clef"
+        ? "clef-flash"
+        : "deterministic");
+
   return {
     ok: true,
     source,
+    judging_model: resolvedModel,
     safety: {
       violence: Number(violence.toFixed(3)),
       sexual: Number(sexual.toFixed(3)),

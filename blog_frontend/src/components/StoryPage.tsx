@@ -540,10 +540,9 @@ export default function StoryPage(): ReactNode {
                 >
                   <BooksPanel
                     booksData={booksData || article.books_suggestions || null}
-                    onFetch={canEdit ? handleFetchBooks : undefined}
                     loading={loadingBooks}
                     error={booksError}
-                    readOnly={!canEdit}
+                    readOnly={true}
                   />
                 </div>
               )}
@@ -615,6 +614,14 @@ export default function StoryPage(): ReactNode {
 
                       {evalResult.summary ? (
                         <p className={styles.evalSummaryText}>{evalResult.summary}</p>
+                      ) : null}
+
+                      {evalResult.judging_model ? (
+                        <div className={styles.judgingModelRow}>
+                          <span className={styles.judgingModelLabel}>
+                            Evaluated by: {evalResult.judging_model}
+                          </span>
+                        </div>
                       ) : null}
                     </div>
                   ) : isAuthenticated ? (

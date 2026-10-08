@@ -8,13 +8,15 @@ import {
   getArticle,
   listArticles,
   removeArticle,
+  triggerArticleBooks,
   updateArticle,
   uploadObject,
 } from "@site/src/lib/api";
 import {useAuth} from "@site/src/lib/auth";
 import {emptyDraft, formatDate} from "@site/src/lib/media";
-import type {Article, ArticleDraft, ArticleSummary, Block, QualityEvalResult, AiIntelligence} from "@site/src/lib/types";
+import type {Article, ArticleDraft, ArticleSummary, Block, QualityEvalResult, AiIntelligence, BooksSuggestionData} from "@site/src/lib/types";
 import {IntelligencePanel} from "@site/src/components/IntelligencePanel/IntelligencePanel";
+import {BooksPanel} from "@site/src/components/BooksPanel/BooksPanel";
 import {getLanguageIndentSize} from "@site/src/components/ArticleCodeBlock";
 import styles from "./admin.module.css";
 
@@ -152,6 +154,9 @@ function AdminInner(): ReactNode {
   const [intelligence, setIntelligence] = useState<AiIntelligence | null>(null);
   const [loadingIntel, setLoadingIntel] = useState<boolean>(false);
   const [intelError, setIntelError] = useState<string | null>(null);
+  const [booksData, setBooksData] = useState<BooksSuggestionData | null>(null);
+  const [loadingBooks, setLoadingBooks] = useState<boolean>(false);
+  const [booksError, setBooksError] = useState<string | null>(null);
 
   const fetchArticleIntelligence = async (forceRefresh: boolean = false) => {
     const targetIdOrSlug = editingId || draft.slug;
@@ -170,6 +175,22 @@ function AdminInner(): ReactNode {
       setIntelError(message);
     } finally {
       setLoadingIntel(false);
+    }
+  };
+
+  const fetchArticleBooks = async () => {
+    const targetIdOrSlug = editingId || draft.slug;
+    if (!targetIdOrSlug) return;
+    setLoadingBooks(true);
+    setBooksError(null);
+    try {
+      const res = await triggerArticleBooks(targetIdOrSlug);
+      setBooksData(res);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch book suggestions.";
+      setBooksError(message);
+    } finally {
+      setLoadingBooks(false);
     }
   };
 
@@ -226,6 +247,8 @@ function AdminInner(): ReactNode {
         setDraftEval(article.evaluation || null);
         setIntelligence(null);
         setIntelError(null);
+        setBooksData(article.books_suggestions || null);
+        setBooksError(null);
       })
       .catch(() => setStatus("Could not load that story."));
   }, [editSlug, isAuthenticated]);
@@ -463,6 +486,8 @@ function AdminInner(): ReactNode {
     setStatus("");
     setIntelligence(null);
     setIntelError(null);
+    setBooksData(null);
+    setBooksError(null);
   };
 
   const load = async (slug: string) => {
@@ -474,6 +499,8 @@ function AdminInner(): ReactNode {
       setDraftEval(article.evaluation || null);
       setIntelligence(null);
       setIntelError(null);
+      setBooksData(article.books_suggestions || null);
+      setBooksError(null);
       setStatus(`Editing ${article.title}`);
       setMode("compose");
     } catch (err) {
@@ -1146,6 +1173,14 @@ function AdminInner(): ReactNode {
                           </ul>
                         </div>
                       ) : null}
+
+                      {draftEval.judging_model ? (
+                        <div className={styles.judgingModelRow}>
+                          <span className={styles.judgingModelLabel}>
+                            Evaluated by: {draftEval.judging_model}
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -1257,6 +1292,46 @@ function AdminInner(): ReactNode {
                               loading={loadingIntel}
                               error={intelError}
                               readOnly={false}
+                            />
+                          </div>
+                        </details>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {editingId ? (
+                  <div className={styles.intelSidebarSection}>
+                    <div className={styles.auditHeader}>
+                      <span className={styles.analysisKicker}>Curated Literature</span>
+                      <h4>Book Suggestions</h4>
+                    </div>
+                    <p className={styles.auditDesc}>
+                      Amazon Search & AI Scorer curation (TypeSafe System One / Clef / Heuristic ranking).
+                    </p>
+                    <button
+                      type="button"
+                      className={styles.auditBtn}
+                      onClick={fetchArticleBooks}
+                      disabled={loadingBooks}>
+                      {loadingBooks
+                        ? "Scoring Books..."
+                        : booksData
+                        ? "↻ Refresh Suggestions"
+                        : "⚡ Find Book Suggestions"}
+                    </button>
+                    {booksError ? <p className={styles.evalError}>{booksError}</p> : null}
+                    {booksData ? (
+                      <div className={styles.intelStatusBox}>
+                        <span className={styles.intelStatusBadge}>
+                          ✓ Book suggestions compiled ({booksData.books?.length || 0} books, ranked by {booksData.scoredBy || "model"})
+                        </span>
+                        <details className={styles.intelDetails}>
+                          <summary className={styles.intelSummaryToggle}>View Suggested Books</summary>
+                          <div className={styles.intelDrawer}>
+                            <BooksPanel
+                              booksData={booksData}
+                              readOnly={true}
                             />
                           </div>
                         </details>

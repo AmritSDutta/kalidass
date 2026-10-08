@@ -49,6 +49,7 @@ describe("evaluateClef (Hermetic)", () => {
 
     expect(result.ok).toBe(true);
     expect(result.source).toBe("cloudflare-clef");
+    expect(result.judging_model).toBe("clef-flash");
     expect(result.safety.verdict).toBe("safe");
     expect(result.safety.violations).toEqual([]);
     expect(result.safety.violence).toBe(0.01);

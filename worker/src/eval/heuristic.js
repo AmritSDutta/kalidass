@@ -80,6 +80,7 @@ export function evaluateHeuristic(text, options = {}) {
 
   return createEvalResult({
     source: "local-heuristic",
+    judging_model: "deterministic",
     violence: violenceProb,
     sexual: sexualProb,
     antisocial: antisocialProb,

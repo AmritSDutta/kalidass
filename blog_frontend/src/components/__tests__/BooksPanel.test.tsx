@@ -58,6 +58,15 @@ describe("BooksPanel component (Hermetic)", () => {
     expect(handleFetch).toHaveBeenCalledTimes(1);
   });
 
+  it("renders readOnly mode without any Find Book Suggestions buttons in read mode or tab", () => {
+    render(<BooksPanel booksData={null} readOnly={true} loading={false} />);
+
+    expect(screen.getByText(/Books Suggestion/i)).toBeTruthy();
+    expect(screen.getByText(/No book suggestions compiled yet/i)).toBeTruthy();
+    expect(screen.queryByRole("button", {name: /Find Book Suggestions/i})).toBeNull();
+    expect(screen.queryByRole("button", {name: /Refresh Suggestions/i})).toBeNull();
+  });
+
   it("renders loaded books cards with thumbnail, titles, prices and Amazon links", () => {
     render(<BooksPanel booksData={mockBooksData} loading={false} />);
 

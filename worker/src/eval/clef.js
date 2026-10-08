@@ -107,6 +107,7 @@ export async function evaluateClef(text, options = {}, env = {}) {
 
   return createEvalResult({
     source: "cloudflare-clef",
+    judging_model: raw?.model || model,
     violence,
     sexual,
     antisocial,

@@ -11,6 +11,7 @@ describe("evaluateHeuristic (Hermetic)", () => {
     const result = evaluateHeuristic(text);
     expect(result.ok).toBe(true);
     expect(result.source).toBe("local-heuristic");
+    expect(result.judging_model).toBe("deterministic");
     expect(result.safety.verdict).toBe("safe");
     expect(result.safety.violations).toEqual([]);
     expect(result.safety.sexual).toBeLessThan(0.55);

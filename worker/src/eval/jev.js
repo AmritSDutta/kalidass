@@ -139,6 +139,7 @@ export async function evaluateJev(text, options = {}, env = {}) {
 
   return createEvalResult({
     source: "typesafe-jev",
+    judging_model: raw?.model || "jev-latest",
     violence,
     sexual,
     antisocial,

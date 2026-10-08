@@ -51,6 +51,7 @@ describe("evaluateJev (Hermetic)", () => {
 
     expect(result.ok).toBe(true);
     expect(result.source).toBe("typesafe-jev");
+    expect(result.judging_model).toBe("jev-1.13.0");
     expect(result.safety.verdict).toBe("safe");
     expect(result.safety.violations).toEqual([]);
     expect(result.safety.violence).toBe(0.01);

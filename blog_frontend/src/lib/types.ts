@@ -122,6 +122,7 @@ export interface QualityEditorialMetrics {
 export interface QualityEvalResult {
   ok: boolean;
   source: "typesafe-jev" | "cloudflare-clef" | "local-heuristic";
+  judging_model?: string;
   safety: QualitySafetyRisks;
   metrics: QualityEditorialMetrics;
   summary: string;
