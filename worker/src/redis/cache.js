@@ -157,6 +157,7 @@ export async function invalidateArticleCaches(redis, { id, slug, oldSlug } = {})
       tasks.push(redis.del(`article:${id}`));
       tasks.push(redis.del(`ai_intel:${id}`));
       tasks.push(redis.del(`books_suggestion:${id}`));
+      tasks.push(redis.del(`research_suggestion:${id}`));
     }
     if (slug) tasks.push(redis.del(`slug:${slug}`));
     if (oldSlug && oldSlug !== slug) tasks.push(redis.del(`slug:${oldSlug}`));

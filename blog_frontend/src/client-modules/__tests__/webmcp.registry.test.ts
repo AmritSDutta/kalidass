@@ -6,6 +6,7 @@ const apiMocks = vi.hoisted(() => ({
   getArticle: vi.fn(),
   getArticleIntelligence: vi.fn(),
   getArticleBooks: vi.fn(),
+  getArticleResearch: vi.fn(),
   getAuthMe: vi.fn(),
 }));
 vi.mock("../../lib/api", () => apiMocks);
@@ -87,6 +88,27 @@ const sampleArticle = {
       },
     ],
   },
+  research_suggestions: {
+    query: "all:attention routing",
+    topic: "Attention as Routing",
+    fetchedAt: "2026-10-01T00:00:00Z",
+    scoredBy: "jev",
+    papers: [
+      {
+        id: "1706.03762",
+        title: "Attention Is All You Need",
+        authors: [{name: "Ashish Vaswani"}],
+        summary: "The Transformer model uses multi-head attention to replace recurrent layers.",
+        links: {
+          abstract: "https://arxiv.org/abs/1706.03762",
+          pdf: "https://arxiv.org/pdf/1706.03762.pdf",
+        },
+        published: "2017-06-12T00:00:00Z",
+        primaryCategory: "cs.CL",
+        score: 0.95,
+      },
+    ],
+  },
 };
 
 describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
@@ -96,9 +118,10 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
     apiMocks.getArticle.mockReset();
     apiMocks.getArticleIntelligence.mockReset();
     apiMocks.getArticleBooks.mockReset();
+    apiMocks.getArticleResearch.mockReset();
   });
 
-  it("auto-registers all 8 tools on the model context registry", async () => {
+  it("auto-registers all 9 tools on the model context registry", async () => {
     const registry = window.modelContext;
     expect(registry).toBeTruthy();
     const tools = await registry!.listTools();
@@ -109,6 +132,7 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
       "getStoryAiOverview",
       "getStoryBookSuggestions",
       "getStoryCitations",
+      "getStoryResearchPapers",
       "getStoryVideoLinks",
       "readArticle",
       "searchArticles",
@@ -233,6 +257,18 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
       expect(res.books[0].price).toBe("₹1,200");
     });
 
+    it("getStoryResearchPapers extracts research papers on /story/:slug", async () => {
+      window.history.pushState(null, "", "/story/attention-as-routing");
+      apiMocks.getArticle.mockResolvedValue(sampleArticle);
+
+      const res = (await window.modelContext!.tools.getStoryResearchPapers.execute({})) as any;
+      expect(res.available).toBe(true);
+      expect(res.total).toBe(1);
+      expect(res.papers[0].title).toBe("Attention Is All You Need");
+      expect(res.papers[0].authors).toBe("Ashish Vaswani");
+      expect(res.papers[0].links.abstract).toBe("https://arxiv.org/abs/1706.03762");
+    });
+
     it("reports available: false with reason when section is absent", async () => {
       window.history.pushState(null, "", "/story/minimal-story");
       apiMocks.getArticle.mockResolvedValue({
@@ -242,6 +278,7 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
         blocks: [{type: "paragraph", text: "Plain text"}],
         ai_intelligence: null,
         books_suggestions: null,
+        research_suggestions: null,
       });
 
       const videoRes = (await window.modelContext!.tools.getStoryVideoLinks.execute({})) as any;
@@ -259,6 +296,10 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
       const booksRes = (await window.modelContext!.tools.getStoryBookSuggestions.execute({})) as any;
       expect(booksRes.available).toBe(false);
       expect(booksRes.reason).toMatch(/no book/i);
+
+      const researchRes = (await window.modelContext!.tools.getStoryResearchPapers.execute({})) as any;
+      expect(researchRes.available).toBe(false);
+      expect(researchRes.reason).toMatch(/no research paper/i);
     });
 
     it("lazy-fetches book suggestions when the article carries only has_books", async () => {
@@ -271,6 +312,18 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
       expect(apiMocks.getArticleBooks).toHaveBeenCalledWith("attention-as-routing");
       expect(res.available).toBe(true);
       expect(res.books[0].title).toBe("Deep Learning Architectures");
+    });
+
+    it("lazy-fetches research papers when the article carries only has_research", async () => {
+      window.history.pushState(null, "", "/story/attention-as-routing");
+      const {research_suggestions: embeddedResearch, ...flagOnly} = sampleArticle as any;
+      apiMocks.getArticle.mockResolvedValue({...flagOnly, has_research: true, research_suggestions: null});
+      apiMocks.getArticleResearch.mockResolvedValue(embeddedResearch);
+
+      const res = (await window.modelContext!.tools.getStoryResearchPapers.execute({})) as any;
+      expect(apiMocks.getArticleResearch).toHaveBeenCalledWith("attention-as-routing");
+      expect(res.available).toBe(true);
+      expect(res.papers[0].title).toBe("Attention Is All You Need");
     });
 
     it("lazy-fetches the dossier when the article carries only has_intelligence", async () => {

@@ -1,0 +1,229 @@
+.container {
+  margin-top: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  background: var(--bg-surface-elevated, rgba(255, 255, 255, 0.03));
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: var(--bg-surface-subtle, rgba(0, 0, 0, 0.15));
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: var(--chroma-aakash, #38bdf8);
+  color: #0f172a;
+}
+
+.cachedBadge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-dim, #a1a1aa);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+
+.scorerBadge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--chroma-neel, #818cf8);
+  background: rgba(129, 140, 248, 0.12);
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fetchButton {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.84rem;
+  background: var(--chroma-aakash, #38bdf8);
+  color: #0f172a;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.fetchButton:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.fetchButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  padding: 1.25rem;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--chroma-aakash, #38bdf8);
+  transform: translateY(-2px);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.categoryTag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--chroma-aakash, #38bdf8);
+  background: rgba(56, 189, 248, 0.1);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+
+.cardTitle {
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary, #ffffff);
+}
+
+.cardTitleLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardTitleLink:hover {
+  color: var(--chroma-aakash, #38bdf8);
+  text-decoration: underline;
+}
+
+.cardAuthors {
+  font-size: 0.82rem;
+  color: var(--text-dim, #94a3b8);
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.cardSummary {
+  font-size: 0.88rem;
+  color: var(--text-secondary, #cbd5e1);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  flex-grow: 1;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+.metaInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-dim, #94a3b8);
+}
+
+.linkGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.arxivBtn {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--chroma-aakash, #38bdf8);
+  text-decoration: none;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.1);
+  transition: background 0.15s ease;
+}
+
+.arxivBtn:hover {
+  background: rgba(56, 189, 248, 0.2);
+}
+
+.pdfBtn {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--chroma-haldi, #f59e0b);
+  text-decoration: none;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.1);
+  transition: background 0.15s ease;
+}
+
+.pdfBtn:hover {
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.emptyState {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--text-dim, #a1a1aa);
+}
+
+.emptyTitle {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text-primary, #ffffff);
+  margin-bottom: 0.35rem;
+}
+
+.errorBanner {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.75rem 1.25rem;
+  font-size: 0.85rem;
+}

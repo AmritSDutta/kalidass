@@ -4,12 +4,13 @@ import Link from "@docusaurus/Link";
 import {useLocation} from "@docusaurus/router";
 import StoryBody, {headingSlug} from "@site/src/components/StoryBody";
 import VideoEmbed from "@site/src/components/VideoEmbed";
-import {evaluateQuality, getArticle, getArticleIntelligence, getArticleBooks, triggerArticleBooks, updateArticle} from "@site/src/lib/api";
+import {evaluateQuality, getArticle, getArticleIntelligence, getArticleBooks, triggerArticleBooks, getArticleResearch, triggerArticleResearch, updateArticle} from "@site/src/lib/api";
 import {useAuth} from "@site/src/lib/auth";
 import {formatDate} from "@site/src/lib/media";
-import type {Article, QualityEvalResult, AiIntelligence, BooksSuggestionData} from "@site/src/lib/types";
+import type {Article, QualityEvalResult, AiIntelligence, BooksSuggestionData, ResearchSuggestionData} from "@site/src/lib/types";
 import {IntelligencePanel} from "@site/src/components/IntelligencePanel/IntelligencePanel";
 import {BooksPanel} from "@site/src/components/BooksPanel/BooksPanel";
+import {ResearchPanel} from "@site/src/components/ResearchPanel/ResearchPanel";
 import styles from "./StoryPage.module.css";
 
 interface HeadingItem {
@@ -37,18 +38,23 @@ export default function StoryPage(): ReactNode {
   const [isSavingStaged, setIsSavingStaged] = useState<boolean>(false);
 
   // Tab navigation state for left reading column
-  const [activeTab, setActiveTab] = useState<"article" | "intel" | "books">("article");
+  const [activeTab, setActiveTab] = useState<"article" | "intel" | "books" | "research">("article");
   const [intelligence, setIntelligence] = useState<AiIntelligence | null>(null);
   const [loadingIntel, setLoadingIntel] = useState<boolean>(false);
   const [intelError, setIntelError] = useState<string | null>(null);
   const [booksData, setBooksData] = useState<BooksSuggestionData | null>(null);
   const [loadingBooks, setLoadingBooks] = useState<boolean>(false);
   const [booksError, setBooksError] = useState<string | null>(null);
+  const [researchData, setResearchData] = useState<ResearchSuggestionData | null>(null);
+  const [loadingResearch, setLoadingResearch] = useState<boolean>(false);
+  const [researchError, setResearchError] = useState<string | null>(null);
   const articleTabRef = useRef<HTMLButtonElement>(null);
   const intelTabRef = useRef<HTMLButtonElement>(null);
   const booksTabRef = useRef<HTMLButtonElement>(null);
+  const researchTabRef = useRef<HTMLButtonElement>(null);
   const intelRequested = useRef<boolean>(false);
   const booksRequested = useRef<boolean>(false);
+  const researchRequested = useRef<boolean>(false);
 
   useEffect(() => {
     const handleStageEvent = (e: Event) => {
@@ -280,16 +286,54 @@ export default function StoryPage(): ReactNode {
       .finally(() => setLoadingBooks(false));
   };
 
-  const tabsList: Array<"article" | "intel" | "books"> = ["article", "intel", "books"];
+  const handleFetchResearch = async () => {
+    if (!slug) return;
+    setLoadingResearch(true);
+    setResearchError(null);
+    try {
+      const data = await triggerArticleResearch(slug);
+      setResearchData(data);
+      setArticle((prev) => (prev ? {...prev, research_suggestions: data, has_research: true} : null));
+    } catch (err) {
+      setResearchError(err instanceof Error ? err.message : "Failed to fetch research papers.");
+    } finally {
+      setLoadingResearch(false);
+    }
+  };
 
-  const switchTab = (tab: "article" | "intel" | "books") => {
+  // Lazy public fetch: research papers load once, on first Research tab activation.
+  const loadResearchOnce = () => {
+    if (researchRequested.current || !slug) return;
+    researchRequested.current = true;
+    setLoadingResearch(true);
+    getArticleResearch(slug)
+      .then((data) => {
+        setResearchData(data);
+        setArticle((prev) => (prev ? {...prev, research_suggestions: data, has_research: true} : null));
+      })
+      .catch(() => undefined)
+      .finally(() => setLoadingResearch(false));
+  };
+
+  const tabsList: Array<"article" | "intel" | "books" | "research"> = ["article", "intel", "books", "research"];
+
+  const switchTab = (tab: "article" | "intel" | "books" | "research") => {
     setActiveTab(tab);
     if (tab === "intel") {
       loadIntelligenceOnce();
     } else if (tab === "books") {
       loadBooksOnce();
+    } else if (tab === "research") {
+      loadResearchOnce();
     }
-    const targetRef = tab === "article" ? articleTabRef : tab === "intel" ? intelTabRef : booksTabRef;
+    const targetRef =
+      tab === "article"
+        ? articleTabRef
+        : tab === "intel"
+        ? intelTabRef
+        : tab === "books"
+        ? booksTabRef
+        : researchTabRef;
     targetRef.current?.focus();
   };
 
@@ -494,6 +538,24 @@ export default function StoryPage(): ReactNode {
                     </span>
                   )}
                 </button>
+                <button
+                  ref={researchTabRef}
+                  type="button"
+                  role="tab"
+                  id="story-tab-research"
+                  aria-controls="story-panel-research"
+                  aria-selected={activeTab === "research"}
+                  tabIndex={activeTab === "research" ? 0 : -1}
+                  className={`${styles.tabBtn} ${activeTab === "research" ? styles.tabBtnActive : ""}`}
+                  onClick={() => switchTab("research")}
+                >
+                  Research
+                  {(researchData || article.has_research) && (
+                    <span className={styles.tabBadge} title="Research papers available">
+                      ✓
+                    </span>
+                  )}
+                </button>
               </div>
 
               {activeTab === "article" ? (
@@ -531,7 +593,7 @@ export default function StoryPage(): ReactNode {
                     readOnly={!canEdit}
                   />
                 </div>
-              ) : (
+              ) : activeTab === "books" ? (
                 <div
                   className={styles.intelTabWrap}
                   role="tabpanel"
@@ -543,6 +605,21 @@ export default function StoryPage(): ReactNode {
                     loading={loadingBooks}
                     error={booksError}
                     readOnly={true}
+                  />
+                </div>
+              ) : (
+                <div
+                  className={styles.intelTabWrap}
+                  role="tabpanel"
+                  id="story-panel-research"
+                  aria-labelledby="story-tab-research"
+                >
+                  <ResearchPanel
+                    researchData={researchData || article.research_suggestions || null}
+                    onFetch={canEdit ? handleFetchResearch : undefined}
+                    loading={loadingResearch}
+                    error={researchError}
+                    readOnly={!canEdit}
                   />
                 </div>
               )}

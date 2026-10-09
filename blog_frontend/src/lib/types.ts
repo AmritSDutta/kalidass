@@ -55,6 +55,8 @@ export type ArticleSummary = {
   fallbackNotice?: string;
   /** Server flag: stored book recommendations exist (fetched lazily via /books). */
   has_books?: boolean;
+  /** Server flag: stored research papers exist (fetched lazily via /research). */
+  has_research?: boolean;
 };
 
 export type Article = ArticleSummary & {
@@ -66,6 +68,9 @@ export type Article = ArticleSummary & {
   /** Server flag: stored book recommendations exist (fetched lazily via /books). */
   has_books?: boolean;
   books_suggestions?: BooksSuggestionData | null;
+  /** Server flag: stored research papers exist (fetched lazily via /research). */
+  has_research?: boolean;
+  research_suggestions?: ResearchSuggestionData | null;
 };
 
 export type ArticleDraft = {
@@ -284,5 +289,30 @@ export interface BooksSuggestionData {
   books: BookSuggestionItem[];
 }
 
+export interface ResearchPaperItem {
+  id: string;
+  title: string;
+  summary: string;
+  authors: Array<{ name: string; affiliation?: string }>;
+  links: {
+    abstract: string;
+    pdf?: string;
+    doi?: string;
+  };
+  published?: string;
+  updated?: string;
+  categories?: string[];
+  primaryCategory?: string | null;
+  score?: number;
+  isPaperConfidence?: number;
+  topicSimilarity?: number;
+  recencyTimestamp?: number;
+}
 
-
+export interface ResearchSuggestionData {
+  query: string;
+  topic: string;
+  fetchedAt: string;
+  scoredBy: "jev" | "clef" | "heuristic" | string;
+  papers: ResearchPaperItem[];
+}
