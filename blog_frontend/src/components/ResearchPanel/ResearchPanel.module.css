@@ -227,3 +227,93 @@
   padding: 0.75rem 1.25rem;
   font-size: 0.85rem;
 }
+
+/* Light Mode Overrides: Enforce high contrast and dark typography */
+[data-theme="light"] .container {
+  background: var(--paper-solid, #ffffff);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+}
+
+[data-theme="light"] .header {
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .cachedBadge {
+  color: #475569;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .scorerBadge {
+  color: #4f46e5;
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="light"] .card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .card:hover {
+  border-color: #0284c7;
+}
+
+[data-theme="light"] .cardTitle {
+  color: #0f172a;
+}
+
+[data-theme="light"] .cardTitleLink:hover {
+  color: #0369a1;
+}
+
+[data-theme="light"] .cardAuthors,
+[data-theme="light"] .metaInfo {
+  color: #64748b;
+}
+
+[data-theme="light"] .cardSummary {
+  color: #334155;
+}
+
+[data-theme="light"] .cardFooter {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .categoryTag {
+  color: #0369a1;
+  background: rgba(56, 189, 248, 0.15);
+}
+
+[data-theme="light"] .arxivBtn {
+  color: #0369a1;
+  background: rgba(56, 189, 248, 0.15);
+}
+
+[data-theme="light"] .arxivBtn:hover {
+  background: rgba(56, 189, 248, 0.25);
+}
+
+[data-theme="light"] .pdfBtn {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.14);
+}
+
+[data-theme="light"] .pdfBtn:hover {
+  background: rgba(245, 158, 11, 0.24);
+}
+
+[data-theme="light"] .emptyState {
+  color: #64748b;
+}
+
+[data-theme="light"] .emptyTitle {
+  color: #0f172a;
+}
+
+[data-theme="light"] .errorBanner {
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.3);
+}
