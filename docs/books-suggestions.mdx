@@ -137,10 +137,10 @@ See [Environment Variables](/worker/environment) for the full reference.
 
 ## 6. Frontend Integration
 
-- **Story reader tab**: `StoryPage.tsx` renders a third ARIA tab, **Books suggestion**
-  (`story-tab-books` / `story-panel-books`), alongside **Article** and **AI Intel**. The panel is
-  mounted **read-only** (`<BooksPanel readOnly />`), so generation happens through authenticated
-  flows rather than the public reader.
+- **Story reader tab**: `StoryPage.tsx` renders the **Books suggestion** ARIA tab
+  (`story-tab-books` / `story-panel-books`) alongside **Article**, **AI Intel**, and **Research**.
+  The panel is mounted **read-only** (`<BooksPanel readOnly />`), so generation happens through
+  authenticated flows rather than the public reader.
 - **Lazy fetch**: the tab fetches `getArticleBooks(slug)` once, on first activation, via
   `src/lib/api.ts`; the badge is driven by `booksData` or `article.has_books`.
 - **API client helpers**: `getArticleBooks(idOrSlug)` (public peek) and

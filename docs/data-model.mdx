@@ -50,7 +50,16 @@ export type Block =
   | { type: "quote"; text: string; cite?: string; _id?: string }
   | { type: "image"; url: string; caption?: string; _id?: string }
   | { type: "video"; url: string; caption?: string; _id?: string }
-  | { type: "code"; text: string; language?: string; title?: string; _id?: string };
+  | {
+      type: "code";
+      text: string;
+      language?: string;
+      title?: string;
+      showLineNumbers?: boolean;
+      wrapLines?: boolean;
+      highlightLines?: string;
+      _id?: string;
+    };
 ```
 
 | Type | Fields | Rendering Component |
@@ -60,7 +69,7 @@ export type Block =
 | `quote` | `text`, `cite?` | Pull quote `<blockquote>` with optional `<cite>` tag |
 | `image` | `url`, `caption?` | Responsive `<figure>` with `<img>` and `<figcaption>` |
 | `video` | `url`, `caption?` | `VideoEmbed` component (YouTube, Vimeo, or direct MP4) |
-| `code` | `text`, `language?`, `title?` | `ArticleCodeBlock` with Prism syntax highlighting and line numbers |
+| `code` | `text`, `language?`, `title?`, `showLineNumbers?`, `wrapLines?`, `highlightLines?` | `ArticleCodeBlock` with Prism syntax highlighting, optional line numbers, line wrapping, and highlighted line ranges |
 
 ## Article Models
 
@@ -89,6 +98,7 @@ Used in index feeds, search results, and Studio summary listings:
 - `updatedAt?: string` — ISO timestamp of last modification.
 - `has_intelligence?: boolean` — Lightweight flag indicating a compiled AI intelligence dossier exists.
 - `has_books?: boolean` — Lightweight flag indicating compiled book suggestions exist.
+- `has_research?: boolean` — Lightweight flag indicating compiled arXiv research suggestions exist.
 
 ### `Article`
 
@@ -97,6 +107,7 @@ The complete article payload returned by `getArticle()` and consumed by `StoryPa
 - `blocks: Block[]` — Array of body content blocks.
 - `createdAt?: string` — ISO record creation timestamp.
 - `books_suggestions?: BooksSuggestionData | null` — Embedded book dossier (authenticated `?books=true` variant only).
+- `research_suggestions?: ResearchSuggestionData | null` — Embedded arXiv research dossier when stored on the article (the reader otherwise lazy-fetches `/api/articles/:slug/research`).
 
 ### `ArticleDraft`
 
@@ -234,6 +245,36 @@ export interface BookSuggestionItem {
   score?: number;
   isBookConfidence?: number;
   topicSimilarity?: number;
+}
+```
+
+## Research Suggestion Schema (`ResearchSuggestionData`)
+
+arXiv preprint recommendations compiled per article (see [Research Suggestions](/research-suggestions)):
+
+```typescript
+export interface ResearchSuggestionData {
+  query: string;
+  topic: string;
+  fetchedAt: string;
+  scoredBy: "jev" | "clef" | "heuristic" | string;
+  papers: ResearchPaperItem[];
+}
+
+export interface ResearchPaperItem {
+  id: string;
+  title: string;
+  summary: string;
+  authors: Array<{ name: string; affiliation?: string }>;
+  links: { abstract: string; pdf?: string; doi?: string };
+  published?: string;
+  updated?: string;
+  categories?: string[];
+  primaryCategory?: string | null;
+  score?: number;
+  isPaperConfidence?: number;
+  topicSimilarity?: number;
+  recencyTimestamp?: number;
 }
 ```
 

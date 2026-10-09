@@ -36,6 +36,8 @@ The frontend interacts with the Cloudflare Worker API via the client library in 
 | `GET` | `/api/articles/:idOrSlug/books` | `getArticleBooks(slug)` | Conditional | Public read-only book-suggestion sub-resource (Redis/Blob only, never generates). Gated by draft/private state. |
 | `POST` | `/api/articles/:idOrSlug/books` | `triggerArticleBooks(slug)` | **Yes** | Generates/refreshes Amazon book suggestions via SerpApi and the eval scorer. Requires author or admin. |
 | `GET` | `/api/articles/:idOrSlug?books=true` | Direct request | **Yes** | Returns the article with an embedded `books_suggestions` payload; honors `refresh=true`. |
+| `GET` | `/api/articles/:idOrSlug/research` | `getArticleResearch(slug)` | Conditional | Public read-only arXiv research sub-resource (Redis/Blob only, never generates). Gated by draft/private state. |
+| `POST` | `/api/articles/:idOrSlug/research` | `triggerArticleResearch(slug)` | **Yes** | Harvests/refreshes arXiv preprint suggestions and ranks them via the eval scorer. Requires author or admin. |
 
 ## Authentication
 
