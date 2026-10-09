@@ -9,14 +9,16 @@ import {
   listArticles,
   removeArticle,
   triggerArticleBooks,
+  triggerArticleResearch,
   updateArticle,
   uploadObject,
 } from "@site/src/lib/api";
 import {useAuth} from "@site/src/lib/auth";
 import {emptyDraft, formatDate} from "@site/src/lib/media";
-import type {Article, ArticleDraft, ArticleSummary, Block, QualityEvalResult, AiIntelligence, BooksSuggestionData} from "@site/src/lib/types";
+import type {Article, ArticleDraft, ArticleSummary, Block, QualityEvalResult, AiIntelligence, BooksSuggestionData, ResearchSuggestionData} from "@site/src/lib/types";
 import {IntelligencePanel} from "@site/src/components/IntelligencePanel/IntelligencePanel";
 import {BooksPanel} from "@site/src/components/BooksPanel/BooksPanel";
+import {ResearchPanel} from "@site/src/components/ResearchPanel/ResearchPanel";
 import {getLanguageIndentSize} from "@site/src/components/ArticleCodeBlock";
 import styles from "./admin.module.css";
 
@@ -157,6 +159,9 @@ function AdminInner(): ReactNode {
   const [booksData, setBooksData] = useState<BooksSuggestionData | null>(null);
   const [loadingBooks, setLoadingBooks] = useState<boolean>(false);
   const [booksError, setBooksError] = useState<string | null>(null);
+  const [researchData, setResearchData] = useState<ResearchSuggestionData | null>(null);
+  const [loadingResearch, setLoadingResearch] = useState<boolean>(false);
+  const [researchError, setResearchError] = useState<string | null>(null);
 
   const fetchArticleIntelligence = async (forceRefresh: boolean = false) => {
     const targetIdOrSlug = editingId || draft.slug;
@@ -191,6 +196,22 @@ function AdminInner(): ReactNode {
       setBooksError(message);
     } finally {
       setLoadingBooks(false);
+    }
+  };
+
+  const fetchArticleResearch = async () => {
+    const targetIdOrSlug = editingId || draft.slug;
+    if (!targetIdOrSlug) return;
+    setLoadingResearch(true);
+    setResearchError(null);
+    try {
+      const res = await triggerArticleResearch(targetIdOrSlug);
+      setResearchData(res);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch research papers.";
+      setResearchError(message);
+    } finally {
+      setLoadingResearch(false);
     }
   };
 
@@ -249,6 +270,8 @@ function AdminInner(): ReactNode {
         setIntelError(null);
         setBooksData(article.books_suggestions || null);
         setBooksError(null);
+        setResearchData(article.research_suggestions || null);
+        setResearchError(null);
       })
       .catch(() => setStatus("Could not load that story."));
   }, [editSlug, isAuthenticated]);
@@ -488,6 +511,8 @@ function AdminInner(): ReactNode {
     setIntelError(null);
     setBooksData(null);
     setBooksError(null);
+    setResearchData(null);
+    setResearchError(null);
   };
 
   const load = async (slug: string) => {
@@ -501,6 +526,8 @@ function AdminInner(): ReactNode {
       setIntelError(null);
       setBooksData(article.books_suggestions || null);
       setBooksError(null);
+      setResearchData(article.research_suggestions || null);
+      setResearchError(null);
       setStatus(`Editing ${article.title}`);
       setMode("compose");
     } catch (err) {
@@ -1331,6 +1358,46 @@ function AdminInner(): ReactNode {
                           <div className={styles.intelDrawer}>
                             <BooksPanel
                               booksData={booksData}
+                              readOnly={true}
+                            />
+                          </div>
+                        </details>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {editingId ? (
+                  <div className={styles.intelSidebarSection}>
+                    <div className={styles.auditHeader}>
+                      <span className={styles.analysisKicker}>Academic Research</span>
+                      <h4>Research Papers</h4>
+                    </div>
+                    <p className={styles.auditDesc}>
+                      arXiv preprint harvesting & System One relevance ranking (relevancy first, recency second).
+                    </p>
+                    <button
+                      type="button"
+                      className={styles.auditBtn}
+                      onClick={fetchArticleResearch}
+                      disabled={loadingResearch}>
+                      {loadingResearch
+                        ? "Searching arXiv..."
+                        : researchData
+                        ? "↻ Refresh Research"
+                        : "⚡ Find Research Papers"}
+                    </button>
+                    {researchError ? <p className={styles.evalError}>{researchError}</p> : null}
+                    {researchData ? (
+                      <div className={styles.intelStatusBox}>
+                        <span className={styles.intelStatusBadge}>
+                          ✓ Research compiled ({researchData.papers?.length || 0} papers, ranked by {researchData.scoredBy || "model"})
+                        </span>
+                        <details className={styles.intelDetails}>
+                          <summary className={styles.intelSummaryToggle}>View Research Papers</summary>
+                          <div className={styles.intelDrawer}>
+                            <ResearchPanel
+                              researchData={researchData}
                               readOnly={true}
                             />
                           </div>

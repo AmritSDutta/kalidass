@@ -11,6 +11,7 @@ import type {
   QualityEvalRequest,
   QualityEvalResult,
   BooksSuggestionData,
+  ResearchSuggestionData,
 } from "./types";
 
 export type TokenProvider = () => Promise<string | null> | string | null;
@@ -122,6 +123,18 @@ export function getArticleBooks(idOrSlug: string) {
 // Authenticated generation/refresh of book suggestions.
 export function triggerArticleBooks(idOrSlug: string) {
   return request<BooksSuggestionData>(`/api/articles/${encodeURIComponent(idOrSlug)}/books`, {
+    method: "POST",
+  });
+}
+
+// Public read-only research paper fetch (lazy): called when Research tab activates.
+export function getArticleResearch(idOrSlug: string) {
+  return request<ResearchSuggestionData>(`/api/articles/${encodeURIComponent(idOrSlug)}/research`);
+}
+
+// Authenticated generation/refresh of research paper recommendations.
+export function triggerArticleResearch(idOrSlug: string) {
+  return request<ResearchSuggestionData>(`/api/articles/${encodeURIComponent(idOrSlug)}/research`, {
     method: "POST",
   });
 }

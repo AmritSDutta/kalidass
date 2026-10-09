@@ -278,7 +278,7 @@ export function initWebMcp(): void {
     }
 
     console.log(
-      "[WebMCP] Registered in-page tools: searchArticles, readArticle, getStoryAiOverview, getStoryCitations, getStoryVideoLinks, getPeopleAlsoAsk, getStoryBookSuggestions, enhanceStoryContent"
+      "[WebMCP] Registered in-page tools: searchArticles, readArticle, getStoryAiOverview, getStoryCitations, getStoryVideoLinks, getPeopleAlsoAsk, getStoryBookSuggestions, getStoryResearchPapers, enhanceStoryContent"
     );
   } catch (err) {
     console.warn("[WebMCP] Initialization error:", err);

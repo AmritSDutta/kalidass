@@ -82,6 +82,7 @@ kalidass/
 │   │   │   ├── hardening.ts         # Cosmetic deterrent against devtools shortcuts in prod
 │   │   │   ├── webmcp.ts            # WebMCP core tools & modelContext registry
 │   │   │   ├── storyWebMcp.ts       # Story-scoped WebMCP tools & stage enhancement
+│   │   │   ├── researchWebMcp.ts    # Research paper formatters & WebMCP payload helpers
 │   │   │   └── webmcpShared.ts      # Shared WebMCP types & URL slug extractor
 │   │   ├── components/
 │   │   │   ├── ArticleCard.tsx      # Magazine & index card preview with AI badge
@@ -91,6 +92,7 @@ kalidass/
 │   │   │   ├── ErrorBoundary.tsx    # FaroAwareErrorBoundary wrapping UI with crash reporting
 │   │   │   ├── HomepageFeatures/    # Landing page feature cards
 │   │   │   ├── IntelligencePanel/   # SerpApi search grounding accordion dossier
+│   │   ├── ResearchPanel/       # arXiv paper suggestion panel (read-only in reader)
 │   │   │   ├── KalidasaEpigraph.tsx # Prologue verse banner from Mālavikāgnimitra
 │   │   │   ├── StoryBody.tsx        # Polymorphic block renderer (all 6 types)
 │   │   │   ├── StoryPage.tsx        # Dynamic reader (/story/:slug) + outline metrics
@@ -124,6 +126,10 @@ kalidass/
 │   │   │   ├── service.js           # Orchestration, Redis/Blob cache, read-only peek
 │   │   │   ├── serpapi.js           # SerpApi amazon-engine client
 │   │   │   └── scorer.js            # Jev/Clef/heuristic ranking (top 3)
+│   │   ├── research/                 # arXiv research suggestions subsystem
+│   │   │   ├── service.js           # Orchestration, Redis/Blob cache, read-only peek
+│   │   │   ├── searchArxiv.js       # arXiv Atom 1.0 API client & zero-dependency parser
+│   │   │   └── scorer.js            # Jev/Clef/heuristic ranking, relevancy-then-recency (top 5)
 │   │   ├── eval/
 │   │   │   ├── index.js             # Dispatcher & provider cascade (jev -> clef -> heuristic)
 │   │   │   ├── heuristic.js         # Whole-word regex safety & editorial readiness
@@ -157,6 +163,7 @@ kalidass/
 │   ├── docs.json                     # Docs7 config with filterSidebar & navigation groups
 │   ├── custom.css                    # Diagram frame widening for strict-mode Mermaid
 │   ├── books-suggestions.mdx         # Amazon book recommendations pipeline guide
+│   ├── research-suggestions.mdx      # arXiv research papers pipeline guide
 │   ├── faro-observability.mdx        # Grafana Faro RUM, Web Vitals & sourcemap guide
 │   └── *.mdx                         # Architectural & operational documentation
 ├── scripts/
@@ -229,12 +236,16 @@ export type Block =
 - **`ArticleDraft`**: Input payload for `createArticle` / `updateArticle`:
   - `title`, `subtitle`, `excerpt`, `coverImage`, `videoUrl`, `author`, `tags`, `accent`, `featured`, `blocks`, `published`, `private`, `aiGenerated`, `slug`.
   - Server-managed fields (`id`, `authorEmail`, `publishedAt`, `readTime`, `createdAt`, `updatedAt`) are stripped by client and set server-side.
-- **`ArticleSummary`**: Card and list view projection containing immutable `authorEmail`, `has_intelligence: boolean`, `has_books: boolean`, and formatted `readTime`.
-- **`Article`**: Full record including `blocks: Block[]`, `authorEmail`, `has_intelligence`, `has_books`, and (authenticated `?books=true` variant only) `books_suggestions: BooksSuggestionData | null`.
+- **`ArticleSummary`**: Card and list view projection containing immutable `authorEmail`, `has_intelligence: boolean`, `has_books: boolean`, `has_research: boolean`, and formatted `readTime`.
+- **`Article`**: Full record including `blocks: Block[]`, `authorEmail`, `has_intelligence`, `has_books`, `has_research`, and (authenticated `?books=true` variant only) `books_suggestions: BooksSuggestionData | null`.
 
 ### Books Suggestions Models (`blog_frontend/src/lib/types.ts` & `worker/src/books/`)
 - **`BooksSuggestionData`**: `query`, `topic`, `amazon_domain`, `fetchedAt`, `scoredBy` (`"jev" | "clef" | "heuristic"`), and `books: BookSuggestionItem[]` (max 3).
 - **`BookSuggestionItem`**: `title`, `link`, optional `thumbnail`, `price`, `rating`, `reviews_count`, `authors[]`, `asin`, `badge`, plus scorer fields `score`, `isBookConfidence`, `topicSimilarity`.
+
+### Research Suggestions Models (`blog_frontend/src/lib/types.ts` & `worker/src/research/`)
+- **`ResearchSuggestionData`**: `query`, `topic`, `fetchedAt`, `scoredBy` (`"jev" | "clef" | "heuristic"`), and `papers: ResearchPaperItem[]` (max 5).
+- **`ResearchPaperItem`**: `id`, `title`, `summary`, `authors[{name, affiliation?}]`, `links` (`abstract` + optional `pdf`/`doi`), `published`, `updated`, `categories[]`, `primaryCategory`, plus scorer fields `score`, `isPaperConfidence`, `topicSimilarity`.
 
 ### Operational & Visibility Flags
 - `published: false` = Draft. Requires Bearer authentication. Authors see only their own drafts; admins see all.
@@ -246,7 +257,7 @@ export type Block =
 
 ## 6. WebMCP In-Browser AI Tools Specification
 
-Kalidass Journal exposes 8 structured tools on `window.modelContext`, `document.modelContext`, and `navigator.modelContext`:
+Kalidass Journal exposes 9 structured tools on `window.modelContext`, `document.modelContext`, and `navigator.modelContext`:
 
 | Tool | Scope | Parameters | Description |
 |---|---|---|---|
@@ -257,6 +268,7 @@ Kalidass Journal exposes 8 structured tools on `window.modelContext`, `document.
 | `getStoryVideoLinks` | Story-scoped | `slug?` | Returns hero and inline body video players and captions. |
 | `getPeopleAlsoAsk` | Story-scoped | `slug?` | Returns searcher questions and answer snippets from the dossier. |
 | `getStoryBookSuggestions` | Story-scoped | `slug?` | Returns curated Amazon book recommendations and relevant literature for the active story. |
+| `getStoryResearchPapers` | Story-scoped | `slug?` | Returns up to 5 arXiv academic papers and preprints, ranked by relevance then recency, from the research dossier. |
 | `enhanceStoryContent` | Story-scoped (Auth) | `enhancedText?`, `sectionHeading?`, `addNewSection?`, `blockIndex?`, `enhancedBlocks?`, `instruction?` | Stages in-browser content modifications with live preview bar. Resolves route internally via `window.location`. |
 
 ### Staging Lifecycle Events
@@ -296,6 +308,10 @@ Kalidass Journal exposes 8 structured tools on `window.modelContext`, `document.
 12. **Eval Provider Cascade Invariant**:
     - `EVAL_PROVIDER` defaults to `"jev"` (`worker/wrangler.toml`). `runQualityEvaluation` (`worker/src/eval/index.js`) cascades jev -> clef -> heuristic on missing keys or upstream outage.
     - The safety verdict is only ever `"safe"` or `"rejected"`; article writes are rejected with `422` when the verdict is not safe.
+13. **Research Suggestions Invariants**:
+    - Redis key `research_suggestion:<id>` (`kalidass:research_suggestion:<id>`, 24h TTL) plus Blob object `<rootBucket>/research/<id>.json`; the Redis key is deleted by `invalidateArticleCaches` (`worker/src/redis/cache.js`).
+    - `worker/src/research/scorer.js` cascades jev -> clef -> heuristic, filters on `score >= 0.40 && isPaperConfidence >= 0.40`, sorts primarily by relevance score and secondarily by recency, and caps to the top 5. A model's zero-match verdict is preserved (never resurrected by the heuristic fallback), and unparsable model verdicts fail closed to score `0`.
+    - `POST /api/articles/:id/research` is owner/admin only; `GET /api/articles/:id/research` mirrors the article draft/private gating.
 
 ---
 

@@ -1,12 +1,14 @@
-import {getArticle, getArticleIntelligence, getArticleBooks, getAuthMe} from "../lib/api";
-import type {Article, AiIntelligence, BooksSuggestionData, Block} from "../lib/types";
+import {getArticle, getArticleIntelligence, getArticleBooks, getArticleResearch, getAuthMe} from "../lib/api";
+import type {Article, AiIntelligence, BooksSuggestionData, ResearchSuggestionData, Block} from "../lib/types";
 import type {WebMcpTool} from "./webmcpShared";
 import {getBrowserStorySlug} from "./webmcpShared";
+import {formatResearchSuggestionPayload} from "./researchWebMcp";
 
 export interface StoryWebMcpDeps {
   getArticleFn?: typeof getArticle;
   getIntelligenceFn?: typeof getArticleIntelligence;
   getArticleBooksFn?: typeof getArticleBooks;
+  getArticleResearchFn?: typeof getArticleResearch;
   getAuthMeFn?: typeof getAuthMe;
   currentPathname?: string;
   adminTokenOverride?: string | null;
@@ -406,6 +408,63 @@ export class StoryWebMcp {
   }
 
   /**
+   * Tool: getStoryResearchPapers
+   * Returns relevant arXiv academic papers and preprint suggestions for the current story page (/story/:slug).
+   */
+  async getStoryResearchPapers(args?: {
+    slug?: string;
+  }): Promise<
+    StoryToolResult<{
+      query: string;
+      topic: string;
+      total: number;
+      scoredBy?: string;
+      papers: Array<{
+        id: string;
+        title: string;
+        authors: string;
+        summary: string;
+        links: {
+          abstract: string;
+          pdf?: string;
+        };
+        published?: string;
+        primaryCategory?: string | null;
+        score?: number;
+      }>;
+    }>
+  > {
+    const resolved = await this.resolveForTool(args?.slug);
+    if (!resolved.ok) {
+      return {available: false, error: resolved.error};
+    }
+    const {article} = resolved.data;
+    const targetSlug = args?.slug || article.slug || getBrowserStorySlug(this.deps.currentPathname) || "";
+
+    let researchData: ResearchSuggestionData | null = article.research_suggestions || null;
+    if (!researchData && targetSlug) {
+      const getResearchFn = this.deps.getArticleResearchFn || getArticleResearch;
+      try {
+        researchData = await getResearchFn(targetSlug);
+      } catch {
+        researchData = null;
+      }
+    }
+
+    if (!researchData || !researchData.papers || researchData.papers.length === 0) {
+      return {
+        available: false,
+        reason: "No research papers available for this story.",
+      };
+    }
+
+    return {
+      available: true,
+      ...formatResearchSuggestionPayload(researchData),
+    };
+  }
+
+  /**
    * Tool 5: enhanceStoryContent
    * Enhances textual blog content (headings, paragraphs, quotes) on the story page.
    * Target story is strictly resolved from window.location (/story/:slug).
@@ -705,6 +764,14 @@ export class StoryWebMcp {
         inputSchema: baseSlugSchema,
         parameters: baseSlugSchema,
         execute: (args?: {slug?: string}) => this.getStoryBookSuggestions(args),
+      },
+      {
+        name: "getStoryResearchPapers",
+        description:
+          "Returns relevant arXiv academic papers and preprint suggestions for the current story page (/story/:slug).",
+        inputSchema: baseSlugSchema,
+        parameters: baseSlugSchema,
+        execute: (args?: {slug?: string}) => this.getStoryResearchPapers(args),
       },
       {
         name: "enhanceStoryContent",
