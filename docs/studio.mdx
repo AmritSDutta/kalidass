@@ -76,6 +76,18 @@ The primary writing environment:
 - Authors can only delete their own articles; Super-Admins can delete any article.
 - Protected by a browser confirmation dialog and worker-enforced 403 ownership check.
 
+## Editor Sidebar Analysis Panels
+
+When editing an already-saved article, the right-hand editor sidebar renders the analysis and compilation cards alongside the live outline:
+
+- **Quality & Safety (`Article Heuristics`)**: The **Run Quality Audit** action evaluates the draft for AI-generation probability, systems rigor, engagement, and the pre-submit safety gate (see [Evaluation](/evaluation)).
+- **Live Outline (`Heading Analysis`)**: Section count, total words, estimated read time, and a clickable document-structure outline with per-heading word counts.
+- **AI Intelligence (`Search Grounding`)**: **⚡ Compile AI Intel** / **↻ Refresh AI Intel** harvests a SerpApi dossier (AI Overview, Knowledge Graph, People Also Ask) via `POST /api/articles/:id/intel`, with an inline drawer to preview it (see [Reading Experience](/reading-experience)).
+- **Book Suggestions (`Curated Literature`)**: **⚡ Find Book Suggestions** / **↻ Refresh Suggestions** ranks Amazon literature via `POST /api/articles/:id/books` (see [Books Suggestions](/books-suggestions)).
+- **Research Papers (`Academic Research`)**: **⚡ Find Research Papers** / **↻ Refresh Research** harvests and ranks arXiv preprints via `POST /api/articles/:id/research` (see [Research Suggestions](/research-suggestions)).
+
+The intelligence, books, and research cards only render once the article has an id, and each shows a status badge with the item count and the scoring provider before expanding its read-only results drawer.
+
 ## Media Upload Integration
 
 File upload controls are embedded directly in the form fields:

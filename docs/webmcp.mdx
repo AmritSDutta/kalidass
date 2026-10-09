@@ -14,7 +14,7 @@ Kalidass Journal integrates WebMCP across all pages via a dedicated client modul
 ## 1. How WebMCP Works
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph Browser["User Browser Runtime (kalidass.amrit.fyi)"]
         Docusaurus["Docusaurus Reader SPA"]
         Registry["WebMCP Registry (document / navigator / window .modelContext)"]
@@ -103,9 +103,9 @@ Gets the direct canonical reading URL, path, and summary metadata for a specific
 
 ## 3. Story-Scoped Tools (`storyWebMcp.ts`)
 
-Six additional tools are registered by the `StoryWebMcp` class (`blog_frontend/src/client-modules/storyWebMcp.ts`). They resolve the active story from an explicit `slug` argument or, by default, from the current `/story/:slug` route (`getBrowserStorySlug`). Every story tool accepts an optional `slug`; the intelligence dossier is lazy-fetched from `/api/articles/:slug/intel` only when the article carries the `has_intelligence` flag, and the book dossier is lazy-fetched from `/api/articles/:slug/books` when the article carries `has_books`.
+Eight additional tools are registered by the `StoryWebMcp` class (`blog_frontend/src/client-modules/storyWebMcp.ts`). The six read-only tools resolve the active story from an explicit `slug` argument or, by default, from the current `/story/:slug` route (`getBrowserStorySlug`); the two edit tools (`getStoryBlocks`, `enhanceStoryContent`) ignore `slug` entirely and resolve the story strictly from `window.location.pathname`. The intelligence, books, and research dossiers are lazy-fetched from `/api/articles/:slug/intel`, `/api/articles/:slug/books`, and `/api/articles/:slug/research` respectively, only when the article carries the matching `has_intelligence`, `has_books`, or `has_research` flag.
 
-All six return a **discriminated availability union**: `{ available: true, ...data }` on success, or `{ available: false, error | reason }` — `error` distinguishes *no story context* (`"Tool only available on a story page (/story/:slug)."`) from *lookup failures* (`"Story lookup failed for '<slug>'"`), while `reason` reports section-level absences (e.g. `"No video embeds or links in this story."`).
+All eight return a **discriminated availability union**: `{ available: true, ...data }` on success, or `{ available: false, error | reason }` — `error` distinguishes *no story context* (`"Tool only available on a story page (/story/:slug)."`) from *lookup failures* (`"Story lookup failed for '<slug>'"`), while `reason` reports section-level absences (e.g. `"No video embeds or links in this story."`).
 
 ### `getStoryAiOverview`
 Returns the Google AI Overview text and cited research sources for the current story.
@@ -139,7 +139,7 @@ Returns curated arXiv academic papers and preprint suggestions for the current s
 Returns the indexed list of blocks (with 0-based indices, types, metadata, previews, and staged dirty indicators) for the active story page (`/story/:slug`).
 * **Target Resolution**: Purely internal via `window.location.pathname` (no manual `slug` argument needed). Rejects on non-story pages.
 * **Authorization**: Gated to the story author (`authorEmail`) or elevated administrator (`kalidass-admin-token`).
-* **Returns**: `{ available: true, ok: true, slug, title, totalBlocks, staged, dirtyIndices, blocks: [{ index, type, text?, preview, isDirty }] }`.
+* **Returns**: `{ available: true, ok: true, slug, title, totalBlocks, staged, dirtyIndices, blocks: [{ index, type, text?, cite?, url?, caption?, language?, title?, showLineNumbers?, wrapLines?, highlightLines?, isDirty, preview }] }`.
 * **Behavior**: Reflects any pending staged edits in memory (`isDirty: true`, `staged: true`), allowing agents to inspect exact block indices before in-place modifications.
 
 ### `enhanceStoryContent`
@@ -147,10 +147,11 @@ Stages in-browser content enhancements, section refinements, or code block addit
 * **Target Resolution**: Purely internal via `window.location.pathname` (no manual `slug` argument needed). Rejects on non-story pages.
 * **Authorization**: Gated to the story author (`authorEmail`) or elevated administrator (`kalidass-admin-token`).
 * **Input Schema / Parameters**:
-  * `enhancedText` *(string, optional)*: Replacement or appended prose/markdown text.
-  * `sectionHeading` *(string, optional)*: Specific heading to target and update. Rejects actionably if the heading is not found.
-  * `blockIndex` *(number, optional)*: Exact block index to replace.
-  * `enhancedBlocks` *(Block[], optional)*: Direct replacement block array supporting `paragraph`, `heading`, `quote`, `image`, `video`, and `code` (with `language` and `title`).
+  * `enhancedText` *(string, optional)*: Replacement or appended prose text. Markdown tokens are stripped (`humanizeSectionText`) so the reader renders clean typography; code blocks keep their raw source text.
+  * `sectionHeading` *(string, optional)*: Specific heading to target, update, or add. Rejects actionably (listing available headings) if the heading is not found.
+  * `addNewSection` *(boolean, optional)*: When `true`, inserts a new `heading` block (plus a paragraph when `enhancedText` is supplied) at `blockIndex` or at the end of the story.
+  * `blockIndex` *(number, optional)*: Exact block index to replace, or the insertion point when adding a new section.
+  * `enhancedBlocks` *(Block[], optional)*: Direct replacement/append block array supporting `paragraph`, `heading`, `quote`, `image`, `video`, and `code` (with `language`, `title`, `showLineNumbers`, `wrapLines`, and `highlightLines`). Each block is validated before staging.
   * `instruction` *(string, optional)*: Summary message explaining the editorial modification.
 * **Returns**: `{ available: true, ok: true, staged: true, slug, dirtyIndices, updatedIndices, articleTitle, message }`.
 * **Behavior**: Composes consecutive edits incrementally on top of pending staged blocks. Dispatches `kalidass:stage-enhancement` custom event for live in-page diff preview in `StoryPage.tsx`.
