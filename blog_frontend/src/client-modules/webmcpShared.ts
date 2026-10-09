@@ -15,7 +15,7 @@ export interface WebMcpTool {
     properties: Record<string, {type: string; description: string}>;
     required?: string[];
   };
-  execute: (args: any) => Promise<unknown> | unknown;
+  execute: (args?: any) => Promise<unknown> | unknown;
 }
 
 export interface ModelContextRegistry {

@@ -130,6 +130,18 @@ Returns curated Amazon book recommendations and relevant literature for the curr
 * **Input Schema / Parameters**: `slug` *(string, optional)* — defaults to the active story on `/story/:slug`.
 * **Returns**: `{ available, query, topic, total, scoredBy?, books: [{ title, authors?, price?, rating?, reviews_count?, link, thumbnail? }] }`, or `{ available: false, reason: "No book suggestions available for this story." }` when none has been compiled.
 
+### `getStoryResearchPapers`
+Returns curated arXiv academic papers and preprint suggestions for the current story, compiled by the [Research Suggestions](/research-suggestions) pipeline.
+* **Input Schema / Parameters**: `slug` *(string, optional)* — defaults to the active story on `/story/:slug`.
+* **Returns**: `{ available, query, topic, total, scoredBy?, papers: [{ id, title, authors, summary, links: { abstract, pdf }, published, primaryCategory, score }] }`.
+
+### `getStoryBlocks`
+Returns the indexed list of blocks (with 0-based indices, types, metadata, previews, and staged dirty indicators) for the active story page (`/story/:slug`).
+* **Target Resolution**: Purely internal via `window.location.pathname` (no manual `slug` argument needed). Rejects on non-story pages.
+* **Authorization**: Gated to the story author (`authorEmail`) or elevated administrator (`kalidass-admin-token`).
+* **Returns**: `{ available: true, ok: true, slug, title, totalBlocks, staged, dirtyIndices, blocks: [{ index, type, text?, preview, isDirty }] }`.
+* **Behavior**: Reflects any pending staged edits in memory (`isDirty: true`, `staged: true`), allowing agents to inspect exact block indices before in-place modifications.
+
 ### `enhanceStoryContent`
 Stages in-browser content enhancements, section refinements, or code block additions to the currently viewed story.
 * **Target Resolution**: Purely internal via `window.location.pathname` (no manual `slug` argument needed). Rejects on non-story pages.
@@ -155,7 +167,7 @@ Kalidass Journal is validated with the **WebMCP – Model Context Tool Inspector
    - Open the **WebMCP Inspector** side panel.
 3. **Hard-Refresh Page**:
    - Press `Ctrl + Shift + R` (or `F5`) on `https://kalidass.amrit.fyi` or `http://localhost:3000`.
-   - The inspector will automatically list all eight tools — `searchArticles`, `readArticle`, `getStoryAiOverview`, `getStoryCitations`, `getStoryVideoLinks`, `getPeopleAlsoAsk`, `getStoryBookSuggestions`, and `enhanceStoryContent` — along with their interactive schema forms.
+   - The inspector will automatically list all 10 tools — `searchArticles`, `readArticle`, `getStoryAiOverview`, `getStoryCitations`, `getStoryVideoLinks`, `getPeopleAlsoAsk`, `getStoryBookSuggestions`, `getStoryResearchPapers`, `getStoryBlocks`, and `enhanceStoryContent` — along with their interactive schema forms.
 4. **Execute & Test with Gemini**:
    - Test manual JSON inputs directly in the inspector or attach a Gemini API key to run autonomous multi-step agent queries.
 
