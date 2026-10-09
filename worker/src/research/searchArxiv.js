@@ -205,8 +205,9 @@ export async function fetchArxivPapers(topic, env) {
     .trim()
     .slice(0, 150);
 
-  const tokens = cleanTopic.split(/\s+/).filter((t) => t.length > 2).slice(0, 8);
-  const searchQuery = tokens.length > 0 ? `all:${tokens.join(" AND all:")}` : `all:${cleanTopic}`;
+  const sanitized = cleanTopic.replace(/[^\w\s-]/g, " ").trim();
+  const tokens = sanitized.split(/\s+/).filter((t) => t.length > 2).slice(0, 8);
+  const searchQuery = tokens.length > 0 ? `all:${tokens.join(" AND all:")}` : `all:${sanitized || "technology"}`;
 
   const feed = await searchArxiv({
     searchQuery,

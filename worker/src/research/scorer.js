@@ -191,7 +191,20 @@ export async function scorePapersClefBatch(candidates, topic, env) {
   }
 
   const jsonMatch = responseText.match(/\[\s*\{[\s\S]*\}\s*\]/);
-  const parsedList = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+  if (!jsonMatch) {
+    throw new Error("Clef response did not contain a valid JSON array");
+  }
+
+  let parsedList = [];
+  try {
+    parsedList = JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    throw new Error(`Clef response JSON parsing failed: ${err.message}`);
+  }
+
+  if (!Array.isArray(parsedList) || parsedList.length === 0) {
+    throw new Error("Clef returned empty candidate ranking array");
+  }
 
   return candidates.map((item, idx) => {
     const scored = parsedList.find((p) => p.index === idx) || parsedList[idx];

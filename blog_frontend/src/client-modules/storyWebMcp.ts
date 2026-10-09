@@ -21,15 +21,18 @@ export interface StoryResolution {
 
 // Module-level pending snapshot for composing consecutive enhancements in the same session
 let pendingStaged: Article | null = null;
+let pendingDirtyIndices: number[] = [];
 
 if (typeof window !== "undefined") {
   window.addEventListener("kalidass:stage-clear", () => {
     pendingStaged = null;
+    pendingDirtyIndices = [];
   });
 }
 
 export function clearPendingStaged(): void {
   pendingStaged = null;
+  pendingDirtyIndices = [];
 }
 
 /**
@@ -81,6 +84,28 @@ export function validateEnhancedBlocks(blocks: unknown[]): {valid: true} | {vali
     }
   }
   return {valid: true};
+}
+
+export function getBlockPreview(block: Block): string {
+  if (!block) return "";
+  const rawText = (block as any).text || (block as any).content || "";
+  if (block.type === "paragraph" || block.type === "heading" || block.type === "quote") {
+    const text = typeof rawText === "string" ? rawText : JSON.stringify(rawText);
+    return text.length > 80 ? text.slice(0, 80) + "..." : text;
+  }
+  if (block.type === "code") {
+    const title = block.title ? `[${block.title}] ` : "";
+    const lang = block.language ? `(${block.language}) ` : "";
+    const text = typeof rawText === "string" ? rawText : JSON.stringify(rawText);
+    return `${title}${lang}${text.slice(0, 60)}...`;
+  }
+  if (block.type === "image") {
+    return block.caption ? `[Image] ${block.caption}` : `[Image] ${block.url || ""}`;
+  }
+  if (block.type === "video") {
+    return block.caption ? `[Video] ${block.caption}` : `[Video] ${block.url || ""}`;
+  }
+  return typeof rawText === "string" ? rawText.slice(0, 80) : JSON.stringify(block).slice(0, 80);
 }
 
 export type StoryToolResult<T> =
@@ -465,7 +490,117 @@ export class StoryWebMcp {
   }
 
   /**
-   * Tool 5: enhanceStoryContent
+   * Tool: getStoryBlocks
+   * Returns the structured, indexed list of blocks for the active story page (/story/:slug).
+   * Target story is strictly resolved from window.location (/story/:slug).
+   * Enforces privilege: caller must be the author or an elevated admin.
+   * Reflects pending staged edits if present.
+   */
+  async getStoryBlocks(): Promise<
+    StoryToolResult<{
+      ok: true;
+      slug: string;
+      title: string;
+      totalBlocks: number;
+      staged: boolean;
+      dirtyIndices: number[];
+      blocks: Array<{
+        index: number;
+        type: Block["type"];
+        text?: string;
+        cite?: string;
+        url?: string;
+        caption?: string;
+        language?: string;
+        title?: string;
+        showLineNumbers?: boolean;
+        wrapLines?: boolean;
+        highlightLines?: string;
+        isDirty: boolean;
+        preview: string;
+      }>;
+    }>
+  > {
+    const routeSlug = getBrowserStorySlug(this.deps.currentPathname);
+    if (!routeSlug) {
+      return {available: false, error: "Tool only available on a story page (/story/:slug)."};
+    }
+
+    let article: Article;
+    try {
+      const getFn = this.deps.getArticleFn || getArticle;
+      article = await getFn(routeSlug);
+    } catch (err) {
+      return {
+        available: false,
+        error: `Story lookup failed for '${routeSlug}': ${err instanceof Error ? err.message : "unknown error"}`,
+      };
+    }
+
+    // Check edit privileges
+    const getMeFn = this.deps.getAuthMeFn || getAuthMe;
+    let authUser: {email?: string; role?: string} | null = null;
+    const adminToken =
+      this.deps.adminTokenOverride !== undefined
+        ? this.deps.adminTokenOverride
+        : typeof window !== "undefined"
+          ? localStorage.getItem("kalidass-admin-token")
+          : null;
+
+    try {
+      const meRes = await getMeFn(undefined, adminToken || undefined);
+      if (meRes?.user) {
+        authUser = meRes.user;
+      }
+    } catch {
+      authUser = null;
+    }
+
+    const isAuthor =
+      Boolean(authUser?.email && article.authorEmail) &&
+      authUser!.email!.toLowerCase().trim() === article.authorEmail.toLowerCase().trim();
+    const isAdmin = authUser?.role === "admin";
+
+    if (!isAuthor && !isAdmin) {
+      return {
+        available: false,
+        error: "Not privileged: you must be the author or an admin to access story blocks.",
+      };
+    }
+
+    const isStagedActive = Boolean(pendingStaged && pendingStaged.slug === routeSlug);
+    const baseArticle = isStagedActive ? pendingStaged! : article;
+    const existingBlocks = baseArticle.blocks || [];
+    const dirtyIndices = isStagedActive ? [...pendingDirtyIndices] : [];
+
+    return {
+      available: true,
+      ok: true,
+      slug: baseArticle.slug,
+      title: baseArticle.title,
+      totalBlocks: existingBlocks.length,
+      staged: isStagedActive,
+      dirtyIndices,
+      blocks: existingBlocks.map((b, idx) => ({
+        index: idx,
+        type: b.type,
+        text: (b as any).text,
+        cite: (b as any).cite,
+        url: (b as any).url,
+        caption: (b as any).caption,
+        language: (b as any).language,
+        title: (b as any).title,
+        showLineNumbers: (b as any).showLineNumbers,
+        wrapLines: (b as any).wrapLines,
+        highlightLines: (b as any).highlightLines,
+        isDirty: dirtyIndices.includes(idx),
+        preview: getBlockPreview(b),
+      })),
+    };
+  }
+
+  /**
+   * Tool: enhanceStoryContent
    * Enhances textual blog content (headings, paragraphs, quotes) on the story page.
    * Target story is strictly resolved from window.location (/story/:slug).
    * Enforces privilege: caller must be the author or an elevated admin.
@@ -632,6 +767,7 @@ export class StoryWebMcp {
     };
 
     pendingStaged = stagedArticle;
+    pendingDirtyIndices = Array.from(new Set([...pendingDirtyIndices, ...dirtyIndices]));
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(
@@ -772,6 +908,20 @@ export class StoryWebMcp {
         inputSchema: baseSlugSchema,
         parameters: baseSlugSchema,
         execute: (args?: {slug?: string}) => this.getStoryResearchPapers(args),
+      },
+      {
+        name: "getStoryBlocks",
+        description:
+          "Returns the indexed list of blocks (with 0-based indices, types, metadata, previews, and staged dirty indicators) for the active story page (/story/:slug). Target story resolved automatically from URL. Requires author or admin privilege.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+        parameters: {
+          type: "object",
+          properties: {},
+        },
+        execute: () => this.getStoryBlocks(),
       },
       {
         name: "enhanceStoryContent",

@@ -121,7 +121,7 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
     apiMocks.getArticleResearch.mockReset();
   });
 
-  it("auto-registers all 9 tools on the model context registry", async () => {
+  it("auto-registers all 10 tools on the model context registry", async () => {
     const registry = window.modelContext;
     expect(registry).toBeTruthy();
     const tools = await registry!.listTools();
@@ -130,6 +130,7 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
       "enhanceStoryContent",
       "getPeopleAlsoAsk",
       "getStoryAiOverview",
+      "getStoryBlocks",
       "getStoryBookSuggestions",
       "getStoryCitations",
       "getStoryResearchPapers",
@@ -377,6 +378,108 @@ describe("WebMCP in-browser registry & storyWebMcp (Hermetic)", () => {
       expect(res.available).toBe(false);
       expect(res.error).toMatch(/story lookup failed/i);
       expect(res.error).toMatch(/attention-as-routing/);
+    });
+
+    describe("getStoryBlocks tool", () => {
+      beforeEach(() => {
+        localStorage.clear();
+        clearPendingStaged();
+        apiMocks.getAuthMe.mockReset();
+      });
+
+      it("does not expose slug parameter in schema or parameters", () => {
+        const tool = window.modelContext!.tools.getStoryBlocks;
+        expect(tool.inputSchema?.properties?.slug).toBeUndefined();
+        expect(tool.parameters?.properties?.slug).toBeUndefined();
+      });
+
+      it("rejects when not on a story page", async () => {
+        window.history.pushState(null, "", "/magazine");
+        const res = (await window.modelContext!.tools.getStoryBlocks.execute()) as any;
+        expect(res.available).toBe(false);
+        expect(res.error).toBe("Tool only available on a story page (/story/:slug).");
+      });
+
+      it("rejects unauthorized caller with exact error message", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "stranger@other.com", role: "author"},
+        });
+
+        const res = (await window.modelContext!.tools.getStoryBlocks.execute()) as any;
+        expect(res.available).toBe(false);
+        expect(res.error).toBe(
+          "Not privileged: you must be the author or an admin to access story blocks."
+        );
+      });
+
+      it("returns indexed blocks with previews and types for privileged author", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "a@b.c", role: "author"},
+        });
+
+        const res = (await window.modelContext!.tools.getStoryBlocks.execute()) as any;
+        expect(res.available).toBe(true);
+        expect(res.ok).toBe(true);
+        expect(res.slug).toBe("attention-as-routing");
+        expect(res.totalBlocks).toBe(sampleArticle.blocks.length);
+        expect(res.staged).toBe(false);
+        expect(res.dirtyIndices).toEqual([]);
+        expect(res.blocks).toHaveLength(sampleArticle.blocks.length);
+
+        // Check index and previews
+        expect(res.blocks[0]).toMatchObject({
+          index: 0,
+          type: "paragraph",
+          text: "Introduction to routing networks.",
+          isDirty: false,
+          preview: "Introduction to routing networks.",
+        });
+        expect(res.blocks[1]).toMatchObject({
+          index: 1,
+          type: "heading",
+          text: "Empirical Benchmarks",
+          isDirty: false,
+        });
+        expect(res.blocks[2]).toMatchObject({
+          index: 2,
+          type: "video",
+          url: "https://vimeo.com/in-body-vid",
+          caption: "Benchmark demo",
+          isDirty: false,
+          preview: "[Video] Benchmark demo",
+        });
+      });
+
+      it("reflects staged block changes and marks dirty blocks when preceded by enhanceStoryContent", async () => {
+        window.history.pushState(null, "", "/story/attention-as-routing");
+        apiMocks.getArticle.mockResolvedValue(sampleArticle);
+        apiMocks.getAuthMe.mockResolvedValue({
+          ok: true,
+          user: {email: "a@b.c", role: "author"},
+        });
+
+        // 1. Stage an edit via enhanceStoryContent
+        await window.modelContext!.tools.enhanceStoryContent.execute({
+          blockIndex: 0,
+          enhancedText: "Revised introduction to sparse routing networks.",
+          instruction: "Clarified introductory concepts",
+        });
+
+        // 2. Query getStoryBlocks
+        const res = (await window.modelContext!.tools.getStoryBlocks.execute()) as any;
+        expect(res.available).toBe(true);
+        expect(res.staged).toBe(true);
+        expect(res.dirtyIndices).toContain(0);
+        expect(res.blocks[0].text).toBe("Revised introduction to sparse routing networks.");
+        expect(res.blocks[0].isDirty).toBe(true);
+        expect(res.blocks[1].isDirty).toBe(false);
+      });
     });
 
     describe("enhanceStoryContent tool", () => {
