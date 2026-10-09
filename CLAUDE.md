@@ -94,6 +94,7 @@ kalidass/
 │   │   │   ├── IntelligencePanel/   # SerpApi search grounding accordion dossier
 │   │   ├── ResearchPanel/       # arXiv paper suggestion panel (read-only in reader)
 │   │   │   ├── KalidasaEpigraph.tsx # Prologue verse banner from Mālavikāgnimitra
+│   │   │   ├── NeuralGenNavbarItem.tsx # Hard-navigation navbar link for /generate_article (Cloudflare Access)
 │   │   │   ├── StoryBody.tsx        # Polymorphic block renderer (all 6 types)
 │   │   │   ├── StoryPage.tsx        # Dynamic reader (/story/:slug) + outline metrics
 │   │   │   └── VideoEmbed.tsx       # YouTube, Vimeo, and direct MP4 player
@@ -313,6 +314,10 @@ Kalidass Journal exposes 10 structured tools on `window.modelContext`, `document
     - Redis key `research_suggestion:<id>` (`kalidass:research_suggestion:<id>`, 24h TTL) plus Blob object `<rootBucket>/research/<id>.json`; the Redis key is deleted by `invalidateArticleCaches` (`worker/src/redis/cache.js`).
     - `worker/src/research/scorer.js` cascades jev -> clef -> heuristic, filters on `score >= 0.40 && isPaperConfidence >= 0.40`, sorts primarily by relevance score and secondarily by recency, and caps to the top 5. A model's zero-match verdict is preserved (never resurrected by the heuristic fallback), and unparsable model verdicts fail closed to score `0`.
     - `POST /api/articles/:id/research` is owner/admin only; `GET /api/articles/:id/research` mirrors the article draft/private gating.
+14. **Cloudflare Access Hard Navigation Invariant**:
+    - Privileged administrative routes protected by Cloudflare Access (such as `/generate_article` Neural Gen) must NEVER use client-side SPA routing (`@docusaurus/Link`, `to: "/generate_article"`, or `history.push`).
+    - Client-side transitions bypass edge HTTP request inspection because the browser swaps DOM components without initiating a top-level document request to Cloudflare.
+    - The navbar uses `NeuralGenNavbarItem` (`custom-neural-gen`) which executes `window.location.href = '/generate_article'`, forcing a clean top-level HTTP GET request that Cloudflare Access intercepts and gates at the CDN edge.
 
 ---
 

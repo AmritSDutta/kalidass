@@ -40,7 +40,7 @@ flowchart TD
 
 ---
 
-## 2. The Three Pillars of Zero Trust Isolation
+## 2. The Four Pillars of Zero Trust Isolation
 
 ### Pillar 1: Zero Public Ingress (`workers_dev = false`)
 
@@ -132,6 +132,24 @@ export function adminOk(request, env) {
   - `POST /api/upload` & `POST /api/objects` (Uploading media blobs)
   - `POST /api/articles/:slug/books` (Compiling book suggestions)
   - `GET /api/articles?status=draft` (Listing draft articles)
+
+---
+
+### Pillar 4: Cloudflare Access Edge Interception on Interactive Routes (`/generate_article`)
+
+In addition to programmatic API token gates and private isolate service bindings, privileged interactive web surfaces—specifically the **Neural Gen** autonomous article generator (`/generate_article`)—are protected at the edge by **Cloudflare Access (Zero Trust)**.
+
+#### SPA Routing vs. Edge Access Interception
+
+In a Single Page Application (SPA), clicking client-side links (`history.push` or `@docusaurus/Link`) swaps DOM components in the browser runtime without sending an HTTP GET request to Cloudflare CDN. Consequently, client-side routing would bypass Cloudflare Access edge evaluation.
+
+To enforce Zero Trust inspection:
+1. The **Neural Gen** navigation link uses a dedicated component (`NeuralGenNavbarItem.tsx`) registered as `custom-neural-gen` in the Docusaurus navbar registry.
+2. Standard clicks execute a hard browser navigation:
+   ```javascript
+   window.location.href = "/generate_article";
+   ```
+3. This forces the browser to initiate a genuine top-level HTTP GET request, allowing Cloudflare Access to intercept the request at the CDN edge, evaluate the identity and Zero Trust policies, and enforce authentication before private UI assets are served.
 
 ---
 
