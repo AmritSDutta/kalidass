@@ -74,13 +74,41 @@ export async function generateArticle(request, env, user, storageHelpers) {
   // 1. Generate article draft via provider
   const draft = await provider.generate(request, env);
 
+  const now = new Date().toISOString();
+  const articleId = crypto.randomUUID();
+
+  // Save generated cover image to Upstash Blob as a hosted file and update URL
+  if (draft.coverImage && draft.coverImage.startsWith("data:image/")) {
+    try {
+      const match = draft.coverImage.match(/^data:image\/([a-zA-Z0-9\+\-]+);base64,(.+)$/s);
+      if (match) {
+        const ext = match[1] === "jpeg" ? "jpg" : match[1];
+        const binaryString = atob(match[2]);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const root = env?.ROOT_BUCKET || env?.ROOT_FOLDER || "kalidass";
+        const prefix = String(root).replace(/^\/+|\/+$/g, "");
+        const mediaPath = `${prefix}/media/${articleId}-cover.${ext}`;
+        const blob = await bucket.put(mediaPath, bytes, {
+          contentType: `image/${ext === "jpg" ? "jpeg" : ext}`,
+          cache: "immutable",
+        });
+        if (blob?.url) {
+          draft.coverImage = blob.url;
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to save generated cover image to storage:", err?.message);
+    }
+  }
+
   // 2. Run quality & safety screening (soft-pass: unlisted drafts are reviewed by editors in Studio prior to public publishing)
   const text = extractArticleText(draft);
   const evaluation = await runQualityEvaluation(text, {}, env);
 
   // 3. Assemble full article object with server-stamped invariants under lock
-  const now = new Date().toISOString();
-  const articleId = crypto.randomUUID();
   const runner = typeof withIndexLock === "function" ? withIndexLock : (fn) => fn();
 
   const article = await runner(async () => {

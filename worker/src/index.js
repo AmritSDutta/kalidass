@@ -116,6 +116,10 @@ export default {
         const form = await request.formData();
         const file = form.get("file");
         if (!(file instanceof File)) return ResponseHelper.json({error: "file field required"}, 400, origin);
+        const isImage = (file.type || "").startsWith("image/");
+        if (isImage && file.size > 500 * 1024) {
+          return ResponseHelper.json({error: "Image exceeds maximum allowed size of 500 KB"}, 400, origin);
+        }
         const prefix = StorageHelper.getRootPrefix(env);
         const path = uniquePath`${prefix}/media/${file.name}`;
         const buffer = new Uint8Array(await file.arrayBuffer());
