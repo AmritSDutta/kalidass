@@ -20,6 +20,12 @@ import {IntelligencePanel} from "@site/src/components/IntelligencePanel/Intellig
 import {BooksPanel} from "@site/src/components/BooksPanel/BooksPanel";
 import {ResearchPanel} from "@site/src/components/ResearchPanel/ResearchPanel";
 import {getLanguageIndentSize} from "@site/src/components/ArticleCodeBlock";
+import {
+  ALLOWED_IMAGE_ACCEPT,
+  validateImageUploadFile,
+  getDraftValidationErrors,
+  getPublishValidationErrors,
+} from "@site/src/lib/validation";
 import styles from "./admin.module.css";
 
 const ACCENTS = ["#6366f1", "#f97316", "#06b6d4", "#10b981", "#f43f5e", "#eab308"];
@@ -162,6 +168,7 @@ function AdminInner(): ReactNode {
   const [researchData, setResearchData] = useState<ResearchSuggestionData | null>(null);
   const [loadingResearch, setLoadingResearch] = useState<boolean>(false);
   const [researchError, setResearchError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const fetchArticleIntelligence = async (forceRefresh: boolean = false) => {
     const targetIdOrSlug = editingId || draft.slug;
@@ -419,9 +426,12 @@ function AdminInner(): ReactNode {
     apply: (url: string) => void
   ) => {
     if (!file) return;
-    if (file.type.startsWith("image/") && file.size > 500 * 1024) {
-      setStatus(`Image upload failed: ${(file.size / 1024).toFixed(1)} KB exceeds the 500 KB limit.`);
-      return;
+    if (file.type.startsWith("image/") || /\.(webp|jpe?g|png|gif|svg|bmp)$/i.test(file.name)) {
+      const imgRes = validateImageUploadFile(file);
+      if (!imgRes.valid) {
+        setStatus(`Upload blocked: ${imgRes.error}`);
+        return;
+      }
     }
     setBusy(true);
     try {
@@ -436,6 +446,21 @@ function AdminInner(): ReactNode {
   };
 
   const save = async (publish: boolean) => {
+    setValidationErrors([]);
+    const errors = publish
+      ? getPublishValidationErrors(draft)
+      : getDraftValidationErrors(draft);
+
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      setStatus(
+        publish
+          ? "Publish requirements not met. Please review the checklist below."
+          : "Save draft requirements not met. Please review the checklist below."
+      );
+      return;
+    }
+
     setBusy(true);
     setStatus("");
     setSafetyAlert("");
@@ -483,6 +508,7 @@ function AdminInner(): ReactNode {
       setDraft(fromArticle(saved));
       setDraftEval(saved.evaluation || currentEval || null);
       setTagInput((saved.tags || []).join(", "));
+      setValidationErrors([]);
       setStatus(
         publish
           ? "Brief published to Upstash Blob."
@@ -511,6 +537,7 @@ function AdminInner(): ReactNode {
     setDraftEval(null);
     setTagInput("");
     setStatus("");
+    setValidationErrors([]);
     setIntelligence(null);
     setIntelError(null);
     setBooksData(null);
@@ -526,6 +553,7 @@ function AdminInner(): ReactNode {
       setDraft(fromArticle(article));
       setTagInput((article.tags || []).join(", "));
       setDraftEval(article.evaluation || null);
+      setValidationErrors([]);
       setIntelligence(null);
       setIntelError(null);
       setBooksData(article.books_suggestions || null);
@@ -541,10 +569,24 @@ function AdminInner(): ReactNode {
 
   const publish = async (slug: string) => {
     setBusy(true);
+    setValidationErrors([]);
     try {
       const article = await getArticle(slug);
-      const saved = await updateArticle(article.id, {...fromArticle(article), published: true});
+      const articleDraft = fromArticle(article);
+      const errors = getPublishValidationErrors(articleDraft);
+      if (errors.length > 0) {
+        setEditingId(article.id);
+        setDraft(articleDraft);
+        setTagInput((article.tags || []).join(", "));
+        setDraftEval(article.evaluation || null);
+        setValidationErrors(errors);
+        setStatus(`Cannot publish "${article.title}": requirements not met. Please review the checklist in the editor.`);
+        setMode("compose");
+        return;
+      }
+      const saved = await updateArticle(article.id, {...articleDraft, published: true});
       setStatus(`Published ${saved.title}.`);
+      setValidationErrors([]);
       refresh();
     } catch (err) {
       setStatus((err as Error).message);
@@ -854,7 +896,7 @@ function AdminInner(): ReactNode {
                   />
                   <input
                     type="file"
-                    accept="image/*"
+                    accept={ALLOWED_IMAGE_ACCEPT}
                     onChange={(event) =>
                       onUpload(event.target.files?.[0], (url) => setField("coverImage", url))
                     }
@@ -943,7 +985,7 @@ function AdminInner(): ReactNode {
                       />
                       <input
                         type="file"
-                        accept={block.type === "video" ? "video/*" : "image/*"}
+                        accept={block.type === "video" ? "video/*" : ALLOWED_IMAGE_ACCEPT}
                         onChange={(event) =>
                           onUpload(event.target.files?.[0], (url) =>
                             updateBlock(index, {url})
@@ -1078,6 +1120,17 @@ function AdminInner(): ReactNode {
                   ) : null}
                 </div>
               ))}
+
+              {validationErrors.length > 0 ? (
+                <div className={styles.validationNoticeBox} role="alert">
+                  <strong>Requirements checklist</strong>
+                  <ul>
+                    {validationErrors.map((err, i) => (
+                      <li key={i}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               <div className={styles.formFooterActions}>
                 <button type="button" className={styles.ghost} onClick={startNew} disabled={busy}>
@@ -1422,6 +1475,16 @@ function AdminInner(): ReactNode {
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search title, subtitle, author email, or tags"
             />
+            {validationErrors.length > 0 ? (
+              <div className={styles.validationNoticeBox} role="alert" style={{marginTop: "1rem"}}>
+                <strong>Requirements checklist</strong>
+                <ul>
+                  {validationErrors.map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <div className={styles.stack}>
               {filtered.map((article) => {
                 const isOwner =

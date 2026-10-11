@@ -1020,3 +1020,33 @@
   letter-spacing: 0.02em;
 }
 
+.validationNoticeBox {
+  background: rgba(225, 29, 72, 0.08);
+  border: 1px solid var(--chroma-sindoor, #e11d48);
+  border-radius: 10px;
+  padding: 0.85rem 1.2rem;
+  margin-bottom: 1.25rem;
+  color: var(--chroma-sindoor, #e11d48);
+  font-size: 0.88rem;
+  width: 100%;
+}
+
+.validationNoticeBox strong,
+.validationNoticeBox h4 {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  color: inherit;
+}
+
+.validationNoticeBox ul {
+  margin: 0.25rem 0 0 1.2rem;
+  padding: 0;
+}
+
+.validationNoticeBox li {
+  margin-bottom: 0.2rem;
+  line-height: 1.4;
+}
+
