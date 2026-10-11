@@ -419,6 +419,10 @@ function AdminInner(): ReactNode {
     apply: (url: string) => void
   ) => {
     if (!file) return;
+    if (file.type.startsWith("image/") && file.size > 500 * 1024) {
+      setStatus(`Image upload failed: ${(file.size / 1024).toFixed(1)} KB exceeds the 500 KB limit.`);
+      return;
+    }
     setBusy(true);
     try {
       const object = await uploadObject(file);

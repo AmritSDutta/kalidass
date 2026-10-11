@@ -259,10 +259,15 @@ export class StorageHelper {
     return uploadHandler({
       bucket: new Bucket({token: env.UPSTASH_BLOB_TOKEN, enableTelemetry: false}),
       constraints: {maxSize: "20mb", contentTypes: ["image/*", "video/*"]},
-      onBeforeUpload: ({file}) => ({
-        path: uniquePath`${prefix}/media/${file.name}`,
-        metadata: {kind: "journal-media"},
-      }),
+      onBeforeUpload: ({file}) => {
+        if (file.type?.startsWith("image/") && file.size > 500 * 1024) {
+          throw new Error("Image exceeds maximum allowed size of 500 KB");
+        }
+        return {
+          path: uniquePath`${prefix}/media/${file.name}`,
+          metadata: {kind: "journal-media"},
+        };
+      },
       onUploadComplete: ({path, url, size, contentType}) => ({path, url, size, contentType}),
     });
   }

@@ -165,6 +165,11 @@ export function removeArticle(idOrSlug: string) {
 }
 
 export async function uploadObject(file: File): Promise<{url: string; name: string}> {
+  const MAX_IMAGE_SIZE = 500 * 1024; // 500 KB limit
+  if (file.type.startsWith("image/") && file.size > MAX_IMAGE_SIZE) {
+    throw new Error(`Image size (${(file.size / 1024).toFixed(1)} KB) exceeds the 500 KB limit.`);
+  }
+
   const body = new FormData();
   body.append("file", file);
   const auth = await authHeaders();
