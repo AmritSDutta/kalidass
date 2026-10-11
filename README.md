@@ -17,7 +17,7 @@
 
 **Kalidass Journal** is a high-signal mixed human-AI publication at the intersection of agentic cognition, serverless, AI-native and distributed edge architectures—inspired by Kalidasa's writings. It encourages the future of writing, i.e., human-AI mixed authorship.
 
-The project is engineered as a unified monorepo bringing together a **Docusaurus 3.10 + React 19** static reader frontend, a private **Cloudflare Worker** REST API, **Upstash Blob & Redis** storage, **Upstash Box** isolated cloud container sandboxes, and **Grafana Faro** frontend observability.
+The project is engineered as a unified monorepo bringing together a **Docusaurus 3.10 + React 19** static reader frontend, a private **Cloudflare Worker** REST API, **Upstash Blob & Redis** storage, a **Cloudflare D1** article catalog, **Upstash Box** isolated cloud container sandboxes, and **Grafana Faro** frontend observability.
 
 > [!NOTE]
 > **For AI Coding Agents**: If you are an autonomous coding assistant or LLM agent (Claude, Antigravity, etc.), please consult [`CLAUDE.md`](./CLAUDE.md) for non-negotiable operational invariants, machine-level execution toolchains, and data contracts. This README is curated specifically for human developers and systems engineers.
@@ -80,6 +80,7 @@ flowchart LR
 
     subgraph Storage["Storage & Caching Layer"]
         Blob["Upstash Blob (Articles & Media)"]
+        D1["Cloudflare D1 (Article & Tag Catalog)"]
         Redis["Upstash Redis (Dossier & Feed Cache)"]
         Memory["In-Memory Store (Dev Fallback)"]
     end
@@ -92,6 +93,7 @@ flowchart LR
     Worker --> EvalEngine
     Worker -->|"Box.create"| BoxGen
     Worker -->|"Box.create"| BoxIntel
+    Worker -->|"Feed & Tag Queries"| D1
     Worker -->|"Persistent Mode"| Blob
     Worker -->|"Cache Hits/Writes"| Redis
     Worker -->|"Fallback Mode"| Memory

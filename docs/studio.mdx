@@ -88,11 +88,34 @@ When editing an already-saved article, the right-hand editor sidebar renders the
 
 The intelligence, books, and research cards only render once the article has an id, and each shows a status badge with the item count and the scoring provider before expanding its read-only results drawer.
 
+## Validation & Publishing Requirements
+
+Before any network call, `src/pages/admin.tsx` runs client-side validation from `src/lib/validation.ts`. Failures render in a `role="alert"` requirements checklist and block the action.
+
+**Save draft** (`getDraftValidationErrors`):
+
+| Rule | Limit |
+| --- | --- |
+| Title required | Non-empty |
+| Title length | ≤ 5 words |
+| Paragraph blocks | ≤ 10,000 characters each |
+
+**Publish** (`getPublishValidationErrors`) adds:
+
+| Rule | Requirement |
+| --- | --- |
+| Slug | Required |
+| Summary | `excerpt` **or** `subtitle` must be non-empty |
+| Structure | At least 1 `heading` block with content |
+| Structure | At least 1 `paragraph` block with content |
+
+Publishing from the Drafts rail runs the same check and, on failure, loads the article into Compose with the errors shown. Image uploads are additionally validated before upload: **WebP or JPEG only**, and the file must be **under 512 KB** client-side (`validateImageUploadFile`). See [Media and Uploads](/media-uploads).
+
 ## Media Upload Integration
 
 File upload controls are embedded directly in the form fields:
-- **Cover Image Upload** (`accept="image/*"`): Uploads image and updates `draft.coverImage` with live thumbnail preview.
-- **Lead Video Upload** (`accept="video/*"`): Uploads video file and updates `draft.videoUrl`.
+- **Cover Image Upload** (`accept="image/webp, image/jpeg, .webp, .jpg, .jpeg"`): Uploads an image and updates `draft.coverImage` with live thumbnail preview.
+- **Lead Video Upload** (`accept="video/*"`): Uploads a video file and updates `draft.videoUrl`.
 - **Block Uploads**: Image and video blocks feature dedicated file upload pickers.
 
-Uploads are executed through `uploadObject()` in `src/lib/api.ts`, sending raw binary buffers to `POST /api/objects` with Bearer auth, which the Cloudflare Worker persists directly to Upstash Blob.
+Uploads are executed through `uploadObject()` in `src/lib/api.ts`, sending raw binary buffers to `POST /api/objects` with Bearer auth, which the Cloudflare Worker persists directly to Upstash Blob. Image uploads are gated by `validateImageUploadFile` (WebP/JPEG, < 512 KB) before the request is issued.

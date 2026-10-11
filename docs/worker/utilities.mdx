@@ -48,6 +48,7 @@ Converts any string into a URL-safe, normalized slug (truncated to 72 characters
 Ensures the candidate slug is unique within the article index:
 - On **create** (`POST`): `ignoreId` is omitted — any collision appends `-2`, `-3`, etc.
 - On **update** (`PUT`): `ignoreId` is the existing article's `id` — self-matches are permitted.
+- When the D1 `DB` binding is present, uniqueness is instead enforced by the `articles.slug UNIQUE` constraint (surfaced as `409`).
 
 ### `estimateReadTime(blocks)`
 
@@ -62,7 +63,7 @@ Merges an incoming payload with existing article state and caller identity:
 
 ### `summarize(article)`
 
-Projects a full article object into the lightweight `ArticleSummary` format stored in `index.json` and returned in feed lists.
+Projects a full article object into the lightweight `ArticleSummary` format stored in `index.json`, returned in feed lists, and persisted to the D1 `articles.summary` column (see [Cloudflare D1 Catalog](/worker/d1)).
 
 ### `ensureSeed(bucket, env)` & `reconstructIndex(bucket, env)`
 

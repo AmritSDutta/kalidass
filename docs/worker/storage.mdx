@@ -102,6 +102,23 @@ All object paths in Upstash Blob are namespaced under the configurable `ROOT_BUC
 
 The `uniquePath` template tag from `@upstash/blob` generates collision-safe media paths inside `<rootBucket>/media/`.
 
+## Cloudflare D1 Query Catalog (`worker/src/d1/`)
+
+Alongside Blob, the worker maintains a **Cloudflare D1** (edge SQLite) **catalog** that mirrors each article's
+`ArticleSummary` for fast relational queries. It is a **read index**, not the source of truth — the full `Article` JSON
+still lives in Blob, and the `articles.summary` column is a denormalized copy built by `StorageHelper.summarize`.
+
+| Concern | Backend |
+| --- | --- |
+| Durable full article & media | Upstash Blob (authoritative) |
+| Feed pagination, tag filter, author scope, slug uniqueness | Cloudflare D1 (`articles`, `article_tags`) |
+| Feed / story / tag / dossier acceleration | Upstash Redis (TTL caches) |
+
+The catalog is synced from Blob on cold start (`ensureD1Synced`), updated on every write (`upsertArticleWithTags` /
+`deleteArticle`), and rebuilt by `POST /api/admin/reindex`. **When the `DB` binding is absent, every route falls back to
+the Blob-only path** (`ensureSeed` + in-memory filtering, `withIndexLock` + `uniqueSlug`). Full schema, repository API,
+and sync lifecycle are documented in [Cloudflare D1 Catalog](/worker/d1).
+
 ## Multi-Tier Caching Layer (`worker/src/redis/`)
 
 In addition to durable object storage in Upstash Blob, the worker incorporates an edge caching tier via `getRedisClient(env)` and `worker/src/redis/cache.js`:
@@ -120,6 +137,8 @@ In addition to durable object storage in Upstash Blob, the worker incorporates a
 | `kalidass:slug:<slug>` | 24 hours (86,400s) | `string` (article ID) | Slug-to-ID pointer for fast URL resolution |
 | `kalidass:ai_intel:<id>` | 24 hours (86,400s) | `AiIntelligence` JSON | Cached SerpApi search dossier |
 | `kalidass:books_suggestion:<id>` | 24 hours (86,400s) | `BooksSuggestionData` JSON | Cached Amazon book suggestions |
+| `kalidass:research_suggestion:<id>` | 24 hours (86,400s) | `ResearchSuggestionData` JSON | Cached arXiv research suggestions |
+| `kalidass:tags:top10` | 3 hours (10,800s) | `string[]` | Top 10 D1 tags for the public tag rail |
 
 ### Feed Delivery & RFC 7232 ETag Revalidation
 

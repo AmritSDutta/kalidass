@@ -45,6 +45,7 @@
           "worker/index",
           "worker/routing",
           "worker/storage",
+          "worker/d1",
           "worker/environment",
           "worker/wrangler",
           "worker/utilities",

@@ -27,12 +27,16 @@ flowchart TD
     JSON["kalidass/index.json and articles/:id.json"]
     Media["kalidass/media/* - Images, Clips, and Covers"]
   end
+  subgraph CatalogTier["Relational Catalog - Cloudflare D1"]
+    D1Table["articles + article_tags (SQLite)"]
+  end
   Browser -->|"1. Loads SPA UI"| Static
   Browser -->|"2. Client fetch /api/* (same-origin)"| PagesFunction
   PagesFunction -->|"3. In-Memory Isolate RPC"| ServiceBinding
   ServiceBinding --> Worker
   Worker -->|"4. Read / Write Articles & Blobs"| JSON
   Worker -->|"5. Store Blobs"| Media
+  Worker -->|"6. Sync Article & Tag Catalog"| D1Table
 ```
 
 ## Prerequisites Checklist
@@ -42,6 +46,7 @@ Before initiating deployment, gather and configure the following credentials:
 | Requirement | Service | Purpose |
 | --- | --- | --- |
 | **Public Blob Bucket** | Upstash | Stores article JSON schemas and uploaded media objects |
+| **D1 Database** | Cloudflare | Edge SQLite catalog for article summaries and tags (`kalidass-journal-db`) |
 | **`UPSTASH_BLOB_TOKEN`** | Upstash Console | Authenticates Worker and browser client uploads |
 | **`AUTH0_DOMAIN`** | Auth0 Tenant | Signs and verifies user JWTs (e.g. `dev-xxx.us.auth0.com`) |
 | **`AUTH0_AUDIENCE`** | Auth0 API | API audience identifier (`https://api.kalidass.amrit.fyi`) |
@@ -162,7 +167,18 @@ npx wrangler secret put ADMIN_TOKEN
 # Enter a secure passphrase or secret
 ```
 
-### Step 3.2: Deploy Private Worker to Cloudflare
+### Step 3.2: Provision the D1 Catalog
+
+Create the edge SQLite database (once) and apply the schema migration:
+
+```bash
+npx wrangler d1 create kalidass-journal-db
+npx wrangler d1 migrations apply kalidass-journal-db --remote
+```
+
+Ensure the `[[d1_databases]]` block in `worker/wrangler.toml` uses `binding = "DB"` and the returned `database_id`. The worker falls back to the Blob-backed index when the binding is absent, but the D1 catalog powers D1-backed feed, tag, and author queries (see [Cloudflare D1 Catalog](/worker/d1)).
+
+### Step 3.3: Deploy Private Worker to Cloudflare
 
 Run the Wrangler deployment command:
 

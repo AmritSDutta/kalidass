@@ -39,6 +39,13 @@ ROOT_BUCKET = "kalidass"
 # Quality evaluation provider (jev | clef | heuristic) and default Cloudflare Clef model selector
 EVAL_PROVIDER = "jev"
 CLEF_MODEL = "clef-flash"
+
+# Cloudflare D1 SQLite catalog binding (article summaries + tags)
+[[d1_databases]]
+binding = "DB"
+database_name = "kalidass-journal-db"
+database_id = "f6bd6f4f-bf62-47c4-8fac-18614ab4f12c"
+migrations_dir = "migrations"
 ```
 
 ## Key Fields Explained
@@ -56,6 +63,7 @@ CLEF_MODEL = "clef-flash"
 | `ROOT_BUCKET` | `"kalidass"` | Root folder prefix inside Upstash Blob for article JSON and media objects. |
 | `EVAL_PROVIDER` | `"jev"` | Active quality & safety evaluation provider (`jev`, `clef`, or `heuristic`). See [Quality & Safety Evaluation](/worker/quality-eval). |
 | `CLEF_MODEL` | `"clef-flash"` | Cloudflare Clef model selector — `clef-flash` (9B, lowest latency) or `clef` (27B, highest precision). |
+| `[[d1_databases]].binding` | `"DB"` | Cloudflare D1 database bound as `env.DB` for the article/tag catalog. Migrations live in `migrations/`. See [Cloudflare D1 Catalog](/worker/d1). |
 
 ## `.wranglerignore`
 

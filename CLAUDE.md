@@ -45,6 +45,7 @@ Authoritative technical specification, operational invariants, and machine-level
 │                                     Private Cloudflare Worker Edge API      │
 │                                     (workers_dev = false, no public URL)    │
 │                                       │                                     │
+│                                       ├── Cloudflare D1 (Article Catalog)   │
 │                                       ├── Upstash Redis (Cache / TTLs)      │
 │                                       ├── Upstash Blob (Object Storage)     │
 │                                       └── Upstash Box (Container Runners)   │
@@ -103,7 +104,8 @@ kalidass/
 │   │   │   ├── auth.tsx             # AuthProvider & useAuth hook (Auth0 / admin token)
 │   │   │   ├── config.ts            # Runtime config & customFields resolution
 │   │   │   ├── media.ts             # Video player URL parser & embed resolvers
-│   │   │   └── types.ts             # Canonical Block union, Article, Books, and Auth types
+│   │   │   ├── types.ts             # Canonical Block union, Article, Books, and Auth types
+│   │   │   └── validation.ts        # Studio form/publish validation & image upload guards
 │   │   ├── pages/
 │   │   │   ├── index.tsx            # Lead Dispatch featured hero & issue index
 │   │   │   ├── magazine.tsx         # Issue archive with search, tag filter & pagination
@@ -123,6 +125,8 @@ kalidass/
 │   │   │   ├── auth.js               # AuthHelper: Auth0 JWT, constant-time token match
 │   │   │   ├── response.js           # ResponseHelper: CORS headers, JSON formatting, options
 │   │   │   └── storage.js            # StorageHelper: Blob/memory persistence, models, index lock
+│   │   ├── d1/                       # Cloudflare D1 article & tag catalog
+│   │   │   └── repository.js         # D1 sync, feed/tag/author queries, upsert & delete
 │   │   ├── books/                    # Amazon book suggestions subsystem
 │   │   │   ├── service.js           # Orchestration, Redis/Blob cache, read-only peek
 │   │   │   ├── serpapi.js           # SerpApi amazon-engine client
@@ -157,6 +161,7 @@ kalidass/
 │   │   │   └── types.js             # Redis adapter contracts
 │   │   ├── memory.js                 # In-memory storage adapter fallback
 │   │   └── seed.js                  # Initial bootstrap seed (empty by default)
+│   ├── migrations/                   # D1 SQLite migrations (0001_init_d1_schema.sql)
 │   ├── test/                         # 100% hermetic Vitest suites
 │   ├── wrangler.toml                 # Cloudflare Worker bindings & private route config
 │   └── package.json
@@ -166,6 +171,7 @@ kalidass/
 │   ├── books-suggestions.mdx         # Amazon book recommendations pipeline guide
 │   ├── research-suggestions.mdx      # arXiv research papers pipeline guide
 │   ├── faro-observability.mdx        # Grafana Faro RUM, Web Vitals & sourcemap guide
+│   ├── worker/d1.mdx                 # Cloudflare D1 catalog guide (schema, sync, fallback)
 │   └── *.mdx                         # Architectural & operational documentation
 ├── scripts/
 │   └── validate_docs.mjs             # Docs7 automated structural validator
@@ -254,6 +260,11 @@ export type Block =
 - `aiGenerated: true` = Displays the `AI` badge across cards and reader headers.
 - `authorEmail`: Immutable creator email stamped server-side from verified Auth0 JWT or admin token.
 
+### Cloudflare D1 Catalog (`worker/src/d1/repository.js` & `worker/migrations/0001_init_d1_schema.sql`)
+- The `articles` table (`id`, `slug` UNIQUE, `title`, `author_email`, `published`, `private`, `featured`, `read_time`, `published_at`, `updated_at`, `summary`) mirrors each `ArticleSummary` (built by `StorageHelper.summarize`) in its `summary` JSON column.
+- `article_tags` (`article_id`, `tag` NOCASE, composite PK, FK cascade) holds the normalized tag set, indexed for tag-filtered feed queries.
+- Blob remains the source of truth for the full `Article`; D1 (`env.DB`) is a query index for feed pagination, tag filtering, author scoping, and slug uniqueness.
+
 ---
 
 ## 6. WebMCP In-Browser AI Tools Specification
@@ -318,6 +329,16 @@ Kalidass Journal exposes 10 structured tools on `window.modelContext`, `document
     - Privileged administrative routes protected by Cloudflare Access (such as `/generate_article` Neural Gen) must NEVER use client-side SPA routing (`@docusaurus/Link`, `to: "/generate_article"`, or `history.push`).
     - Client-side transitions bypass edge HTTP request inspection because the browser swaps DOM components without initiating a top-level document request to Cloudflare.
     - The navbar uses `NeuralGenNavbarItem` (`custom-neural-gen`) which executes `window.location.href = '/generate_article'`, forcing a clean top-level HTTP GET request that Cloudflare Access intercepts and gates at the CDN edge.
+15. **Cloudflare D1 Catalog Invariants**:
+    - Blob is the source of truth; D1 (`env.DB`) is a query index. `ensureD1Synced` seeds it once from `StorageHelper.reconstructIndex` (or the `seedArticles` fallback) under the module-level `isSynced` guard, which stays unset when nothing is seeded so a later request retries.
+    - `articles.slug` is `UNIQUE`: create/update pre-check with `isSlugTaken` and return `409` on a `UNIQUE constraint failed: articles.slug` error.
+    - Writes stay in sync — create/update → `upsertArticleWithTags`, delete → `deleteArticle` (+ Blob `del`); `/api/admin/reset` → `clearAllD1Articles`; `/api/admin/reindex` → rebuild index + upsert every row.
+    - When `DB` is bound, create/update bypass `withIndexLock`/`ensureSeed`; when unbound, every route falls back to the Blob-only path (`ensureSeed` + `uniqueSlug`).
+    - Top tags are cached under Redis `kalidass:tags:top10` (3h); public `GET /api/tags` returns `string[]`.
+16. **Studio Validation Invariants (`blog_frontend/src/lib/validation.ts`)**:
+    - Client-side gating runs before any network call: title non-empty and ≤ `MAX_TITLE_WORDS` (5) words; paragraph blocks ≤ `MAX_PARAGRAPH_CHARS` (10,000) chars.
+    - Publish additionally requires a slug, a summary (`excerpt` **or** `subtitle`), ≥ 1 `heading` block with content, and ≥ 1 `paragraph` block with content.
+    - Image uploads are WebP/JPEG only: the client validator rejects `>= MAX_IMAGE_BYTES` (512 KB) and the worker rejects images `> 500 KB` (`/api/objects`, `/api/upload`); videos are capped at `20mb`.
 
 ---
 
