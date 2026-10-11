@@ -5,7 +5,7 @@ description: Frontend routes, dynamic plugins, API base configuration, and clien
 
 # Architecture
 
-Kalidass Journal is built on Docusaurus 3.10 and React 19. It configures `preset-classic` with `docs: false, blog: false` so that Markdown processing is disabled for standard content; all articles are fetched at runtime via client-side fetch requests to the Cloudflare Worker API.
+Kalidass Journal is built on Docusaurus 3.10 and React 19. It configures `preset-classic` with `docs: false, blog: false` so that Markdown processing is disabled for standard content; all articles are fetched at runtime via client-side fetch requests to the Cloudflare Worker API. Public reads (feed, tag rail, author/status listings) are served from a Cloudflare D1 (edge SQLite) catalog that mirrors each article's summary, falling back to the Blob-backed index when the `DB` binding is absent (see [Cloudflare D1 Catalog](/worker/d1)).
 
 ## System Topology
 
@@ -20,9 +20,10 @@ flowchart TD
     Proxy["Webpack Dev Proxy (:3000 to :8787)"]
     Worker["Cloudflare Worker (:8787 / Edge)"]
   end
-  subgraph Storage["Upstash Storage Tier"]
+  subgraph Storage["Storage & Caching Tier"]
     UpstashRedis["Upstash Redis - 3h Feed & 24h Story Cache"]
     UpstashBlob["Upstash Blob - JSON Articles & Media"]
+    D1["Cloudflare D1 - SQLite Article & Tag Catalog"]
   end
   Pages --> LibAPI
   ClientMod -. sets .-> LibAPI
@@ -30,6 +31,7 @@ flowchart TD
   Proxy --> Worker
   Worker --> UpstashRedis
   Worker --> UpstashBlob
+  Worker --> D1
 ```
 
 ## Route Map

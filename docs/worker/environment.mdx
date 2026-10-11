@@ -37,6 +37,18 @@ The worker reads configuration from two sources: **Cloudflare secrets** (set via
 | `ROOT_BUCKET` | Var (`wrangler.toml`) | Optional | `"kalidass"` | Root folder prefix inside Upstash Blob (e.g. `kalidass/index.json`, `kalidass/articles/`). |
 | `CORS_ORIGIN` | Var (`wrangler.toml`) | Yes | `"https://kalidass.amrit.fyi"` | Value of the `Access-Control-Allow-Origin` response header matching the Cloudflare Pages domain. |
 
+## Cloudflare D1 Binding (`DB`)
+
+The article/tag catalog is bound as `env.DB` through `[[d1_databases]]` in `wrangler.toml` — it is a **binding, not an environment variable**, so it does not appear in the table above. When the binding is absent (local dev without D1, or hermetic tests), the worker falls back to the Blob-backed index.
+
+```bash
+# Create the database once, then apply the schema
+npx wrangler d1 create kalidass-journal-db
+npx wrangler d1 migrations apply kalidass-journal-db --remote   # --local for wrangler dev
+```
+
+See [Cloudflare D1 Catalog](/worker/d1) for the schema, repository API, and sync lifecycle.
+
 ## Frontend Build Environment Variables
 
 | Variable | Scope | Required | Default | Description |

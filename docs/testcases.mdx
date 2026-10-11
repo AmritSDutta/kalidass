@@ -19,13 +19,16 @@ flowchart TD
     ClefSuite["eval_clef.test.js - 9 tests"]
     MemorySuite["memory_store.test.js - 4 tests"]
     SchemaSuite["schemas.test.js - 7 tests"]
-    WorkerApiSuite["worker_api.test.js - 9 tests"]
+    WorkerApiSuite["worker_api.test.js - 14 tests"]
     ConcurrencySuite["concurrency.test.js - 2 tests"]
     IntelligenceSuite["intelligence.test.js - 12 tests"]
     WebMcpSuite["webmcp.test.js - 9 tests"]
     PromptsSuite["prompts.test.js - 8 tests"]
     RedisSuite["redis_cache.test.js - 17 tests"]
     BooksSuite["books.test.js - 15 tests"]
+    ResearchSuite["research.test.js - 17 tests"]
+    D1Suite["d1_repository.test.js - 10 tests"]
+    GeneratorSuite["generator.test.js - 2 tests"]
   end
   subgraph SystemUnderTest["Worker Engine Under Test"]
     HeuristicEngine["eval/heuristic.js (Regex Word Boundaries)"]
@@ -36,6 +39,9 @@ flowchart TD
     IntelService["intelligence/service.js (peek & generate cascade)"]
     BooksService["books/service.js + books/scorer.js"]
     RedisAdapters["redis/ (Upstash + memory adapters)"]
+    ResearchService["research/service.js + research/scorer.js"]
+    D1Repo["d1/repository.js (article & tag catalog)"]
+    GeneratorService["generator/index.js (cover persistence)"]
   end
   subgraph MockEnv["Mock Runtime Context"]
     MockConfig["env.ADMIN_TOKEN - test-secret-token"]
@@ -53,6 +59,9 @@ flowchart TD
   IntelligenceSuite --> RedisAdapters
   BooksSuite --> BooksService
   RedisSuite --> RedisAdapters
+  ResearchSuite --> ResearchService
+  D1Suite --> D1Repo
+  GeneratorSuite --> GeneratorService
 ```
 
 ---
@@ -76,6 +85,12 @@ The test files reside inside `worker/test/` and are organized by functional doma
       <Tree.File name="webmcp.test.js" highlight />
       <Tree.File name="prompts.test.js" highlight />
       <Tree.File name="redis_cache.test.js" highlight />
+      <Tree.File name="research.test.js" highlight />
+      <Tree.File name="d1_repository.test.js" highlight />
+      <Tree.File name="generator.test.js" highlight />
+      <Tree.Folder name="helpers">
+        <Tree.File name="d1.js" />
+      </Tree.Folder>
     </Tree.Folder>
     <Tree.File name="vitest.config.js" highlight />
     <Tree.File name="package.json" />
@@ -208,11 +223,38 @@ Verifies the Redis feed and story delivery tier, 3-hour caching, RFC 7232 ETag v
 | **Mutation Invalidation Protocol** | Article creation, update, and deletion call `invalidateArticleCaches`. | Purges feed keys (`kalidass:feed:*`) and article/slug keys across mutations. |
 | **Selective Invalidation** | `PUT ?invalidate_feed=false` invokes `invalidateOnlyArticleCache` instead. | Story keys (`article:*`, `slug:*`) purged; `feed:public` / `feed:etag` preserved. |
 
+### Suite 10: D1 Catalog Repository (`d1_repository.test.js`)
+
+Verifies `worker/src/d1/repository.js` against the SQLite schema:
+
+- **Cold-start sync** — `ensureD1Synced` seeds an empty catalog from Blob (or the seed fallback) and is idempotent once populated.
+- **Public feed query** — `getPublicArticles` applies `published`/`private` gating, tag matching (`COLLATE NOCASE`), escaped `LIKE` search, and `LIMIT`/`OFFSET` pagination.
+- **Author scoping** — `getAuthorArticles` isolates `draft`/`published`/`all` by `author_email` and admin role.
+- **Slug uniqueness** — `isSlugTaken` excludes the article under update.
+- **Upsert & delete** — `upsertArticleWithTags` rewrites tag rows in one batch; `deleteArticle` cascades tag removal.
+- **Tag ranking** — `getTopTags` returns the top 10 published, non-private tags.
+
+### Suite 11: Research Suggestions Pipeline (`research.test.js`)
+
+Verifies the arXiv research subsystem (`worker/src/research/`):
+
+- **Atom parsing** — the zero-dependency arXiv Atom 1.0 parser maps entries into `ResearchPaperItem` shapes.
+- **Scorer cascade** — jev → clef → heuristic ranking, `score >= 0.40 && isPaperConfidence >= 0.40` filtering, relevance-then-recency sorting, and preserved zero-match verdicts.
+- **Caching** — Redis `kalidass:research_suggestion:<id>` plus Blob `<root>/research/<id>.json`, with `refresh=true` bypass.
+- **HTTP routes** — `GET`/`POST /api/articles/:id/research` auth gating (owner/admin) and draft/private visibility.
+
+### Suite 12: Generator Cover Persistence & Safety Gating (`generator.test.js`)
+
+Verifies `worker/src/generator/index.js`:
+
+- **Base64 cover extraction** — a data-URI `coverImage` is decoded, written to `<root>/media/<id>-cover.<ext>`, and replaced by the hosted URL.
+- **Hosted cover retention** — an existing `https://` cover is preserved without re-upload.
+
 ---
 
 ## 4. Frontend jsdom Suite (`blog_frontend`)
 
-The Docusaurus UI ships its own hermetic Vitest/jsdom suite (`npm.cmd test` in `blog_frontend/`, 11 files / 70 tests):
+The Docusaurus UI ships its own hermetic Vitest/jsdom suite (`npm.cmd test` in `blog_frontend/`, 15 files / 117 tests):
 
 | Test File | Covers |
 | :--- | :--- |
@@ -227,6 +269,10 @@ The Docusaurus UI ships its own hermetic Vitest/jsdom suite (`npm.cmd test` in `
 | `src/client-modules/__tests__/faro.test.ts` | Collector URL derivation and telemetry gating. |
 | `src/pages/__tests__/magazine.test.tsx` | Pagination and recency ordering (9 briefs per page). |
 | `src/theme/__tests__/Root.test.tsx` | `AuthProvider` + `FaroAwareErrorBoundary` wrapper. |
+| `src/pages/__tests__/admin_validation.test.tsx` | Studio validation: image format/size rules, title word cap, paragraph cap, and draft/publish requirement gating. |
+| `src/components/__tests__/ResearchPanel.test.tsx` | Research panel states (unfetched, read-only, loaded, loading, error), summary truncation, and arXiv link targets. |
+| `src/components/__tests__/NeuralGenNavbarItem.test.tsx` | Hard-navigation navbar link: anchor target, desktop/mobile classes, forced `window.location.href`, and modifier-key passthrough. |
+| `src/client-modules/__tests__/researchWebMcp.test.ts` | Research WebMCP formatters, payload helpers, and slug extraction. |
 
 ---
 
@@ -245,8 +291,8 @@ npm.cmd --prefix blog_frontend test
 
 Execution output (worker):
 ```text
- Test Files  12 passed (12)
-      Tests  101 passed (101)
+ Test Files  15 passed (15)
+      Tests  135 passed (135)
 ```
 
 ---

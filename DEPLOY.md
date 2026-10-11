@@ -1,10 +1,11 @@
 # How to Deploy Kalidass Journal
 
-The live production stack comprises three components:
+The live production stack comprises four components:
 
 - `blog_frontend` — Docusaurus 3.10 static SPA on Cloudflare Pages (`kalidass.amrit.fyi`)
 - `worker` — Private Cloudflare Worker API (`kalidass-journal-worker`, `workers_dev = false`)
 - Upstash Blob — Durable JSON article storage and media objects
+- Cloudflare D1 — Edge SQLite article & tag catalog (`kalidass-journal-db`)
 
 ```text
 Browser  ->  Cloudflare Pages (https://kalidass.amrit.fyi)
@@ -15,7 +16,7 @@ Browser  ->  Cloudflare Pages (https://kalidass.amrit.fyi)
                  |
                  |  env.JOURNAL_WORKER.fetch(request)  (Edge RPC in memory)
                  v
-             Private Worker  ->  Upstash Blob
+             Private Worker  ->  Upstash Blob  +  Cloudflare D1
 ```
 
 ## 1. Create an Upstash Blob Bucket
@@ -27,7 +28,19 @@ Browser  ->  Cloudflare Pages (https://kalidass.amrit.fyi)
 > [!IMPORTANT]
 > Keep `UPSTASH_BLOB_TOKEN` on the Worker only. Never put `UPSTASH_BLOB_TOKEN` in the frontend client code or environment variables.
 
-## 2. Deploy the Private Worker
+## 2. Create the Cloudflare D1 Catalog
+
+The worker mirrors article summaries into a Cloudflare D1 (edge SQLite) catalog for feed, tag, and author queries.
+
+```bash
+cd worker
+npx wrangler d1 create kalidass-journal-db
+npx wrangler d1 migrations apply kalidass-journal-db --remote
+```
+
+Copy the returned `database_id` into the `[[d1_databases]]` block of `worker/wrangler.toml` (`binding = "DB"`, `migrations_dir = "migrations"`). When the binding is absent, the worker transparently falls back to the Blob-backed index.
+
+## 3. Deploy the Private Worker
 
 From `worker`:
 
@@ -52,7 +65,7 @@ npx wrangler deploy
 
 *Note: In `worker/wrangler.toml`, `workers_dev = false` ensures the worker remains completely private with zero public internet exposure.*
 
-## 3. Deploy the UI on Cloudflare Pages
+## 4. Deploy the UI on Cloudflare Pages
 
 Build settings in Cloudflare Dashboard (**Workers & Pages** → **Create application** → **Pages**):
 
@@ -78,7 +91,7 @@ Configure Custom Domain:
 
 Deploy. The Pages catch-all function (`blog_frontend/functions/api/[[route]].ts`) forwards all `/api/*` traffic via `context.env.JOURNAL_WORKER.fetch(request)` across the internal isolate boundary, injecting security headers (`HSTS`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`).
 
-## 4. Local Preview
+## 5. Local Preview
 
 ```bash
 # Worker on :8787 (memory store if no token)
@@ -98,7 +111,7 @@ npm run start
 
 Without `UPSTASH_BLOB_TOKEN`, the Worker's in-memory store starts empty. Direct browser uploads to Upstash (`/api/upload`) require the token.
 
-## 5. Studio Notes
+## 6. Studio Notes
 
 - `/admin` composes text, image, and video blocks.
 - With a Blob token, files go browser -> Upstash (Worker only signs the upload).
@@ -106,7 +119,7 @@ Without `UPSTASH_BLOB_TOKEN`, the Worker's in-memory store starts empty. Direct 
 - Compiled reader dossiers are stored at `kalidass/intelligence/<id>.json` (AI Intel) and `kalidass/books/<id>.json` (book suggestions).
 - Optional `ADMIN_TOKEN`: in the browser console or Studio prompt, enter the token to unlock.
 
-## 6. Verification Checklist
+## 7. Verification Checklist
 
 1. Public Upstash Blob bucket and token configured on Worker.
 2. `wrangler secret put UPSTASH_BLOB_TOKEN` executed.

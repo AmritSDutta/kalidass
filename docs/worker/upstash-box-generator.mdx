@@ -84,12 +84,15 @@ Articles are immediately evaluated by the quality/safety pipeline and saved dire
 - `aiGenerated: true` (AI Attribution Badge)
 - `authorEmail`: Stamped with the administrator's identity.
 
+When the request sets `publishImmediately`, the draft is published only if the evaluation verdict is `safe`; otherwise it is persisted as an unlisted draft.
+
 ### D. OpenAI gpt-image-1 Technical Infographics (Milder, Vibrant Palette)
 Generates modern, typography-free 16:9 landscape infographics (`1536x1024`, WebP 80% compression, low quality) with a subtle `"Kalidass"` watermark:
 - **Milder, Vibrant Color Shades**: Combines milder, muted matte foundation shades (soft slate, gentle charcoal, titanium, subtle indigo) with vibrant, luminous accent color highlights (electric indigo, radiant cyan, warm amber, vibrant violet, emerald).
 - Strictly visual-only pictorial architecture diagrams, node topologies, and data conduits with gentle contrast that is soothing and elegant.
 - Eliminates AI hallucinated text and typographical artifact clutter.
 - **Strict Single-Image Invariant**: Exactly ONE image is generated per article, saved directly to `coverImage`. No inline image blocks are emitted.
+- **Cover Persistence**: A base64 `data:image/*` cover returned by the sandbox is decoded and written to Upstash Blob at `<rootBucket>/media/<id>-cover.<ext>` (immutable cache), then `draft.coverImage` is replaced with the hosted URL. An already-hosted `https://` cover is preserved untouched.
 
 ### E. Firecrawl & Tavily Hybrid Search (70/30 Ratio) & Non-Negotiable Thesis Angle Invariant
 - **Firecrawl & Tavily Hybrid Search (70/30 Ratio)**: Research queries automatically append the dynamic operational year (e.g. `2026`) and thesis angle directives (`buildSearchQuery`). In-box agents split research load across **Firecrawl (70%)** and **Tavily (30%)** with bidirectional fallback — whichever engine is picked first falls back to the other when it returns no results. SerpApi is strictly excluded from generation containers, isolating its rate limits and quota exclusively for `/intel` Google SERP intelligence extraction.

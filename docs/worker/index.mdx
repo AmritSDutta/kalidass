@@ -10,6 +10,7 @@ The Kalidass Journal Worker is a lightweight Cloudflare Worker that serves as th
 ## Responsibilities
 
 - **Article API**: Create, read, update, and delete article objects stored as JSON in Upstash Blob.
+- **D1 Query Catalog**: Mirror article summaries into Cloudflare D1 (edge SQLite) for feed pagination, tag filtering, author scoping, and slug uniqueness, with a transparent Blob-only fallback. See [Cloudflare D1 Catalog](/worker/d1).
 - **Multi-User Edge Caching**: Serve public feeds (3h TTL, full-feed ETag 304 revalidation) and public stories (24h TTL) from Upstash Redis.
 - **Upload Signing**: Delegate direct browser-to-Upstash uploads via the `@upstash/blob` `uploadHandler`.
 - **Fallback Upload**: Accept `FormData` file uploads when the direct upload route is unavailable.
@@ -25,6 +26,7 @@ The Kalidass Journal Worker is a lightweight Cloudflare Worker that serves as th
 | --- | --- |
 | **Runtime** | Cloudflare Workers (ES Module format) |
 | **Storage** | `@upstash/blob@0.0.6-canary.20260914173111` |
+| **Relational Catalog** | Cloudflare D1 (edge SQLite) |
 | **Caching** | `@upstash/redis` (with in-memory fallback) |
 | **Dev Server** | `wrangler ^4.37.0` |
 | **Compatibility** | `nodejs_compat` flag, `compatibility_date = 2026-09-01` |
@@ -39,6 +41,9 @@ The Kalidass Journal Worker is a lightweight Cloudflare Worker that serves as th
         <Tree.File name="auth.js" highlight />
         <Tree.File name="response.js" highlight />
         <Tree.File name="storage.js" highlight />
+      </Tree.Folder>
+      <Tree.Folder name="d1" defaultOpen>
+        <Tree.File name="repository.js" highlight />
       </Tree.Folder>
       <Tree.Folder name="books">
         <Tree.File name="service.js" />
@@ -75,6 +80,9 @@ The Kalidass Journal Worker is a lightweight Cloudflare Worker that serves as th
       </Tree.Folder>
       <Tree.File name="memory.js" highlight />
       <Tree.File name="seed.js" highlight />
+    </Tree.Folder>
+    <Tree.Folder name="migrations" defaultOpen>
+      <Tree.File name="0001_init_d1_schema.sql" highlight />
     </Tree.Folder>
     <Tree.File name=".dev.vars.example" />
     <Tree.File name=".wranglerignore" highlight />

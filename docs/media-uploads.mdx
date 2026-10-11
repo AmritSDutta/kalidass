@@ -45,5 +45,19 @@ flowchart TD
 
 1. **Client Upload (`uploadObject`)**: Bundles the selected file into a `FormData` payload and issues a `POST` request to `/api/objects` with Bearer authentication headers.
 2. **Worker Streaming & Buffering**: The Cloudflare Worker reads the file stream into an in-memory `Uint8Array` buffer. This guarantees an explicit `Content-Length` header on the outgoing Upstash S3 request, preventing signature mismatch errors.
-3. **Upstash Blob Persistence**: Calls `@upstash/blob` `put(name, buffer, { access: "public", contentType })` to persist the asset.
-4. **Public URL Propagation**: Returns `{ url, name }` to the client, populating the draft form and updating live image/video previews.
+3. **Upstash Blob Persistence**: Calls `@upstash/blob` `put(path, buffer, { contentType, contentTypes: ["image/*", "video/*"], maxSize: "20mb" })` to persist the asset at `<rootBucket>/media/<filename>`.
+4. **Public URL Propagation**: Returns `{ id, url, name, size, contentType }` to the client, populating the draft form and updating live image/video previews.
+
+### Upload Limits
+
+| Constraint | Value | Enforced by |
+| --- | --- | --- |
+| Allowed image formats | WebP (`.webp`), JPEG (`.jpg`, `.jpeg`) | `ALLOWED_IMAGE_TYPES` / file input `accept` |
+| Image size | < 512 KB client-side; ≤ 500 KB at the worker | `validateImageUploadFile` / `api.ts` pre-check / `/api/objects` + `/api/upload` guards |
+| Video size | ≤ 20 MB | `@upstash/blob` `maxSize` constraint |
+
+The Studio upload handler runs `validateImageUploadFile` first and aborts with `Upload blocked: <reason>` before calling `uploadObject`.
+
+### Generated Cover Persistence
+
+The article generator (`worker/src/generator/index.js`) decodes any base64 `data:image/*` cover returned by the sandbox and writes it to `<rootBucket>/media/<id>-cover.<ext>` (immutable cache), then replaces `draft.coverImage` with the hosted URL. An already-hosted `https://` cover is preserved untouched.

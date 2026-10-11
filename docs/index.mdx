@@ -16,7 +16,7 @@ description: Master documentation for the Kalidass Journal static frontend, admi
 
 Field notes from the neural heart. Kalidass Journal is a high-signal mixed human-AI publication at the intersection of agentic cognition, serverless, AI-native and distributed edge architectures—inspired by Kalidasa's writings. It encourages the future of writing, i.e., human-AI mixed authorship.
 
-The codebase is organized as a unified monorepo bringing together a Docusaurus 3.10 static UI, an edge Cloudflare Worker REST API, Upstash Blob & Redis storage, Upstash Box sandboxes, and Grafana Faro observability.
+The codebase is organized as a unified monorepo bringing together a Docusaurus 3.10 static UI, an edge Cloudflare Worker REST API, Upstash Blob & Redis storage, a Cloudflare D1 (edge SQLite) catalog, Upstash Box sandboxes, and Grafana Faro observability.
 
 ## From Developer
  
@@ -53,6 +53,7 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
 - [Worker Overview](/worker/index) — Worker architecture, request dispatching, and cold-start seeding.
 - [REST Routing](/worker/routing) — Worker endpoint specifications, status queries, and payload schemas.
 - [Storage Engine](/worker/storage) — Upstash Blob object storage mechanics and in-memory dev fallback.
+- [Cloudflare D1 Catalog](/worker/d1) — D1 SQLite catalog schema, repository API, sync lifecycle, and Blob fallback.
 - [Environment & Secrets](/worker/environment) — Environment variables, secrets management, and access controls.
 - [Wrangler Configuration](/worker/wrangler) — Cloudflare bindings, compatibility flags, and custom domains.
 - [Worker Utilities](/worker/utilities) — Response formatting, CORS headers, and slug generators.
@@ -105,6 +106,7 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
         <Tree.File name="config.ts" />
         <Tree.File name="media.ts" />
         <Tree.File name="types.ts" highlight />
+        <Tree.File name="validation.ts" highlight />
       </Tree.Folder>
       <Tree.Folder name="pages">
         <Tree.File name="index.tsx" highlight />
@@ -135,6 +137,9 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
         <Tree.File name="auth.js" />
         <Tree.File name="response.js" />
         <Tree.File name="storage.js" />
+      </Tree.Folder>
+      <Tree.Folder name="d1" defaultOpen>
+        <Tree.File name="repository.js" highlight />
       </Tree.Folder>
       <Tree.Folder name="books">
         <Tree.File name="service.js" />
@@ -185,6 +190,15 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
       <Tree.File name="webmcp.test.js" />
       <Tree.File name="prompts.test.js" />
       <Tree.File name="redis_cache.test.js" />
+      <Tree.File name="research.test.js" />
+      <Tree.File name="d1_repository.test.js" />
+      <Tree.File name="generator.test.js" />
+      <Tree.Folder name="helpers">
+        <Tree.File name="d1.js" />
+      </Tree.Folder>
+    </Tree.Folder>
+    <Tree.Folder name="migrations">
+      <Tree.File name="0001_init_d1_schema.sql" highlight />
     </Tree.Folder>
     <Tree.File name="vitest.config.js" highlight />
     <Tree.File name="wrangler.toml" highlight />
@@ -201,6 +215,7 @@ The codebase is organized as a unified monorepo bringing together a Docusaurus 3
       <Tree.File name="index.mdx" />
       <Tree.File name="routing.mdx" />
       <Tree.File name="storage.mdx" />
+      <Tree.File name="d1.mdx" highlight />
       <Tree.File name="environment.mdx" />
       <Tree.File name="wrangler.mdx" />
       <Tree.File name="utilities.mdx" />

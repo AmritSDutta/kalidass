@@ -23,8 +23,8 @@ flowchart TD
     InstallWorker["3a. Install Worker Dependencies"]
     InstallFrontend["3b. Install Frontend Dependencies"]
     GateTypecheck["Gate 1: Static Typecheck - tsc"]
-    GateVitest["Gate 2: Hermetic Vitest - 171 tests"]
-    GateDocs["Gate 3: Docs7 Validation - 29 pages"]
+    GateVitest["Gate 2: Hermetic Vitest - 252 tests"]
+    GateDocs["Gate 3: Docs7 Validation - 31 pages"]
   end
   subgraph Deploy["Production Delivery (Manual / Git Integration)"]
     PagesDeploy["Cloudflare Pages - Frontend Edge"]
@@ -58,8 +58,8 @@ Every CI execution runs through three automated quality gates:
 ### Gate 2: Hermetic Test Suites
 - **Commands**: `npm --prefix blog_frontend test` and `npm --prefix worker test`
 - **Engine**: Vitest in isolated jsdom (frontend) and Node.js (worker) environments.
-- **Scope**: 171 hermetic test cases across 23 suites (70 frontend / 101 worker):
-  - **Frontend (jsdom)**: renderers, `BooksPanel`, `IntelligencePanel`, `ErrorBoundary`, `KalidasaEpigraph`, WebMCP registry, Faro, hardening, magazine pagination, and `Root`.
+- **Scope**: 252 hermetic test cases across 30 files (117 frontend / 135 worker):
+  - **Frontend (jsdom)**: renderers, `BooksPanel`, `IntelligencePanel`, `ResearchPanel`, `ErrorBoundary`, `KalidasaEpigraph`, `NeuralGenNavbarItem`, WebMCP registry, research WebMCP, Faro, hardening, magazine pagination, Studio validation, and `Root`.
   - Safety heuristics & word-boundary Scunthorpe defense (`test/eval_heuristic.test.js`).
   - TypeSafe Jev (`test/eval_jev.test.js`) and Cloudflare Clef (`test/eval_clef.test.js`) provider mapping and cascade.
   - Book suggestions pipeline — SerpApi transform, scorer cascade, caching, and auth gating (`test/books.test.js`).
@@ -71,6 +71,9 @@ Every CI execution runs through three automated quality gates:
   - WebMCP route isolation & slug resolution (`test/webmcp.test.js`).
   - Box generator prompt construction, Firecrawl/Tavily (70/30) search & grounding (`test/prompts.test.js`).
   - Upstash Redis multi-user feed delivery, 3h ETag revalidation & story cache (`test/redis_cache.test.js`).
+  - D1 catalog repository — cold-start sync, feed/tag/author queries, slug uniqueness, and upsert/delete (`test/d1_repository.test.js`).
+  - arXiv research pipeline — Atom parsing, scorer cascade, caching, and route gating (`test/research.test.js`).
+  - Generator cover persistence — base64 decode to Blob and hosted-URL retention (`test/generator.test.js`).
 - **Invariant**: 100% mocked and hermetic with zero external network calls.
 
 ### Gate 3: Portable Docs7 Documentation Validator

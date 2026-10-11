@@ -14,14 +14,15 @@ The frontend interacts with the Cloudflare Worker API via the client library in 
 | `GET` | `/api/health` | `getHealth()` | No | Health check — returns `{ ok: true }`. |
 | `GET` | `/api/auth/me` | `getAuthMe()` | **Yes** | Returns authenticated user profile `{ user: { email, role, sub, isSuperuserEligible } }`. |
 | `POST` | `/api/auth/elevate` | `elevateAuth(adminToken)` | **Yes** | 2-Factor Superuser Elevation. Requires whitelisted email (`ADMIN_EMAILS`) and valid `adminToken` body. Returns `{ ok: true, elevated: true }`. |
-| `GET` | `/api/articles` | `listArticles()` | No | Public feed: returns published, non-private articles only. |
+| `GET` | `/api/tags` | `getTopTags()` | No | Top 10 tags across published public articles, served from the D1 catalog (Redis-cached). Returns `string[]`. |
+| `GET` | `/api/articles` | `listArticles(params)` | No | Public feed (D1-backed): published, non-private articles. Accepts `tag`, `q` (search), `page`, and `limit` params. |
 | `GET` | `/api/articles?status=draft` | `listArticles("draft")` | **Yes** | Returns draft articles belonging to current author (or all for Super-Admin). |
 | `GET` | `/api/articles?status=published` | `listArticles("published")` | **Yes** | Returns published articles (excluding other users' private unlisted articles unless admin). |
 | `GET` | `/api/articles?status=all` | `listArticles("all")` | **Yes** | Returns all stored articles accessible to the user. |
 | `GET` | `/api/articles/:idOrSlug` | `getArticle(slug)` | Conditional | Returns full article. Drafts and private articles require auth and owner/admin check. |
-| `POST` | `/api/articles` | `createArticle(draft)` | **Yes** | Creates a new article stamped with verified `authorEmail`. Body: JSON `ArticleDraft`. Returns created `Article`. |
-| `PUT` | `/api/articles/:idOrSlug` | `updateArticle(id, draft)` | **Yes** | Updates an existing article. Enforces ownership (`403 Forbidden` for non-owners). Body: JSON `ArticleDraft`. |
-| `DELETE` | `/api/articles/:idOrSlug` | `removeArticle(id)` | **Yes** | Deletes article object from Upstash storage. Enforces ownership (`403 Forbidden` for non-owners). |
+| `POST` | `/api/articles` | `createArticle(draft)` | **Yes** | Creates a new article stamped with verified `authorEmail`. Body: JSON `ArticleDraft`. Enforces slug uniqueness (`409` on collision). Returns created `Article`. |
+| `PUT` | `/api/articles/:idOrSlug` | `updateArticle(id, draft)` | **Yes** | Updates an existing article and syncs the D1 catalog (`409` on slug collision). Enforces ownership (`403 Forbidden` for non-owners). Body: JSON `ArticleDraft`. |
+| `DELETE` | `/api/articles/:idOrSlug` | `removeArticle(id)` | **Yes** | Deletes the article from the D1 catalog and Upstash storage. Enforces ownership (`403 Forbidden` for non-owners). |
 | `POST` | `/api/upload` | Direct Upstash SDK | **Yes** | Upstash Blob direct browser upload route. Requires authenticated author or admin. |
 | `POST` | `/api/objects` | `uploadObject(file)` | **Yes** | Direct binary upload (`FormData` with `file` field) persisted to Upstash Blob. Returns `{ url, name }`. |
 | `GET` | `/api/upload` | Direct Upstash SDK | **Yes** | Upstash Blob direct upload token route (requires `UPSTASH_BLOB_TOKEN` and an authenticated author or admin). |
