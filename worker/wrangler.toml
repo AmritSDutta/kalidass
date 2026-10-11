@@ -18,3 +18,9 @@ EVAL_PROVIDER = "jev"
 # AUTH0_DOMAIN, AUTH0_AUDIENCE, ADMIN_EMAILS, TYPESAFE_API_KEY, CLEF_API_KEY, and CLOUDFLARE_ACCOUNT_ID
 # are configured via wrangler secret / .dev.vars
 
+[[d1_databases]]
+binding = "DB"
+database_name = "kalidass-journal-db"
+database_id = "f6bd6f4f-bf62-47c4-8fac-18614ab4f12c"
+migrations_dir = "migrations"
+

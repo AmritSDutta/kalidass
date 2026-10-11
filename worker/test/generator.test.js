@@ -4,7 +4,6 @@ import {memoryBucket, clearMemoryStore, getMemoryObject} from "../src/memory.js"
 
 describe("Article Generation & Image Persistence (Hermetic)", () => {
   let bucket;
-  let indexStore;
   let articleStore;
 
   const validWebpBase64 =
@@ -13,25 +12,17 @@ describe("Article Generation & Image Persistence (Hermetic)", () => {
   beforeEach(() => {
     clearMemoryStore();
     bucket = memoryBucket();
-    indexStore = [];
     articleStore = new Map();
   });
 
   const mockStorageHelpers = (b) => ({
     bucket: b,
-    readJson: async (_b, path) => {
-      if (path.endsWith("index.json")) return indexStore;
-      return articleStore.get(path) || null;
-    },
+    readJson: async (_b, path) => articleStore.get(path) || null,
     putJson: async (_b, path, value) => {
-      if (path.endsWith("index.json")) {
-        indexStore = value;
-      } else {
-        articleStore.set(path, value);
-      }
+      articleStore.set(path, value);
       return {ok: true};
     },
-    ensureSeed: async () => indexStore,
+    ensureSeed: async () => [],
     slugify: (str) =>
       String(str || "brief")
         .toLowerCase()
@@ -45,7 +36,6 @@ describe("Article Generation & Image Persistence (Hermetic)", () => {
       title: art.title,
       coverImage: art.coverImage,
     }),
-    getIndexPath: () => "kalidass/index.json",
     getArticleObject: (id) => `kalidass/articles/${id}.json`,
     withIndexLock: (fn) => fn(),
   });
@@ -87,10 +77,6 @@ describe("Article Generation & Image Persistence (Hermetic)", () => {
     // 3. Assert saved article JSON contains hosted URL
     const savedArticle = articleStore.get(`kalidass/articles/${article.id}.json`);
     expect(savedArticle.coverImage).toBe(article.coverImage);
-
-    // 4. Assert index.json contains only hosted URL (no base64)
-    expect(indexStore[0].coverImage).toBe(article.coverImage);
-    expect(indexStore[0].coverImage).not.toContain("data:image/");
   });
 
   it("retains existing HTTPS cover image without redundant upload", async () => {
@@ -115,7 +101,7 @@ describe("Article Generation & Image Persistence (Hermetic)", () => {
     const result = await generateArticle(request, env, user, mockStorageHelpers(bucket));
 
     expect(result.ok).toBe(true);
-    expect(result.article.coverImage).toBe(existingUrl);
-    expect(indexStore[0].coverImage).toBe(existingUrl);
+    const savedArticle = articleStore.get(`kalidass/articles/${result.article.id}.json`);
+    expect(savedArticle.coverImage).toBe(existingUrl);
   });
 });

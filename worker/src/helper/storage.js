@@ -10,9 +10,6 @@ export class StorageHelper {
     return String(root).replace(/^\/+|\/+$/g, "");
   }
 
-  static getIndexPath(env) {
-    return `${StorageHelper.getRootPrefix(env)}/index.json`;
-  }
 
   static getArticleObject(id, env) {
     return `${StorageHelper.getRootPrefix(env)}/articles/${id}.json`;
@@ -113,22 +110,9 @@ export class StorageHelper {
   }
 
   static async reconstructIndex(bucket, env) {
-    const canonicalPath = StorageHelper.getIndexPath(env);
     const rootPrefix = StorageHelper.getRootPrefix(env);
 
-    // 1. Try legacy index paths first if canonical index is empty
-    const fallbackPaths = ["journal/index.json", "index.json"];
-    for (const fbPath of fallbackPaths) {
-      if (fbPath !== canonicalPath) {
-        const fbIndex = await StorageHelper.readJson(bucket, fbPath, null);
-        if (Array.isArray(fbIndex) && fbIndex.length > 0) {
-          await StorageHelper.putJson(bucket, canonicalPath, fbIndex);
-          return fbIndex;
-        }
-      }
-    }
-
-    // 2. Scan bucket for all individual article files
+    // Scan bucket directly for individual article files
     if (typeof bucket.list === "function") {
       const candidatePrefixes = [
         `${rootPrefix}/articles/`,
@@ -160,12 +144,10 @@ export class StorageHelper {
       }
 
       if (foundArticles.size > 0) {
-        const reconstructed = Array.from(foundArticles.values()).sort(
+        return Array.from(foundArticles.values()).sort(
           (a, b) =>
             new Date(b.publishedAt || b.updatedAt) - new Date(a.publishedAt || a.updatedAt)
         );
-        await StorageHelper.putJson(bucket, canonicalPath, reconstructed);
-        return reconstructed;
       }
     }
 
@@ -173,12 +155,7 @@ export class StorageHelper {
   }
 
   static async ensureSeed(bucket, env) {
-    const indexPath = StorageHelper.getIndexPath(env);
     try {
-      const index = await StorageHelper.readJson(bucket, indexPath, null);
-      if (Array.isArray(index) && index.length > 0) return index;
-
-      // Self-healing: if index is missing or empty [], check fallback paths or reconstruct from stored files
       const recovered = await StorageHelper.reconstructIndex(bucket, env);
       if (recovered.length > 0) return recovered;
 
@@ -196,12 +173,10 @@ export class StorageHelper {
           await StorageHelper.putJson(bucket, StorageHelper.getArticleObject(article.id, env), record);
           summaries.push(StorageHelper.summarize(record));
         }
-        await StorageHelper.putJson(bucket, indexPath, summaries);
         return summaries;
       }
 
-      // Never overwrite index.json with [] on failed/empty reads
-      return Array.isArray(index) ? index : [];
+      return [];
     } catch (err) {
       console.error("Upstash Blob ensureSeed error:", err);
       return [];

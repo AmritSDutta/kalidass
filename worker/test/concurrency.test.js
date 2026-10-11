@@ -62,7 +62,7 @@ describe("Worker Concurrency & Race Conditions (100% Hermetic Mocked)", () => {
     const uniqueSlugs = new Set(slugs);
     expect(uniqueSlugs.size).toBe(parallelCount);
 
-    // Verify index.json integrity: all 10 articles must exist (zero lost updates)
+    // Verify catalog integrity: all 10 articles must exist (zero lost updates)
     const listRes = await worker.fetch(createRequest("/api/articles"), env);
     expect(listRes.status).toBe(200);
     const indexList = await listRes.json();

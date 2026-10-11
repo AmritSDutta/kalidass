@@ -1,7 +1,7 @@
-import {useEffect, useMemo, useState, type ReactNode} from "react";
+import {useEffect, useState, type ReactNode} from "react";
 import Layout from "@theme/Layout";
 import ArticleCard from "@site/src/components/ArticleCard";
-import {listArticles} from "@site/src/lib/api";
+import {listArticles, getTopTags} from "@site/src/lib/api";
 import type {ArticleSummary} from "@site/src/lib/types";
 import styles from "./magazine.module.css";
 
@@ -9,48 +9,57 @@ const PAGE_SIZE = 9;
 
 export default function Magazine(): ReactNode {
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
+  const [tags, setTags] = useState<string[]>(["All"]);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [tag, setTag] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    listArticles().then(setArticles).catch(() => setArticles([]));
+    getTopTags()
+      .then((topTags) => {
+        if (Array.isArray(topTags) && topTags.length > 0) {
+          setTags(["All", ...topTags]);
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  const tags = useMemo(() => {
-    const set = new Set<string>(["All"]);
-    articles.forEach((item) => item.tags?.forEach((t) => set.add(t)));
-    return [...set];
-  }, [articles]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
 
-  const filtered = useMemo(() => {
-    return articles.filter((item) => {
-      const hay = `${item.title} ${item.excerpt} ${item.tags.join(" ")}`.toLowerCase();
-      const matchesQuery = hay.includes(query.toLowerCase());
-      const matchesTag = tag === "All" || item.tags.includes(tag);
-      return matchesQuery && matchesTag;
-    });
-  }, [articles, query, tag]);
+  useEffect(() => {
+    let ignore = false;
+    setLoading(true);
+    listArticles({
+      tag,
+      page: currentPage,
+      query: debouncedQuery,
+      limit: PAGE_SIZE,
+    })
+      .then((items) => {
+        if (!ignore) setArticles(items || []);
+      })
+      .catch(() => {
+        if (!ignore) setArticles([]);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
 
-  // Enforce strict recency ordering (newest publishedAt first)
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      const timeA = new Date(a.publishedAt || (a as {updatedAt?: string}).updatedAt || 0).getTime();
-      const timeB = new Date(b.publishedAt || (b as {updatedAt?: string}).updatedAt || 0).getTime();
-      return timeB - timeA;
-    });
-  }, [filtered]);
-
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-
-  const paginated = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return sorted.slice(start, start + PAGE_SIZE);
-  }, [sorted, currentPage]);
+    return () => {
+      ignore = true;
+    };
+  }, [tag, debouncedQuery, currentPage]);
 
   const handleQueryChange = (val: string) => {
     setQuery(val);
-    setCurrentPage(1);
   };
 
   const handleTagChange = (t: string) => {
@@ -58,20 +67,19 @@ export default function Magazine(): ReactNode {
     setCurrentPage(1);
   };
 
-  const changePage = (page: number) => {
-    if (page < 1 || page > totalPages) return;
-    setCurrentPage(page);
+  const changePage = (newPage: number) => {
+    if (newPage < 1) return;
+    setCurrentPage(newPage);
     if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
       try {
         window.scrollTo({top: 0, behavior: "smooth"});
       } catch {
-        // Safe fallback in test environments without full scroll implementation
+        // Fallback for test environments without full scroll implementation
       }
     }
   };
 
-  const startItem = sorted.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
-  const endItem = Math.min(currentPage * PAGE_SIZE, sorted.length);
+  const hasNextPage = articles.length === PAGE_SIZE;
 
   return (
     <Layout title="Issue" description="The full Kalidass Journal issue.">
@@ -102,24 +110,27 @@ export default function Magazine(): ReactNode {
             </div>
           </div>
         </header>
+
         <div className={styles.grid}>
-          {paginated.length > 0 ? (
-            paginated.map((article) => (
+          {articles.length > 0 ? (
+            articles.map((article) => (
               <ArticleCard key={article.id} article={article} />
             ))
           ) : (
             <div className={styles.empty}>
-              {articles.length === 0
-                ? "No briefs published yet. Launch Studio to compose your first brief."
-                : "No matching briefs found."}
+              {loading
+                ? "Loading briefs..."
+                : query || tag !== "All"
+                ? "No matching briefs found."
+                : "No briefs published yet. Launch Studio to compose your first brief."}
             </div>
           )}
         </div>
 
-        {totalPages > 1 ? (
+        {currentPage > 1 || hasNextPage ? (
           <nav className={styles.pagination} aria-label="Magazine pagination">
             <div className={styles.paginationInfo}>
-              Showing {startItem}–{endItem} of {sorted.length} briefs
+              Page {currentPage} · {articles.length} brief{articles.length === 1 ? "" : "s"} shown
             </div>
             <div className={styles.paginationNav}>
               <button
@@ -130,21 +141,11 @@ export default function Magazine(): ReactNode {
                 aria-label="Previous page">
                 ← Prev
               </button>
-              {Array.from({length: totalPages}, (_, idx) => idx + 1).map((pageNum) => (
-                <button
-                  key={pageNum}
-                  type="button"
-                  className={pageNum === currentPage ? styles.pageBtnActive : styles.pageBtn}
-                  onClick={() => changePage(pageNum)}
-                  aria-current={pageNum === currentPage ? "page" : undefined}>
-                  {pageNum}
-                </button>
-              ))}
               <button
                 type="button"
                 className={styles.pageBtn}
                 onClick={() => changePage(currentPage + 1)}
-                disabled={currentPage >= totalPages}
+                disabled={!hasNextPage}
                 aria-label="Next page">
                 Next →
               </button>
