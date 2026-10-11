@@ -1,5 +1,7 @@
 import {describe, it, expect, beforeEach} from "vitest";
 import worker from "../src/index.js";
+import {createTestD1} from "./helpers/d1.js";
+import {registerGeneratorProvider} from "../src/generator/index.js";
 
 describe("Worker REST API (Hermetic Integration)", () => {
   const env = {
@@ -139,7 +141,7 @@ describe("Worker REST API (Hermetic Integration)", () => {
       body: {
         title: "Reindex Test Article",
         slug: uniqueSlug,
-        excerpt: "Ensuring reindex reconstructs corrupted index.json.",
+        excerpt: "Ensuring reindex reconstructs catalog from blob storage.",
         tags: ["Systems"],
         published: true,
         private: false,
@@ -194,7 +196,7 @@ describe("Worker REST API (Hermetic Integration)", () => {
     });
     await worker.fetch(createReq, env);
 
-    // Empty index to simulate corrupted/emptied index.json
+    // Reset repository to simulate emptied catalog
     await worker.fetch(
       createRequest("/api/admin/reset", {
         method: "POST",
@@ -215,5 +217,167 @@ describe("Worker REST API (Hermetic Integration)", () => {
     const req = createRequest("/api/unknown-route-12345");
     const res = await worker.fetch(req, env);
     expect(res.status).toBe(404);
+  });
+
+  describe("Cloudflare D1 Worker Routes", () => {
+    let d1Env;
+
+    beforeEach(() => {
+      d1Env = {
+        ...env,
+        DB: createTestD1(),
+      };
+    });
+
+    it("GET /api/tags returns 200 with top tags array from D1", async () => {
+      const res = await worker.fetch(createRequest("/api/tags"), d1Env);
+      expect(res.status).toBe(200);
+      const tags = await res.json();
+      expect(Array.isArray(tags)).toBe(true);
+    });
+
+    it("GET /api/articles with ?tag= filters public articles from D1", async () => {
+      const uniqueSlug = `d1-tag-filter-${Date.now()}`;
+      await worker.fetch(
+        createRequest("/api/articles", {
+          method: "POST",
+          headers: {Authorization: "Bearer test-secret-token"},
+          body: {
+            title: "D1 Tag Filter Article",
+            slug: uniqueSlug,
+            tags: ["D1SpecialTag"],
+            published: true,
+            private: false,
+            blocks: [{type: "paragraph", text: "Testing tag filtering."}],
+          },
+        }),
+        d1Env
+      );
+
+      const taggedRes = await worker.fetch(createRequest("/api/articles?tag=D1SpecialTag"), d1Env);
+      expect(taggedRes.status).toBe(200);
+      const taggedArticles = await taggedRes.json();
+      expect(taggedArticles.some((a) => a.slug === uniqueSlug)).toBe(true);
+    });
+
+    it("POST /api/articles returns 409 Conflict when slug is already taken in D1", async () => {
+      const duplicateSlug = `conflict-slug-${Date.now()}`;
+      const payload = {
+        title: "Conflict Slug Article",
+        slug: duplicateSlug,
+        tags: ["Test"],
+        published: true,
+        private: false,
+        blocks: [{type: "paragraph", text: "First copy."}],
+      };
+
+      const firstRes = await worker.fetch(
+        createRequest("/api/articles", {
+          method: "POST",
+          headers: {Authorization: "Bearer test-secret-token"},
+          body: payload,
+        }),
+        d1Env
+      );
+      expect(firstRes.status).toBe(201);
+
+      // Attempting to create second article with identical slug
+      const secondRes = await worker.fetch(
+        createRequest("/api/articles", {
+          method: "POST",
+          headers: {Authorization: "Bearer test-secret-token"},
+          body: payload,
+        }),
+        d1Env
+      );
+      expect(secondRes.status).toBe(409);
+      const errorData = await secondRes.json();
+      expect(errorData.error).toContain("Slug is already in use");
+    });
+
+    it("POST /api/generate persists generated article directly to D1", async () => {
+      const generatedSlug = `ai-gen-${Date.now()}`;
+      registerGeneratorProvider({
+        name: "test-d1-generator",
+        generate: async () => ({
+          title: "AI Edge Generation",
+          slug: generatedSlug,
+          tags: ["AI", "Edge"],
+          blocks: [{type: "paragraph", text: "AI generated content."}],
+        }),
+      });
+
+      const res = await worker.fetch(
+        createRequest("/api/generate", {
+          method: "POST",
+          headers: {Authorization: "Bearer test-secret-token"},
+          body: {
+            provider: "test-d1-generator",
+            topic: "Edge Computing",
+          },
+        }),
+        d1Env
+      );
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.article.slug).toBe(generatedSlug);
+
+      const d1Row = await d1Env.DB.prepare("SELECT * FROM articles WHERE slug = ?").bind(generatedSlug).first();
+      expect(d1Row).not.toBeNull();
+      expect(d1Row.title).toBe("AI Edge Generation");
+    });
+
+    it("POST /api/admin/reset clears D1 and POST /api/admin/reindex re-populates D1", async () => {
+      // 1. Seed an article into D1
+      const testSlug = `admin-ops-${Date.now()}`;
+      await worker.fetch(
+        createRequest("/api/articles", {
+          method: "POST",
+          headers: {Authorization: "Bearer test-secret-token"},
+          body: {
+            title: "Admin Ops Article",
+            slug: testSlug,
+            tags: ["Admin"],
+            published: true,
+            private: false,
+            blocks: [{type: "paragraph", text: "Ops testing."}],
+          },
+        }),
+        d1Env
+      );
+
+      const countBefore = await d1Env.DB.prepare("SELECT COUNT(*) as count FROM articles").first();
+      expect(Number(countBefore.count)).toBeGreaterThan(0);
+
+      // 2. POST /api/admin/reset clears D1
+      const resetRes = await worker.fetch(
+        createRequest("/api/admin/reset", {
+          method: "POST",
+          headers: {Authorization: "Bearer test-secret-token"},
+        }),
+        d1Env
+      );
+      expect(resetRes.status).toBe(200);
+
+      const countAfterReset = await d1Env.DB.prepare("SELECT COUNT(*) as count FROM articles").first();
+      expect(Number(countAfterReset.count)).toBe(0);
+
+      const tagCountAfterReset = await d1Env.DB.prepare("SELECT COUNT(*) as count FROM article_tags").first();
+      expect(Number(tagCountAfterReset.count)).toBe(0);
+
+      // 3. POST /api/admin/reindex restores articles into D1 from blob storage
+      const reindexRes = await worker.fetch(
+        createRequest("/api/admin/reindex", {
+          method: "POST",
+          headers: {Authorization: "Bearer test-secret-token"},
+        }),
+        d1Env
+      );
+      expect(reindexRes.status).toBe(200);
+
+      const countAfterReindex = await d1Env.DB.prepare("SELECT COUNT(*) as count FROM articles").first();
+      expect(Number(countAfterReindex.count)).toBeGreaterThan(0);
+    });
   });
 });

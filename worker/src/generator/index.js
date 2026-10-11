@@ -50,7 +50,6 @@ export function getGeneratorProvider(name) {
  * @param {(index: any[], slug: string, ignoreId?: string) => string} storageHelpers.uniqueSlug
  * @param {(blocks: any[]) => number} storageHelpers.estimateReadTime
  * @param {(article: any) => any} storageHelpers.summarize
- * @param {(env: any) => string} storageHelpers.getIndexPath
  * @param {(id: string, env: any) => string} storageHelpers.getArticleObject
  * @returns {Promise<{ok: boolean, article: any, evaluation: any}>}
  */
@@ -63,7 +62,6 @@ export async function generateArticle(request, env, user, storageHelpers) {
     uniqueSlug,
     estimateReadTime,
     summarize,
-    getIndexPath,
     getArticleObject,
     withIndexLock,
   } = storageHelpers;
@@ -141,8 +139,6 @@ export async function generateArticle(request, env, user, storageHelpers) {
 
     // 4. Automatically persist unlisted draft in Upstash Blob
     await putJson(bucket, getArticleObject(record.id, env), record);
-    index.unshift(summarize(record));
-    await putJson(bucket, getIndexPath(env), index);
     return record;
   });
 

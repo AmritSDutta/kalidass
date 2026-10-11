@@ -102,7 +102,7 @@ Without `UPSTASH_BLOB_TOKEN`, the Worker's in-memory store starts empty. Direct 
 
 - `/admin` composes text, image, and video blocks.
 - With a Blob token, files go browser -> Upstash (Worker only signs the upload).
-- Published articles are JSON objects at `kalidass/articles/<id>.json` plus `kalidass/index.json`.
+- Published articles are stored in Cloudflare D1 SQLite database with full content in Upstash Blob at `kalidass/articles/<id>.json`.
 - Compiled reader dossiers are stored at `kalidass/intelligence/<id>.json` (AI Intel) and `kalidass/books/<id>.json` (book suggestions).
 - Optional `ADMIN_TOKEN`: in the browser console or Studio prompt, enter the token to unlock.
 

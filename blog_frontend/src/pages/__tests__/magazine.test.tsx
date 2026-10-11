@@ -2,11 +2,12 @@ import {describe, it, expect, vi, beforeEach} from "vitest";
 import {render, screen, waitFor, fireEvent} from "@testing-library/react";
 import React from "react";
 import Magazine from "../magazine";
-import {listArticles} from "@site/src/lib/api";
+import {listArticles, getTopTags} from "@site/src/lib/api";
 import type {ArticleSummary} from "@site/src/lib/types";
 
 vi.mock("@site/src/lib/api", () => ({
   listArticles: vi.fn(),
+  getTopTags: vi.fn(),
 }));
 
 function generateMockArticles(count: number): ArticleSummary[] {
@@ -36,83 +37,98 @@ function generateMockArticles(count: number): ArticleSummary[] {
   });
 }
 
-describe("Magazine Page Pagination & Recency (Hermetic)", () => {
+describe("Magazine Page Server Pagination & D1 Tags (Hermetic)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.scrollTo = vi.fn();
+    vi.mocked(getTopTags).mockResolvedValue(["Systems", "Evals", "Edge"]);
   });
 
-  it("sorts by recency descending and displays exactly 9 briefs on page 1", async () => {
-    const mockArticles = generateMockArticles(20);
-    vi.mocked(listArticles).mockResolvedValue(mockArticles);
+  it("renders top tags from API and displays page 1 briefs", async () => {
+    const page1Articles = generateMockArticles(9);
+    vi.mocked(listArticles).mockResolvedValue(page1Articles);
 
     render(<Magazine />);
 
     await waitFor(() => {
-      expect(screen.getByText("Showing 1–9 of 20 briefs")).toBeTruthy();
+      expect(screen.getByText("Page 1 · 9 briefs shown")).toBeTruthy();
     });
 
-    // Newest is Article 20 (20:00:00Z)
-    expect(screen.getByText("Article 20")).toBeTruthy();
-    expect(screen.getByText("Article 19")).toBeTruthy();
-    expect(screen.getByText("Article 12")).toBeTruthy();
+    expect(screen.getByRole("button", {name: "Systems"})).toBeTruthy();
+    expect(screen.getByRole("button", {name: "Evals"})).toBeTruthy();
+    expect(screen.getByRole("button", {name: "Edge"})).toBeTruthy();
+    expect(screen.getByText("Article 01")).toBeTruthy();
+    expect(screen.getByText("Article 09")).toBeTruthy();
 
-    // Older articles should not be on Page 1
-    expect(screen.queryByText("Article 01")).toBeNull();
-    expect(screen.queryByText("Article 11")).toBeNull();
+    const prevBtn = screen.getByRole("button", {name: "Previous page"});
+    expect(prevBtn).toHaveProperty("disabled", true);
+
+    const nextBtn = screen.getByRole("button", {name: "Next page"});
+    expect(nextBtn).toHaveProperty("disabled", false);
   });
 
-  it("navigates to page 2 and renders the next 9 briefs in recency order", async () => {
-    const mockArticles = generateMockArticles(20);
-    vi.mocked(listArticles).mockResolvedValue(mockArticles);
+  it("navigates to page 2 and queries listArticles with page 2", async () => {
+    const page1Articles = generateMockArticles(9);
+    const page2Articles = generateMockArticles(4);
+    vi.mocked(listArticles)
+      .mockResolvedValueOnce(page1Articles)
+      .mockResolvedValueOnce(page2Articles);
 
     render(<Magazine />);
 
     await waitFor(() => {
-      expect(screen.getByText("Showing 1–9 of 20 briefs")).toBeTruthy();
+      expect(screen.getByText("Page 1 · 9 briefs shown")).toBeTruthy();
     });
 
     const nextBtn = screen.getByRole("button", {name: "Next page"});
     fireEvent.click(nextBtn);
 
-    expect(screen.getByText("Showing 10–18 of 20 briefs")).toBeTruthy();
-    expect(screen.getByText("Article 11")).toBeTruthy();
-    expect(screen.getByText("Article 03")).toBeTruthy();
-    expect(screen.queryByText("Article 20")).toBeNull();
-  });
-
-  it("resets to page 1 when searching or applying a tag filter", async () => {
-    const mockArticles = generateMockArticles(20);
-    vi.mocked(listArticles).mockResolvedValue(mockArticles);
-
-    render(<Magazine />);
-
     await waitFor(() => {
-      expect(screen.getByText("Showing 1–9 of 20 briefs")).toBeTruthy();
+      expect(screen.getByText("Page 2 · 4 briefs shown")).toBeTruthy();
     });
 
-    // Go to page 2
-    const nextBtn = screen.getByRole("button", {name: "Next page"});
-    fireEvent.click(nextBtn);
-    expect(screen.getByText("Showing 10–18 of 20 briefs")).toBeTruthy();
+    expect(listArticles).toHaveBeenCalledWith(
+      expect.objectContaining({page: 2, limit: 9})
+    );
 
-    // Select tag "Systems" (10 matching articles)
-    const systemsTagBtn = screen.getByRole("button", {name: "Systems"});
-    fireEvent.click(systemsTagBtn);
+    const prevBtn = screen.getByRole("button", {name: "Previous page"});
+    expect(prevBtn).toHaveProperty("disabled", false);
 
-    // Should immediately reset to page 1
-    expect(screen.getByText("Showing 1–9 of 10 briefs")).toBeTruthy();
-    expect(screen.getByText("Article 20")).toBeTruthy();
+    // Next button should be disabled because page 2 has fewer than 9 articles
+    expect(screen.getByRole("button", {name: "Next page"})).toHaveProperty("disabled", true);
   });
 
-  it("hides pagination controls when total articles are 9 or fewer", async () => {
-    const mockArticles = generateMockArticles(7);
-    vi.mocked(listArticles).mockResolvedValue(mockArticles);
+  it("filters by tag and resets to page 1", async () => {
+    const page1Articles = generateMockArticles(9);
+    const systemsArticles = generateMockArticles(5);
+    vi.mocked(listArticles)
+      .mockResolvedValueOnce(page1Articles)
+      .mockResolvedValueOnce(systemsArticles);
 
     render(<Magazine />);
 
     await waitFor(() => {
-      expect(screen.getByText("Article 07")).toBeTruthy();
+      expect(screen.getByText("Page 1 · 9 briefs shown")).toBeTruthy();
+    });
+
+    const systemsBtn = screen.getByRole("button", {name: "Systems"});
+    fireEvent.click(systemsBtn);
+
+    await waitFor(() => {
+      expect(listArticles).toHaveBeenCalledWith(
+        expect.objectContaining({tag: "Systems", page: 1})
+      );
+    });
+  });
+
+  it("hides pagination controls when on page 1 and fewer than 9 articles return", async () => {
+    const fewArticles = generateMockArticles(5);
+    vi.mocked(listArticles).mockResolvedValue(fewArticles);
+
+    render(<Magazine />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Article 05")).toBeTruthy();
     });
 
     expect(screen.queryByRole("navigation", {name: "Magazine pagination"})).toBeNull();

@@ -93,9 +93,31 @@ export function elevateAuth(adminToken: string, tokenOverride?: string) {
   });
 }
 
-export function listArticles(status?: "draft" | "published" | "all") {
-  const query = status ? `?status=${status}` : "";
-  return request<ArticleSummary[]>(`/api/articles${query}`);
+export interface ListArticlesParams {
+  status?: "draft" | "published" | "all";
+  tag?: string;
+  page?: number;
+  query?: string;
+  limit?: number;
+}
+
+export function listArticles(paramsOrStatus?: "draft" | "published" | "all" | ListArticlesParams) {
+  const params = new URLSearchParams();
+  if (typeof paramsOrStatus === "string") {
+    params.set("status", paramsOrStatus);
+  } else if (paramsOrStatus && typeof paramsOrStatus === "object") {
+    if (paramsOrStatus.status) params.set("status", paramsOrStatus.status);
+    if (paramsOrStatus.tag && paramsOrStatus.tag !== "All") params.set("tag", paramsOrStatus.tag);
+    if (paramsOrStatus.page && paramsOrStatus.page > 1) params.set("page", String(paramsOrStatus.page));
+    if (paramsOrStatus.query) params.set("q", paramsOrStatus.query);
+    if (paramsOrStatus.limit) params.set("limit", String(paramsOrStatus.limit));
+  }
+  const qStr = params.toString() ? `?${params.toString()}` : "";
+  return request<ArticleSummary[]>(`/api/articles${qStr}`);
+}
+
+export function getTopTags() {
+  return request<string[]>("/api/tags");
 }
 
 export function getArticle(

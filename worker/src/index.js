@@ -22,6 +22,17 @@ import {ResponseHelper} from "./helper/response.js";
 import {AuthHelper} from "./helper/auth.js";
 import {StorageHelper} from "./helper/storage.js";
 import {getMemoryObject} from "./memory.js";
+import {
+  ensureD1Synced,
+  getTopTags,
+  getPublicArticles,
+  getAuthorArticles,
+  isSlugTaken,
+  getArticleByIdOrSlug,
+  upsertArticleWithTags,
+  deleteArticle,
+  clearAllD1Articles,
+} from "./d1/repository.js";
 
 // Cloudflare Workers fetch guard: ensures @upstash/blob requests carry Content-Length
 const nativeFetch = globalThis.fetch;
@@ -135,51 +146,103 @@ export default {
         );
       }
 
+      if (url.pathname === "/api/tags" && request.method === "GET") {
+        if (env.DB) {
+          await ensureD1Synced(env.DB, StorageHelper, env, seedArticles);
+        }
+        const redis = getRedisClient(env);
+        const tags = await getTopTags(env.DB, redis);
+        return ResponseHelper.json(tags, 200, origin, {
+          "cache-control": "public, max-age=60, stale-while-revalidate=120",
+        });
+      }
+
       if (url.pathname === "/api/articles" && request.method === "GET") {
+        if (env.DB) {
+          await ensureD1Synced(env.DB, StorageHelper, env, seedArticles);
+        }
         const rawStatus = url.searchParams.get("status");
+        const tag = url.searchParams.get("tag") || "";
+        const page = url.searchParams.get("page") || "1";
+        const search = url.searchParams.get("q") || url.searchParams.get("search") || "";
 
         // Public feed: only public published articles (Redis accelerated with 3h TTL & deterministic featured story)
         if (!rawStatus) {
+          const isDefaultLanding = (!tag || tag.toLowerCase() === "all") && page === "1" && !search;
           const redis = getRedisClient(env);
           const ifNoneMatch = request.headers.get("if-none-match");
 
-          const cached = await getCachedPublicFeed(redis);
-          if (cached) {
-            if (ifNoneMatch && cached.etag && matchesEtag(ifNoneMatch, cached.etag)) {
-              return new Response(null, {
-                status: 304,
-                headers: ResponseHelper.corsHeaders(origin, {
-                  etag: cached.etag,
-                  "cache-control": "public, max-age=60, stale-while-revalidate=300",
-                }),
+          if (isDefaultLanding) {
+            const cached = await getCachedPublicFeed(redis);
+            if (cached) {
+              if (ifNoneMatch && cached.etag && matchesEtag(ifNoneMatch, cached.etag)) {
+                return new Response(null, {
+                  status: 304,
+                  headers: ResponseHelper.corsHeaders(origin, {
+                    etag: cached.etag,
+                    "cache-control": "public, max-age=60, stale-while-revalidate=300",
+                  }),
+                });
+              }
+              return ResponseHelper.json(cached.feed, 200, origin, {
+                etag: cached.etag || "",
+                "cache-control": "public, max-age=60, stale-while-revalidate=300",
               });
             }
-            return ResponseHelper.json(cached.feed, 200, origin, {
-              etag: cached.etag || "",
-              "cache-control": "public, max-age=60, stale-while-revalidate=300",
-            });
+          }
+
+          if (env.DB) {
+            const items = await getPublicArticles(env.DB, { tag, page, limit: 9, search });
+            if (isDefaultLanding) {
+              const decidedItems = ensureFeaturedDecided(items);
+              const saved = await setCachedPublicFeed(redis, decidedItems);
+              const finalFeed = saved?.feed || decidedItems;
+              const finalEtag = saved?.etag || computeFeedEtag(decidedItems);
+              return ResponseHelper.json(finalFeed, 200, origin, {
+                etag: finalEtag,
+                "cache-control": "public, max-age=60, stale-while-revalidate=300",
+              });
+            }
+            return ResponseHelper.json(items, 200, origin);
           }
 
           const index = await StorageHelper.ensureSeed(bucket, env);
-          const items = index
+          let items = index
             .filter((item) => item.published !== false && item.private !== true)
             .sort(
               (a, b) =>
                 new Date(b.publishedAt || b.updatedAt) - new Date(a.publishedAt || a.updatedAt)
             );
 
+          if (tag && tag.toLowerCase() !== "all") {
+            items = items.filter((item) =>
+              (item.tags || []).some((t) => t.toLowerCase() === tag.toLowerCase())
+            );
+          }
+          if (search) {
+            const term = search.toLowerCase();
+            items = items.filter(
+              (item) =>
+                (item.title || "").toLowerCase().includes(term) ||
+                (item.excerpt || "").toLowerCase().includes(term)
+            );
+          }
+
           const decidedItems = ensureFeaturedDecided(items);
-          const saved = await setCachedPublicFeed(redis, decidedItems);
-          const finalFeed = saved?.feed || decidedItems;
-          const finalEtag = saved?.etag || computeFeedEtag(decidedItems);
-
-          return ResponseHelper.json(finalFeed, 200, origin, {
-            etag: finalEtag,
-            "cache-control": "public, max-age=60, stale-while-revalidate=300",
-          });
+          if (isDefaultLanding) {
+            const saved = await setCachedPublicFeed(redis, decidedItems);
+            const finalFeed = saved?.feed || decidedItems;
+            const finalEtag = saved?.etag || computeFeedEtag(decidedItems);
+            return ResponseHelper.json(finalFeed, 200, origin, {
+              etag: finalEtag,
+              "cache-control": "public, max-age=60, stale-while-revalidate=300",
+            });
+          }
+          const validLimit = Math.max(1, Number(url.searchParams.get("limit")) || 9);
+          const validPage = Math.max(1, Number(page) || 1);
+          const pagedItems = decidedItems.slice((validPage - 1) * validLimit, validPage * validLimit);
+          return ResponseHelper.json(pagedItems, 200, origin);
         }
-
-        const index = await StorageHelper.ensureSeed(bucket, env);
 
         // Privileged status queries require authentication
         const user = await AuthHelper.getAuthUser(request, env);
@@ -187,6 +250,12 @@ export default {
           return ResponseHelper.json({error: "Unauthorized"}, 401, origin);
         }
 
+        if (env.DB) {
+          const items = await getAuthorArticles(env.DB, user, rawStatus);
+          return ResponseHelper.json(items, 200, origin);
+        }
+
+        const index = await StorageHelper.ensureSeed(bucket, env);
         const items = index
           .filter((item) => {
             // Super-Admin sees everything according to requested status
@@ -282,7 +351,9 @@ export default {
       if (url.pathname === "/api/admin/reset" && request.method === "POST") {
         const user = await AuthHelper.getAuthUser(request, env);
         if (!user || user.role !== "admin") return ResponseHelper.json({error: "Unauthorized"}, 401, origin);
-        await StorageHelper.putJson(bucket, StorageHelper.getIndexPath(env), []);
+        if (env.DB) {
+          await clearAllD1Articles(env.DB);
+        }
         const redis = getRedisClient(env);
         await invalidateAllArticleCaches(redis);
         return ResponseHelper.json({ok: true, message: "Article repository reset to empty"}, 200, origin);
@@ -296,6 +367,11 @@ export default {
         const articles = await StorageHelper.withIndexLock(async () => {
           return await StorageHelper.reconstructIndex(bucket, env);
         });
+        if (env.DB) {
+          for (const a of articles) {
+            await upsertArticleWithTags(env.DB, a, StorageHelper.summarize(a));
+          }
+        }
         const redis = getRedisClient(env);
         await invalidateAllArticleCaches(redis);
         return ResponseHelper.json(
@@ -418,17 +494,20 @@ export default {
           bucket,
           readJson: (...args) => StorageHelper.readJson(...args),
           putJson: (...args) => StorageHelper.putJson(...args),
-          ensureSeed: (...args) => StorageHelper.ensureSeed(...args),
+          ensureSeed: env.DB ? async () => [] : (...args) => StorageHelper.ensureSeed(...args),
           slugify: (...args) => StorageHelper.slugify(...args),
           uniqueSlug: (...args) => StorageHelper.uniqueSlug(...args),
           estimateReadTime: (...args) => StorageHelper.estimateReadTime(...args),
           summarize: (...args) => StorageHelper.summarize(...args),
-          getIndexPath: (...args) => StorageHelper.getIndexPath(...args),
           getArticleObject: (...args) => StorageHelper.getArticleObject(...args),
-          withIndexLock: (...args) => StorageHelper.withIndexLock(...args),
+          withIndexLock: env.DB ? (fn) => fn() : (...args) => StorageHelper.withIndexLock(...args),
         };
 
         const result = await generateArticle(body, env, user, storageHelpers);
+        if (env.DB && result?.article) {
+          await ensureD1Synced(env.DB, StorageHelper, env, seedArticles);
+          await upsertArticleWithTags(env.DB, result.article, StorageHelper.summarize(result.article));
+        }
         const redis = getRedisClient(env);
         await invalidateArticleCaches(redis, { id: result?.article?.id, slug: result?.article?.slug });
         return ResponseHelper.json(result, 201, origin);
@@ -456,6 +535,38 @@ export default {
           }
         }
 
+        if (env.DB) {
+          await ensureD1Synced(env.DB, StorageHelper, env, seedArticles);
+          const targetSlug = StorageHelper.slugify(body.slug || body.title);
+          if (await isSlugTaken(env.DB, targetSlug)) {
+            return ResponseHelper.json(
+              {error: "Slug is already in use by another article"},
+              409,
+              origin
+            );
+          }
+          const newArticle = StorageHelper.buildArticle(body, null, user);
+          newArticle.evaluation = evalResult || body.evaluation || null;
+          newArticle.slug = targetSlug;
+          newArticle.readTime = StorageHelper.estimateReadTime(newArticle.blocks);
+          await StorageHelper.putJson(bucket, StorageHelper.getArticleObject(newArticle.id, env), newArticle);
+          try {
+            await upsertArticleWithTags(env.DB, newArticle, StorageHelper.summarize(newArticle));
+          } catch (err) {
+            if (/UNIQUE constraint failed:.*articles\.slug/i.test(err?.message || "")) {
+              return ResponseHelper.json(
+                {error: "Slug is already in use by another article"},
+                409,
+                origin
+              );
+            }
+            throw err;
+          }
+          const redis = getRedisClient(env);
+          await invalidateArticleCaches(redis, { id: newArticle.id, slug: newArticle.slug });
+          return ResponseHelper.json(newArticle, 201, origin);
+        }
+
         const article = await StorageHelper.withIndexLock(async () => {
           const index = await StorageHelper.ensureSeed(bucket, env);
           const newArticle = StorageHelper.buildArticle(body, null, user);
@@ -463,8 +574,6 @@ export default {
           newArticle.slug = StorageHelper.uniqueSlug(index, StorageHelper.slugify(body.slug || body.title));
           newArticle.readTime = StorageHelper.estimateReadTime(newArticle.blocks);
           await StorageHelper.putJson(bucket, StorageHelper.getArticleObject(newArticle.id, env), newArticle);
-          index.unshift(StorageHelper.summarize(newArticle));
-          await StorageHelper.putJson(bucket, StorageHelper.getIndexPath(env), index);
           return newArticle;
         });
         const redis = getRedisClient(env);
@@ -477,9 +586,16 @@ export default {
       const intelMatch = url.pathname.match(/^\/api\/articles\/([^/]+)\/intel$/);
       if (intelMatch && request.method === "GET") {
         const key = decodeURIComponent(intelMatch[1]);
-        const index = await StorageHelper.ensureSeed(bucket, env);
-        const meta = index.find((item) => item.id === key || item.slug === key);
-        if (!meta) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+        let meta = null;
+        if (env.DB) {
+          const d1Row = await getArticleByIdOrSlug(env.DB, key);
+          if (!d1Row) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+          meta = d1Row.summary;
+        } else {
+          const index = await StorageHelper.ensureSeed(bucket, env);
+          meta = index.find((item) => item.id === key || item.slug === key);
+          if (!meta) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+        }
 
         if (meta.published === false || meta.private === true) {
           const user = await AuthHelper.getAuthUser(request, env);
@@ -504,9 +620,16 @@ export default {
       const booksMatch = url.pathname.match(/^\/api\/articles\/([^/]+)\/books$/);
       if (booksMatch) {
         const key = decodeURIComponent(booksMatch[1]);
-        const index = await StorageHelper.ensureSeed(bucket, env);
-        const meta = index.find((item) => item.id === key || item.slug === key);
-        if (!meta) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+        let meta = null;
+        if (env.DB) {
+          const d1Row = await getArticleByIdOrSlug(env.DB, key);
+          if (!d1Row) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+          meta = d1Row.summary;
+        } else {
+          const index = await StorageHelper.ensureSeed(bucket, env);
+          meta = index.find((item) => item.id === key || item.slug === key);
+          if (!meta) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+        }
 
         if (request.method === "GET") {
           if (meta.published === false || meta.private === true) {
@@ -571,9 +694,16 @@ export default {
       const researchMatch = url.pathname.match(/^\/api\/articles\/([^/]+)\/research$/);
       if (researchMatch) {
         const key = decodeURIComponent(researchMatch[1]);
-        const index = await StorageHelper.ensureSeed(bucket, env);
-        const meta = index.find((item) => item.id === key || item.slug === key);
-        if (!meta) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+        let meta = null;
+        if (env.DB) {
+          const d1Row = await getArticleByIdOrSlug(env.DB, key);
+          if (!d1Row) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+          meta = d1Row.summary;
+        } else {
+          const index = await StorageHelper.ensureSeed(bucket, env);
+          meta = index.find((item) => item.id === key || item.slug === key);
+          if (!meta) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+        }
 
         if (request.method === "GET") {
           if (meta.published === false || meta.private === true) {
@@ -659,9 +789,16 @@ export default {
           }
         }
 
-        const index = await StorageHelper.ensureSeed(bucket, env);
-        const meta = index.find((item) => item.id === key || item.slug === key);
-        if (!meta) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+        let meta = null;
+        if (env.DB) {
+          const d1Row = await getArticleByIdOrSlug(env.DB, key);
+          if (!d1Row) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+          meta = d1Row.summary;
+        } else {
+          const index = await StorageHelper.ensureSeed(bucket, env);
+          meta = index.find((item) => item.id === key || item.slug === key);
+          if (!meta) return ResponseHelper.json({error: "Article not found"}, 404, origin);
+        }
 
         if (request.method === "GET") {
           if (meta.published === false || meta.private === true) {
@@ -821,6 +958,54 @@ export default {
             }
           }
 
+          if (env.DB) {
+            const targetSlug = StorageHelper.slugify(body.slug || body.title || existing.slug);
+            if (targetSlug !== existing.slug && (await isSlugTaken(env.DB, targetSlug, existing.id))) {
+              return ResponseHelper.json(
+                {error: "Slug is already in use by another article"},
+                409,
+                origin
+              );
+            }
+            const article = StorageHelper.buildArticle(body, existing, user);
+            article.evaluation = evalResult || body.evaluation || existing.evaluation || null;
+            article.authorEmail = existing.authorEmail || user.email; // Preserved immutably
+            article.slug = targetSlug;
+            article.readTime = StorageHelper.estimateReadTime(article.blocks);
+            await StorageHelper.putJson(bucket, StorageHelper.getArticleObject(existing.id, env), article);
+            try {
+              await upsertArticleWithTags(env.DB, article, StorageHelper.summarize(article));
+            } catch (err) {
+              if (/UNIQUE constraint failed:.*articles\.slug/i.test(err?.message || "")) {
+                return ResponseHelper.json(
+                  {error: "Slug is already in use by another article"},
+                  409,
+                  origin
+                );
+              }
+              throw err;
+            }
+
+            const shouldInvalidateFeed =
+              url.searchParams.get("invalidate_feed") !== "false" &&
+              request.headers.get("x-invalidate-feed") !== "false";
+
+            if (shouldInvalidateFeed) {
+              await invalidateArticleCaches(redis, {
+                id: article.id,
+                slug: article.slug,
+                oldSlug: existing.slug,
+              });
+            } else {
+              await invalidateOnlyArticleCache(redis, {
+                id: article.id,
+                slug: article.slug,
+                oldSlug: existing.slug,
+              });
+            }
+            return ResponseHelper.json(article, 200, origin);
+          }
+
           const updatedArticle = await StorageHelper.withIndexLock(async () => {
             const index = await StorageHelper.ensureSeed(bucket, env);
             const article = StorageHelper.buildArticle(body, existing, user);
@@ -833,11 +1018,6 @@ export default {
             );
             article.readTime = StorageHelper.estimateReadTime(article.blocks);
             await StorageHelper.putJson(bucket, StorageHelper.getArticleObject(existing.id, env), article);
-            await StorageHelper.putJson(
-              bucket,
-              StorageHelper.getIndexPath(env),
-              index.map((item) => (item.id === existing.id ? StorageHelper.summarize(article) : item))
-            );
             return article;
           });
           const shouldInvalidateFeed =
@@ -877,18 +1057,23 @@ export default {
             }
           }
 
+          if (env.DB) {
+            await deleteArticle(env.DB, meta.id);
+            try {
+              await bucket.del(StorageHelper.getArticleObject(meta.id, env));
+            } catch {
+              // already gone
+            }
+            await invalidateArticleCaches(redis, { id: meta.id, slug: meta.slug });
+            return ResponseHelper.json({ok: true}, 200, origin);
+          }
+
           await StorageHelper.withIndexLock(async () => {
             try {
               await bucket.del(StorageHelper.getArticleObject(meta.id, env));
             } catch {
               // already gone
             }
-            const index = await StorageHelper.ensureSeed(bucket, env);
-            await StorageHelper.putJson(
-              bucket,
-              StorageHelper.getIndexPath(env),
-              index.filter((item) => item.id !== meta.id)
-            );
           });
           await invalidateArticleCaches(redis, { id: meta.id, slug: meta.slug });
           return ResponseHelper.json({ok: true}, 200, origin);
